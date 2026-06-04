@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v5.7
+ * NINJA SHOOTING AVERAGE v7.7
  * 管理専用コーチアプリ対応 Apps Script
  */
 
@@ -28,23 +28,28 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  setupSheets_();
   const p = e && e.parameter ? e.parameter : {};
-  const action = p.action;
   const callback = p.callback;
-
   let result;
-  if (action === 'coachAddPlayer') result = coachAddPlayer_(p);
-  else if (action === 'loginPlayer') result = loginPlayer_(p);
-  else if (action === 'changePassword') result = changePassword_(p);
-  else if (action === 'rankings') result = getRankings_();
-  else if (action === 'listPlayers') result = listPlayers_();
-  else if (action === 'playerDetail') result = playerDetail_(p.playerId);
-  else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
-  else if (action === 'dashboard') result = dashboard_();
-  else {
-    updateSummary_();
-    result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v5.7' };
+  try {
+    setupSheets_();
+    const action = p.action;
+
+    if (action === 'coachAddPlayer') result = coachAddPlayer_(p);
+    else if (action === 'loginPlayer') result = loginPlayer_(p);
+    else if (action === 'changePassword') result = changePassword_(p);
+    else if (action === 'rankings') result = getRankings_();
+    else if (action === 'listPlayers' || action === 'players') result = listPlayers_();
+    else if (action === 'playerDetail') result = playerDetail_(p.playerId);
+    else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
+    else if (action === 'dashboard') result = dashboard_();
+    else {
+      updateSummary_();
+      result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v7.7' };
+    }
+  } catch (err) {
+    log_('GET_ERROR', String(err));
+    result = { status:'error', message:String(err) };
   }
 
   if (callback) {

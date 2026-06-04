@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 選手用 v5.7</title>
+<title>NINJA SHOOTING AVERAGE 選手用 v8.1</title>
 <style>
 :root{--bg:#f6f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--brand:#d91828;--dark:#111827;--line:#e5e7eb;}
 *{box-sizing:border-box}
@@ -15,6 +15,7 @@ header{position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#05050
 main{padding:14px}
 .card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(15,23,42,.06)}
 .card h2{font-size:16px;margin:0 0 12px}
+.input-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.today-badge{display:inline-block;background:#111827;color:#fff;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:900;white-space:nowrap;line-height:1.1;min-width:156px;text-align:center;box-shadow:0 4px 10px rgba(17,24,39,.18)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 label{display:block;font-size:12px;font-weight:900;color:#374151;margin:8px 0 6px}
 input,select,button{width:100%;font:inherit;border-radius:14px;border:1px solid var(--line);padding:12px;background:#fff}
@@ -99,17 +100,17 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <h1 class="brand-title"><img src="data:image/png;base64,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" alt="NINJA logo"><span>NINJA SHOOTING AVERAGE</span></h1>
-  <div class="profile"><span id="headerUser">未登録</span><span style="font-size:11px;opacity:.8">v5.7 選手用</span><button class="ghost" style="width:auto;padding:6px 10px;font-size:11px" onclick="logoutAccount()">ログアウト</button></div>
+  <div class="profile"><span id="headerUser">未登録</span><span style="font-size:11px;opacity:.8">v8.1 選手用</span><button class="ghost" style="width:auto;padding:6px 10px;font-size:11px" onclick="logoutAccount()">ログアウト</button></div>
 </header>
 <main>
 <section id="inputView" class="view active">
   <div class="card">
-    <h2>シューティング入力</h2>
+    <h2 class="input-title-row">シューティング入力 <span id="inputTodayBadge" class="today-badge"></span></h2>
     <div class="row"><div><label>選手</label><input id="playerView" readonly></div><div><label>カテゴリー</label><input id="categoryView" readonly></div></div>
-    <label>日付</label><input id="dateInput" type="date">
+    <input id="dateInput" type="hidden">
     <label>練習</label><select id="practiceInput"><option>通常練習</option><option>自主練習</option></select>
     <label>種目</label><div id="inputTypeButtons" class="type-grid"></div>
-    <label>ポジション</label><div id="inputPositionButtons" class="position-grid"></div>
+    <label>ポジション</label><div id="inputPositionButtons" class="position-grid"></div><select id="inputPositionSelect" style="margin-top:8px" onchange="setInputPosition(this.value)"></select>
     <div id="normalFields">
       <div class="row">
         <div><label>成功数</label><input id="madeInput" type="number" inputmode="numeric" min="0" placeholder="例 70" oninput="previewRate()"><div id="madeQuickButtons" class="quick"></div></div>
@@ -141,22 +142,10 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 </section>
 
 <section id="graphView" class="view">
-
-  <div class="card" id="monthlyAllPositionCard">
-    <h2>2P・3P 全ポジション推移</h2>
-    <div class="small" style="margin-bottom:8px">
-      <b>横軸：日付</b>　<b>縦軸：本数</b>（成功数・試投数）
-    </div>
-    <div id="monthlyTypeButtons" class="type-grid" style="margin-bottom:8px"></div>
-    <div id="monthlyMonthButtons" class="type-grid" style="margin-bottom:8px"></div>
-    <canvas id="monthlyAllPositionCanvas" width="520" height="340"></canvas>
-    <div id="monthlyAllPositionDetail" class="small" style="margin-top:8px">線や点を押すと詳細が表示されます。</div>
-  </div>
-
-  <div class="card"><div class="small"><b>全ポジション推移：</b>横軸＝日付 ／ 縦軸＝本数（成功数・試投数）</div></div>
-  <div class="card"><h2>グラフ</h2><div class="kpi"><div><b id="avgAll">0%</b><span>総合成功率</span></div><div><b id="totalAttempts">0</b><span>総試投数</span></div><div><b id="bestRate">0%</b><span>最高成功率</span></div></div></div>
+  
+  <div class="card"><h2>データ</h2><div class="kpi"><div><b id="avgAll">0</b><span>総成功本数</span></div><div><b id="totalAttempts">0</b><span>総試投数</span></div><div><b id="bestRate">0%</b><span>最高成功率</span></div></div></div>
   <div class="card">
-    <h2>ポジション別 成長グラフ</h2><div id="growthDateNote" class="small" style="margin-bottom:6px">日付はグラフ下に「月/日」で表示します。</div><p class="small">折れ線は全ポジションを一括表示します。ポジションボタンを押すと詳細グラフが開きます。</p>
+    <h2>ポジション別 成長グラフ</h2><div id="growthDateNote" class="small" style="margin-bottom:6px"></div>
     <div id="allPositionTypeButtons" class="type-grid" style="margin-bottom:8px"></div>
     <div class="position-grid" id="growthPositionButtons" style="margin-bottom:10px"></div>
     <canvas id="positionLineCanvas" width="450" height="320"></canvas>
@@ -231,7 +220,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 <nav class="tabs"><div class="tabs-inner">
   <button class="tab active" onclick="showView('inputView',this)">入力</button>
-  <button class="tab" onclick="showView('graphView',this)">グラフ</button>
+  <button class="tab" onclick="showView('graphView',this)">データ</button>
   <button class="tab" onclick="showView('rankView',this)">順位</button>
   <button class="tab" onclick="showView('recordView',this)">記録</button>
   <button class="tab" onclick="showView('playerManageView',this)">管理</button>
@@ -260,7 +249,11 @@ let rankType="2P", rankPosition=POSITIONS["2P"][0];
 let compareType="2P", allPositionGrowthType="2P";
 let editId=null, typeRateRegions=[], barRegions=[], growthRegions=[], modalLinePoints=[], positionLinePoints=[], growthPosition=POSITIONS['2P'][0];
 
-function today(){return new Date().toISOString().slice(0,10)}
+function today(){const d=new Date();const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
+function todayDisplay(){const d=new Date();return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`}
+function displayDateFromIso(value){const s=String(value||'');const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${Number(m[1])}.${Number(m[2])}.${Number(m[3])}`:s}
+function isoDateFromDisplay(value){const s=String(value||'').trim();let m=s.match(/^(\d{4})[.\/年-](\d{1,2})[.\/月-](\d{1,2})/);if(m){return `${m[1]}-${String(Number(m[2])).padStart(2,'0')}-${String(Number(m[3])).padStart(2,'0')}`}return s}
+function getInputDateValue(){const d=document.getElementById('dateInput');if(!d)return today();return d.dataset.iso || isoDateFromDisplay(d.value) || today()}
 function load(k,f){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(f))}catch(e){return f}}
 function saveLocal(k,v){localStorage.setItem(k,JSON.stringify(v))}
 function getProfile(){return load(LS_PROFILE,null)} function getRecords(){return load(LS_RECORDS,[])} function setRecords(v){saveLocal(LS_RECORDS,v)}
@@ -317,7 +310,11 @@ async function loginWithId(){
    saveLocal(LS_PROFILE,prof);
    applyProfile(prof);
    document.getElementById("loginScreen").classList.add("hidden");
-   refresh();renderInputTypes();renderInputPositions();if(typeof renderPlayerManage==='function')renderPlayerManage();
+   refresh();
+   forceInputPositionRepair();
+   setTimeout(forceInputPositionRepair,50);
+   setTimeout(forceInputPositionRepair,300);
+   if(typeof renderPlayerManage==='function')renderPlayerManage();
  }catch(e){
    msg.innerHTML="ログインに失敗しました。通信環境を確認してください。";
  }
@@ -333,6 +330,8 @@ async function autoLogin(){
      saveLocal(LS_PROFILE,prof);
      applyProfile(prof);
      document.getElementById("loginScreen").classList.add("hidden");
+     setTimeout(forceInputPositionRepair,0);
+     setTimeout(forceInputPositionRepair,150);
      return true;
    }
  }catch(e){}
@@ -423,7 +422,7 @@ async function changeMyPassword(){
 }
 
 function init(){
- document.getElementById("dateInput").value=today();
+ const __dateEl=document.getElementById("dateInput");if(__dateEl){__dateEl.type="hidden";__dateEl.value=today();__dateEl.dataset.iso=today();}
  renderSharedQuickButtons();renderInputTypes();renderInputPositions();renderRankSelectors();renderCompareButtons();renderAllPositionGrowthButtons();
  autoLogin().then(ok=>{if(!ok){document.getElementById("loginScreen").classList.remove("hidden")}});
  previewRate();refresh();setupCanvasClicks();setupPositionLineClick();
@@ -438,7 +437,7 @@ function applyProfile(p){document.getElementById("headerUser").textContent=p.nam
 function updateProfile(){const name=document.getElementById("adminName").value.trim(),category=document.getElementById("adminCategory").value;if(!name)return;const p={name,category};saveLocal(LS_PROFILE,p);applyProfile(p);refresh();alert("変更しました")}
 
 
-/* v5.7 fixed input position */
+/* v7.2 fixed input position */
 
 
 
@@ -452,7 +451,7 @@ function updateProfile(){const name=document.getElementById("adminName").value.t
 
 
 
-/* v5.7 FIX: input shooting position buttons */
+/* v7.2 FIX: input shooting position buttons */
 function renderInputTypes(){
  const wrap=document.getElementById("inputTypeButtons");
  if(!wrap)return;
@@ -504,7 +503,7 @@ function previewRate(){if(inputType==="マイカン"){document.getElementById("m
 function valid(m,a){if(a<=0){alert("試投数を入力してください");return false}if(m<0||m>a){alert("成功数は試投数以下にしてください");return false}return true}
 
 
-/* v5.7 final fixed controls */
+/* v7.2 final fixed controls */
 
 // 入力：種目・ポジション
 
@@ -634,7 +633,7 @@ function setRankPosition(p){
 
 
 function clearInputNumbersAfterSave(){
- const ids=["madeInput","attemptInput","mikanMadeInput","mikanAttemptInput"];
+ const ids=["madeInput","attemptInput","rightMade","rightAttempt","leftMade","leftAttempt"];
  ids.forEach(id=>{
    const el=document.getElementById(id);
    if(el)el.value="";
@@ -644,23 +643,23 @@ function clearInputNumbersAfterSave(){
 
 function saveRecord(){
  const prof=getProfile(); if(!prof){alert("ログイン登録してください");return}
- const date=document.getElementById("dateInput").value||today(), practice=document.getElementById("practiceInput").value; let rows=getRecords();
+ const date=getInputDateValue(), practice=document.getElementById("practiceInput").value; let rows=getRecords();
  if(editId){const idx=rows.findIndex(r=>r.id===editId);if(idx<0){cancelEdit();return}if(inputType==="マイカン"){alert("マイカンは削除して入力し直してください");return}const made=n("madeInput"),attempts=n("attemptInput");if(!valid(made,attempts))return;rows[idx]={...rows[idx],date,practice,player:prof.name,category:prof.category,type:inputType,position:inputPosition,made,attempts,rate:pct(made,attempts),updatedAt:new Date().toISOString(),syncAction:"update"};setRecords(rows);clearInputNumbersAfterSave();(typeof sendToSheet==='function'?sendToSheet:function(){})([rows[idx]]);document.getElementById("message").innerHTML=`<div class="success">変更しました。${made}/${attempts}（${pct(made,attempts)}%）</div>`;cancelEdit(false);refresh();return}
  let msg="", toSync=[];
  if(inputType==="マイカン"){const rm=n("rightMade"),ra=n("rightAttempt"),lm=n("leftMade"),la=n("leftAttempt");if(!valid(rm,ra)||!valid(lm,la))return;const r1={id:crypto.randomUUID(),date,practice,player:prof.name,category:prof.category,type:"マイカン",position:"右レイアップ",made:rm,attempts:ra,rate:pct(rm,ra),createdAt:new Date().toISOString(),syncAction:"create"};const r2={id:crypto.randomUUID(),date,practice,player:prof.name,category:prof.category,type:"マイカン",position:"左レイアップ",made:lm,attempts:la,rate:pct(lm,la),createdAt:new Date().toISOString(),syncAction:"create"};rows.push(r1,r2);toSync=[r1,r2];msg=`<div class="success">保存しました。右 ${rm}/${ra}・左 ${lm}/${la}${bestMessage([r1,r2])}</div>`}
  else{const made=n("madeInput"),attempts=n("attemptInput");if(!valid(made,attempts))return;const rec={id:crypto.randomUUID(),date,practice,player:prof.name,category:prof.category,type:inputType,position:inputPosition,made,attempts,rate:pct(made,attempts),createdAt:new Date().toISOString(),syncAction:"create"};rows.push(rec);toSync=[rec];msg=`<div class="success">保存しました。${inputType} ${inputPosition} ${made}/${attempts}（${rec.rate}%）${bestMessage([rec])}</div>`}
- setRecords(rows);cloudRankings=null;document.getElementById("message").innerHTML=msg;(typeof sendToSheet==='function'?sendToSheet:function(){})(toSync);refresh();
+ setRecords(rows);cloudRankings=null;document.getElementById("message").innerHTML=msg;(typeof sendToSheet==='function'?sendToSheet:function(){})(toSync);refresh();forceInputPositionRepair();setTimeout(forceInputPositionRepair,100);
 }
 function bestMessage(newRows){const rows=getRecords();let out="";newRows.forEach(r=>{const best=rows.filter(x=>x.player===r.player&&x.type===r.type&&x.position===r.position&&x.id!==r.id).reduce((m,x)=>Math.max(m,x.rate),0);if(r.attempts>=5&&r.rate>best)out+=`<br>🎉 自己ベスト更新！ ${best}% → ${r.rate}%`});return out}
 function refresh(){renderToday();renderRecordView();renderGraphs();renderRankSelectors();renderRanking();if(typeof renderAdmin==="function")renderAdmin()}
 document.addEventListener("change",e=>{if(e.target.id==="dateInput")renderToday()});
 
-function renderToday(){const p=getProfile();if(!p)return;const date=document.getElementById("dateInput").value||today();const list=getRecords().filter(r=>r.player===p.name&&r.date===date);document.getElementById("todayList").innerHTML=list.length?list.slice().reverse().map(r=>`<div class="list-item"><b>${safeText(r.type)}</b> <span class="badge">${safeText(r.position)}</span><br><span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span>　${r.rate}%　<span class="small">${safeText(r.practice)}</span><div class="row" style="margin-top:8px"><button class="secondary" onclick="editRecord('${r.id}')">変更</button><button class="ghost" onclick="deleteRecord('${r.id}')">削除</button></div></div>`).join(""):"まだ記録がありません。"}
-function editRecord(id){const r=getRecords().find(x=>x.id===id);if(!r)return;if(r.type==="マイカン"){alert("マイカンは削除して入力し直してください");return}editId=id;document.getElementById("dateInput").value=r.date;document.getElementById("practiceInput").value=r.practice;inputType=r.type;inputPosition=r.position;renderInputTypes();renderInputPositions();document.getElementById("normalFields").style.display="block";document.getElementById("mikanFields").style.display="none";document.getElementById("madeInput").value=r.made;document.getElementById("attemptInput").value=r.attempts;previewRate();document.getElementById("saveBtn").textContent="変更を保存";document.getElementById("cancelEditBtn").style.display="block";document.getElementById("message").innerHTML='<div class="notice">変更モードです。</div>';window.scrollTo({top:0,behavior:"smooth"})}
+function renderToday(){const p=getProfile();if(!p)return;const date=getInputDateValue();const list=getRecords().filter(r=>r.player===p.name&&isoDateFromDisplay(r.date)===date);document.getElementById("todayList").innerHTML=list.length?list.slice().reverse().map(r=>`<div class="list-item"><b>${safeText(r.type)}</b> <span class="badge">${safeText(r.position)}</span><br><span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span>　${r.rate}%　<span class="small">${safeText(r.practice)}</span><div class="row" style="margin-top:8px"><button class="secondary" onclick="editRecord('${r.id}')">変更</button><button class="ghost" onclick="deleteRecord('${r.id}')">削除</button></div></div>`).join(""):"まだ記録がありません。"}
+function editRecord(id){const r=getRecords().find(x=>x.id===id);if(!r)return;if(r.type==="マイカン"){alert("マイカンは削除して入力し直してください");return}editId=id;const __editDate=document.getElementById("dateInput");if(__editDate){__editDate.type="hidden";__editDate.value=isoDateFromDisplay(r.date);__editDate.dataset.iso=isoDateFromDisplay(r.date);}document.getElementById("practiceInput").value=r.practice;inputType=r.type;inputPosition=r.position;renderInputTypes();renderInputPositions();document.getElementById("normalFields").style.display="block";document.getElementById("mikanFields").style.display="none";document.getElementById("madeInput").value=r.made;document.getElementById("attemptInput").value=r.attempts;previewRate();document.getElementById("saveBtn").textContent="変更を保存";document.getElementById("cancelEditBtn").style.display="block";document.getElementById("message").innerHTML='<div class="notice">変更モードです。</div>';window.scrollTo({top:0,behavior:"smooth"})}
 function deleteRecord(id){const r=getRecords().find(x=>x.id===id);if(!r)return;if(!confirm(`${r.type} ${r.position} ${r.made}/${r.attempts} を削除しますか？`))return;setRecords(getRecords().filter(x=>x.id!==id));cloudRankings=null;(typeof sendToSheet==='function'?sendToSheet:function(){})([{...r,syncAction:"delete",deletedAt:new Date().toISOString()}]);if(editId===id)cancelEdit(false);refresh()}
 function cancelEdit(clear=true){editId=null;document.getElementById("saveBtn").textContent="保存";document.getElementById("cancelEditBtn").style.display="none";if(clear)document.getElementById("message").innerHTML=""}
 
-function showView(id,btn){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));btn.classList.add("active");if(id==="inputView"){renderInputTypes();renderInputPositions()}
+function showView(id,btn){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));btn.classList.add("active");if(id==="inputView"){updateInputDateTimeDisplay();forceInputPositionRepair()}
  if(id==="graphView"){renderCompareButtons();renderAllPositionGrowthButtons();renderGraphs()}if(id==="rankView"){renderRankSelectors();renderRanking();if(getGasUrl()&&!cloudRankings)fetchCloudRankings(false)}
  if(id==="playerManageView"){renderPlayerManage()}if(id==="recordView")renderRecordView();}
 function myRows(){const p=getProfile();return p?getRecords().filter(r=>r.player===p.name):[]}
@@ -720,9 +719,7 @@ function shortDateLabel(dateText){
 function renderGrowthDateList(){
  const box=document.getElementById("growthDateNote");
  if(!box)return;
- const rows=getRecords().filter(r=>r.type===allPositionGrowthType&&r.position===growthPosition).slice(-8);
- if(!rows.length){box.innerHTML="日付はグラフ下に「月/日」で表示します。";return}
- box.innerHTML="表示日付：" + rows.map(r=>shortDateLabel(r.date)).join("・");
+ box.innerHTML="";
 }
 
 
@@ -860,12 +857,12 @@ function renderMonthlyMonthButtons(){
 function setMonthlyGraphType(t){
  monthlyGraphType=t;
  monthlyGraphMonth="";
- renderMonthlyAllPositionGraph();
+ 
 }
 
 function setMonthlyGraphMonth(m){
  monthlyGraphMonth=m;
- renderMonthlyAllPositionGraph();
+ 
 }
 
 function renderMonthlyAllPositionGraph(){
@@ -953,15 +950,15 @@ function drawMonthlyAllPositionChart(){
  };
 }
 
-function renderGraphs(){renderGrowthDateList();setTimeout(attachFallbackGrowthClick,0);const rows=myRows();drawTypeRateSummary(rows);drawAllPositionLines(rows,allPositionGrowthType);renderMonthlyGrowthRanking(rows);drawBars(rows,compareType);drawRadar("radar2",POSITIONS["2P"],rows.filter(r=>r.type==="2P"));drawRadar("radar3",POSITIONS["3P"],rows.filter(r=>r.type==="3P"));const totalM=rows.reduce((s,r)=>s+r.made,0),totalA=rows.reduce((s,r)=>s+r.attempts,0);document.getElementById("avgAll").textContent=pct(totalM,totalA)+"%";document.getElementById("totalAttempts").textContent=totalA;document.getElementById("bestRate").textContent=(rows.reduce((m,r)=>Math.max(m,r.rate),0)||0)+"%"}
-function clearCanvas(id){const c=document.getElementById(id),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);return[c,ctx]}
+function renderGraphs(){renderGrowthDateList();setTimeout(attachFallbackGrowthClick,0);const rows=myRows();drawAllPositionLines(rows,allPositionGrowthType);renderMonthlyGrowthRanking(rows);drawBars(rows,compareType);drawRadar("radar2",POSITIONS["2P"],rows.filter(r=>r.type==="2P"));drawRadar("radar3",POSITIONS["3P"],rows.filter(r=>r.type==="3P"));const totalM=rows.reduce((s,r)=>s+r.made,0),totalA=rows.reduce((s,r)=>s+r.attempts,0);document.getElementById("avgAll").textContent=totalM;document.getElementById("totalAttempts").textContent=totalA;document.getElementById("bestRate").textContent=(rows.reduce((m,r)=>Math.max(m,r.rate),0)||0)+"%"}
+function clearCanvas(id){const c=document.getElementById(id);if(!c)return[null,null];const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);return[c,ctx]}
 function empty(ctx,c){ctx.font="14px sans-serif";ctx.fillStyle="#111827";ctx.fillText("データがありません",c.width/2-55,c.height/2)}
 
 
 
 
 
-function drawTypeRateSummary(rows){const [c,ctx]=clearCanvas("typeRateCanvas");typeRateRegions=[];const detail=document.getElementById("typeRateDetail");if(detail)detail.style.display="none";const data=TYPES.map(type=>{const g=rows.filter(r=>r.type===type);const made=g.reduce((s,r)=>s+r.made,0),attempts=g.reduce((s,r)=>s+r.attempts,0);return{type,made,attempts,rate:pct(made,attempts),color:TYPE_COLORS[type],items:g}});if(!data.some(d=>d.attempts>0)){empty(ctx,c);return}const left=86,top=24,barH=30,gap=20,maxW=c.width-left-48;data.forEach((d,i)=>{const y=top+i*(barH+gap);ctx.fillStyle=d.color;ctx.fillRect(12,y+7,12,12);ctx.fillStyle="#111827";ctx.font="14px sans-serif";ctx.fillText(d.type,32,y+20);ctx.fillStyle="#f3f4f6";ctx.fillRect(left,y,maxW,barH);ctx.fillStyle=d.color;ctx.fillRect(left,y,maxW*d.rate/100,barH);ctx.fillStyle="#111827";ctx.font="13px sans-serif";ctx.fillText(d.rate+"%",left+Math.min(maxW*d.rate/100+8,maxW-34),y+20);ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";ctx.fillText(d.made+"/"+d.attempts,left+maxW-56,y+20);typeRateRegions.push({x:0,y:y-6,w:c.width,h:barH+12,data:d})});ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";ctx.fillText("バーをタップで詳細",18,c.height-10)}
+function drawTypeRateSummary(rows){const [c,ctx]=clearCanvas("typeRateCanvas");if(!c||!ctx)return;typeRateRegions=[];const detail=document.getElementById("typeRateDetail");if(detail)detail.style.display="none";const data=TYPES.map(type=>{const g=rows.filter(r=>r.type===type);const made=g.reduce((s,r)=>s+r.made,0),attempts=g.reduce((s,r)=>s+r.attempts,0);return{type,made,attempts,rate:pct(made,attempts),color:TYPE_COLORS[type],items:g}});if(!data.some(d=>d.attempts>0)){empty(ctx,c);return}const left=86,top=24,barH=30,gap=20,maxW=c.width-left-48;data.forEach((d,i)=>{const y=top+i*(barH+gap);ctx.fillStyle=d.color;ctx.fillRect(12,y+7,12,12);ctx.fillStyle="#111827";ctx.font="14px sans-serif";ctx.fillText(d.type,32,y+20);ctx.fillStyle="#f3f4f6";ctx.fillRect(left,y,maxW,barH);ctx.fillStyle=d.color;ctx.fillRect(left,y,maxW*d.rate/100,barH);ctx.fillStyle="#111827";ctx.font="13px sans-serif";ctx.fillText(d.rate+"%",left+Math.min(maxW*d.rate/100+8,maxW-34),y+20);ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";ctx.fillText(d.made+"/"+d.attempts,left+maxW-56,y+20);typeRateRegions.push({x:0,y:y-6,w:c.width,h:barH+12,data:d})});ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";ctx.fillText("バーをタップで詳細",18,c.height-10)}
 
 
 
@@ -1083,9 +1080,97 @@ function openPositionGrowthModal(position){
 }
 
 function drawAllPositionGrowthBars(rows,type){const [c,ctx]=clearCanvas("allPositionGrowthCanvas");growthRegions=[];const detail=document.getElementById("allPositionGrowthDetail");if(detail)detail.style.display="none";const labels=POSITIONS[type];const data=labels.map((label,i)=>{const g=rows.filter(r=>r.type===type&&r.position===label);const made=g.reduce((s,r)=>s+r.made,0),attempts=g.reduce((s,r)=>s+r.attempts,0);return{label,made,attempts,rate:pct(made,attempts),color:LINE_COLORS[i%LINE_COLORS.length],items:g,type}});if(!data.some(d=>d.attempts>0)){empty(ctx,c);return}const left=156,top=22,barH=24,gap=14,maxW=c.width-left-38;ctx.font="11px sans-serif";data.forEach((d,i)=>{const y=top+i*(barH+gap);ctx.fillStyle=d.color;ctx.fillRect(8,y+5,10,10);ctx.fillStyle="#374151";ctx.fillText(d.label,22,y+16);ctx.fillStyle="#f3f4f6";ctx.fillRect(left,y,maxW,barH);ctx.fillStyle=d.color;ctx.fillRect(left,y,maxW*d.rate/100,barH);ctx.fillStyle="#111827";ctx.fillText(d.rate+"% / "+d.attempts+"本",left+Math.min(maxW*d.rate/100+6,maxW-70),y+16);growthRegions.push({x:0,y:y-4,w:c.width,h:barH+8,data:d})});ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";ctx.fillText("バーをタップで詳細",18,c.height-10)}
-function drawBars(rows,type){const [c,ctx]=clearCanvas("barCanvas");barRegions=[];const bd=document.getElementById("barDetail");if(bd)bd.style.display="none";document.getElementById("compareTitle").textContent=type+" 全ポジション比較";const labels=POSITIONS[type];const data=labels.map((label,i)=>{const g=rows.filter(r=>r.type===type&&r.position===label);const made=g.reduce((s,r)=>s+r.made,0),attempts=g.reduce((s,r)=>s+r.attempts,0);return{label,made,attempts,rate:pct(made,attempts),color:LINE_COLORS[i%LINE_COLORS.length],items:g,type}});if(!data.some(d=>d.attempts>0)){empty(ctx,c);return}const left=150,top=24,barH=24,gap=14,maxW=c.width-left-38;data.forEach((d,i)=>{const y=top+i*(barH+gap);ctx.fillStyle=d.color;ctx.fillRect(8,y+5,10,10);ctx.fillStyle="#374151";ctx.font="11px sans-serif";ctx.fillText(d.label,22,y+16);ctx.fillStyle="#f3f4f6";ctx.fillRect(left,y,maxW,barH);ctx.fillStyle=d.color;ctx.fillRect(left,y,maxW*d.rate/100,barH);ctx.fillStyle="#111827";ctx.fillText(d.rate+"% / "+d.attempts+"本",left+Math.min(maxW*d.rate/100+6,maxW-62),y+16);barRegions.push({x:0,y:y-4,w:c.width,h:barH+8,data:d})});ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";ctx.fillText("バーをタップで詳細",40,c.height-8)}
+function drawBars(rows,type){
+ const [c,ctx]=clearCanvas("barCanvas");
+ if(!c||!ctx)return;
+ barRegions=[];
+ const bd=document.getElementById("barDetail");
+ if(bd)bd.style.display="none";
+ const title=document.getElementById("compareTitle");
+ if(title)title.textContent=type+" 全ポジション比較（累計本数）";
+ const labels=POSITIONS[type]||[];
+ const data=labels.map((label,i)=>{
+   const g=rows.filter(r=>r.type===type&&r.position===label);
+   const made=g.reduce((s,r)=>s+Number(r.made||0),0);
+   const attempts=g.reduce((s,r)=>s+Number(r.attempts||0),0);
+   return{label,made,attempts,rate:pct(made,attempts),color:LINE_COLORS[i%LINE_COLORS.length],items:g,type};
+ });
+ if(!data.some(d=>d.attempts>0)){empty(ctx,c);return}
+ const left=154,top=28,barH=15,gap=28,maxW=c.width-left-44;
+ const maxValue=Math.max(10,...data.map(d=>d.attempts));
+ ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";
+ ctx.fillText("上：成功数（赤） / 下：試投数（黒）",left,14);
+ data.forEach((d,i)=>{
+   const y=top+i*(barH*2+gap);
+   ctx.fillStyle=d.color;ctx.fillRect(8,y+10,10,10);
+   ctx.fillStyle="#374151";ctx.font="11px sans-serif";ctx.fillText(d.label,22,y+18);
+   // 上：成功数 赤
+   ctx.fillStyle="#fee2e2";ctx.fillRect(left,y,maxW,barH);
+   ctx.fillStyle="#d91828";ctx.fillRect(left,y,maxW*d.made/maxValue,barH);
+   // 下：試投数 黒
+   ctx.fillStyle="#f3f4f6";ctx.fillRect(left,y+barH+4,maxW,barH);
+   ctx.fillStyle="#111827";ctx.fillRect(left,y+barH+4,maxW*d.attempts/maxValue,barH);
+   ctx.fillStyle="#d91828";ctx.font="10px sans-serif";
+   ctx.fillText(d.made+"本",left+Math.min(maxW*d.made/maxValue+5,maxW-32),y+11);
+   ctx.fillStyle="#fff";
+   ctx.fillText(d.attempts+"本",left+8,y+barH+15);
+   ctx.fillStyle="#374151";ctx.font="10px sans-serif";ctx.fillText(d.rate+"%",c.width-36,y+24);
+   barRegions.push({x:0,y:y-4,w:c.width,h:barH*2+16,data:d});
+ });
+ ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";ctx.fillText("バーをタップで詳細",40,c.height-8);
+}
 function radarColor(rate){if(rate>=80)return"#16a34a";if(rate>=60)return"#2563eb";if(rate>=40)return"#f59e0b";return"#d91828"}
-function drawRadar(id,labels,rows){const [c,ctx]=clearCanvas(id);const cx=c.width/2,cy=c.height/2+8,R=92;ctx.strokeStyle="#e5e7eb";ctx.fillStyle="#111827";ctx.font="10px sans-serif";for(let ring=1;ring<=4;ring++){ctx.beginPath();for(let i=0;i<labels.length;i++){const a=-Math.PI/2+i*2*Math.PI/labels.length,r=R*ring/4,x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}ctx.closePath();ctx.stroke()}const data=labels.map((lab,i)=>{const g=rows.filter(r=>r.position===lab),made=g.reduce((s,r)=>s+r.made,0),attempts=g.reduce((s,r)=>s+r.attempts,0),rate=pct(made,attempts),ang=-Math.PI/2+i*2*Math.PI/labels.length;return{label:lab,made,attempts,rate,ang,x:cx+Math.cos(ang)*R*rate/100,y:cy+Math.sin(ang)*R*rate/100,color:radarColor(rate)}});data.forEach(d=>{ctx.fillStyle="#111827";ctx.fillText(d.label.slice(0,12),cx+Math.cos(d.ang)*(R+36)-32,cy+Math.sin(d.ang)*(R+36))});if(!rows.length){empty(ctx,c);return}ctx.beginPath();data.forEach((d,i)=>{if(i===0)ctx.moveTo(d.x,d.y);else ctx.lineTo(d.x,d.y)});ctx.closePath();ctx.globalAlpha=.14;ctx.fillStyle="#111827";ctx.fill();ctx.globalAlpha=1;data.forEach((d,i)=>{const next=data[(i+1)%data.length];ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(next.x,next.y);ctx.strokeStyle=d.color;ctx.lineWidth=4;ctx.stroke()});data.forEach(d=>{ctx.beginPath();ctx.arc(d.x,d.y,6,0,Math.PI*2);ctx.fillStyle=d.color;ctx.fill();ctx.fillStyle="#111827";ctx.font="10px sans-serif";if(d.attempts>0)ctx.fillText(d.rate+"%",d.x-10,d.y-10)})}
+function drawRadar(id,labels,rows){
+ const [c,ctx]=clearCanvas(id);
+ if(!c||!ctx)return;
+ const cx=c.width/2,cy=c.height/2+8,R=106;
+ const data=labels.map((lab,i)=>{
+   const g=rows.filter(r=>r.position===lab);
+   const made=g.reduce((s,r)=>s+Number(r.made||0),0);
+   const attempts=g.reduce((s,r)=>s+Number(r.attempts||0),0);
+   const rate=pct(made,attempts);
+   const ang=-Math.PI/2+i*2*Math.PI/labels.length;
+   return{label:lab,made,attempts,rate,ang,color:radarColor(rate)};
+ });
+ if(!rows.length||!data.some(d=>d.attempts>0)){empty(ctx,c);return}
+ const maxRateRaw=Math.max(...data.map(d=>d.rate));
+ const scaleMax=Math.max(20,Math.min(100,Math.ceil(maxRateRaw/10)*10));
+ ctx.strokeStyle="#e5e7eb";ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";ctx.lineWidth=1;
+ for(let ring=1;ring<=4;ring++){
+   const val=Math.round(scaleMax*ring/4);
+   const rr=R*ring/4;
+   ctx.beginPath();
+   for(let i=0;i<labels.length;i++){
+     const a=-Math.PI/2+i*2*Math.PI/labels.length;
+     const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
+     if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+   }
+   ctx.closePath();ctx.stroke();
+   ctx.fillText(val+"%",cx+4,cy-rr+10);
+ }
+ data.forEach(d=>{
+   const rr=R*Math.min(d.rate,scaleMax)/scaleMax;
+   d.x=cx+Math.cos(d.ang)*rr;
+   d.y=cy+Math.sin(d.ang)*rr;
+   const label=d.label.replace("（コーナーミドル）","").replace("（ウィングミドル）","").replace("（コーナー）","").replace("（ウィング）","");
+   ctx.fillStyle="#111827";ctx.font="10px sans-serif";
+   ctx.fillText(label,cx+Math.cos(d.ang)*(R+40)-32,cy+Math.sin(d.ang)*(R+40));
+ });
+ ctx.beginPath();
+ data.forEach((d,i)=>{if(i===0)ctx.moveTo(d.x,d.y);else ctx.lineTo(d.x,d.y)});
+ ctx.closePath();ctx.globalAlpha=.16;ctx.fillStyle="#111827";ctx.fill();ctx.globalAlpha=1;
+ data.forEach((d,i)=>{
+   const next=data[(i+1)%data.length];
+   ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(next.x,next.y);ctx.strokeStyle=d.color;ctx.lineWidth=4;ctx.stroke();
+ });
+ data.forEach(d=>{
+   ctx.beginPath();ctx.arc(d.x,d.y,6,0,Math.PI*2);ctx.fillStyle=d.color;ctx.fill();
+   if(d.attempts>0){
+     ctx.fillStyle="#111827";ctx.font="bold 10px sans-serif";ctx.fillText(d.rate+"%",d.x-12,d.y-10);
+   }
+ });
+ ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";ctx.fillText("自動拡大：最大目盛 "+scaleMax+"%",18,c.height-10);
+}
 
 function setupCanvasClicks(){["typeRateCanvas","allPositionGrowthCanvas","barCanvas"].forEach(id=>{const c=document.getElementById(id);if(!c)return;c.onclick=function(ev){const rect=c.getBoundingClientRect(),x=(ev.clientX-rect.left)*(c.width/rect.width),y=(ev.clientY-rect.top)*(c.height/rect.height);let arr=id==="typeRateCanvas"?typeRateRegions:id==="allPositionGrowthCanvas"?growthRegions:barRegions;const hit=arr.find(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);if(hit)showBarLikeDetail(hit.data,id)}})}
 function showBarLikeDetail(d,id){const el=document.getElementById(id==="typeRateCanvas"?"typeRateDetail":id==="allPositionGrowthCanvas"?"allPositionGrowthDetail":"barDetail");if(!el)return;const best=d.items.reduce((m,r)=>Math.max(m,r.rate),0),latest=d.items.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];el.style.display="block";el.innerHTML=`<b>${safeText(d.type)}${d.label?" / "+safeText(d.label):""}</b><br><div style="font-size:22px;font-weight:900;margin:6px 0;color:${d.color}">${d.rate}%</div><div>成功数：<span class="stat-made">${d.made}</span> 本</div><div>試投数：<span class="stat-attempt">${d.attempts}</span> 本</div><div>自己ベスト：<b>${best}%</b></div>${latest?`<div class="small">最新：${latest.date} / ${safeText(latest.position||latest.practice)} / ${latest.rate}%</div>`:""}`}
@@ -1099,7 +1184,7 @@ async function sendToSheet(recordsToSend){const url=getGasUrl(),status=document.
 async function testGasConnection(){const url=getGasUrl()||document.getElementById("gasUrlInput").value.trim();if(!url){alert("Apps ScriptのURLを入力してください");return}localStorage.setItem(LS_GAS_URL,url);const p=getProfile()||{name:"テスト選手",category:"テスト"};const testRecord={id:"test-"+Date.now(),date:today(),practice:"送信テスト",player:p.name,category:p.category,type:"TEST",position:"接続確認",made:1,attempts:1,rate:100,createdAt:new Date().toISOString()};try{await fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"test",records:[testRecord]})});document.getElementById("gasStatus").innerHTML="送信テストを実行しました。スプレッドシートを確認してください。"}catch(e){document.getElementById("gasStatus").innerHTML="送信テストに失敗しました。"}}
 
 
-/* v5.7 fixed realtime ranking */
+/* v7.2 fixed realtime ranking */
 function getRankKey(type, position){return type+"|"+position}
 
 function gasJsonp(action, params={}){
@@ -1143,8 +1228,8 @@ async function fetchCloudRankings(showAlert=false){
    if(showAlert)alert("チーム順位を更新しました");
  }catch(e){
    console.error("ranking fetch error",e);
-   if(status)status.innerHTML="チーム順位の取得に失敗。Apps Scriptをv5.7に更新してください。";
-   if(showAlert)alert("ランキング取得に失敗しました。Apps Script v5.7へ貼り替え・再デプロイを確認してください。");
+   if(status)status.innerHTML="チーム順位の取得に失敗。Apps Scriptをv7.2に更新してください。";
+   if(showAlert)alert("ランキング取得に失敗しました。Apps Script v7.2へ貼り替え・再デプロイを確認してください。");
  }
 }
 
@@ -1194,52 +1279,199 @@ function downloadCSV(){const header=["日付","選手","カテゴリー","練習
 function clearRecords(){if(confirm("全記録を削除しますか？")){setRecords([]);refresh()}}
 
 
-/* v6.6 first-open init fix ONLY: date + position initial render */
-function firstOpenInputInitOnly(){
+/* v7.2 FIX: 入力ポジションが消える問題を強制修正 */
+function renderInputTypes(){
+  const wrap=document.getElementById("inputTypeButtons");
+  if(!wrap)return;
+  if(!inputType || !TYPES.includes(inputType)) inputType="2P";
+  wrap.innerHTML=TYPES.map(t=>
+    `<button type="button" class="type-btn ${t===inputType?'active':''}" onclick="setInputType('${t}')">${t}</button>`
+  ).join("");
+}
+
+function setInputType(t){
+  inputType=t;
+  const list=POSITIONS[inputType] || [];
+  inputPosition=list[0] || "";
+  renderInputTypes();
+  renderInputPositions();
+  const normal=document.getElementById("normalFields");
+  const mikan=document.getElementById("mikanFields");
+  if(normal) normal.style.display = inputType==="マイカン" ? "none" : "block";
+  if(mikan) mikan.style.display = inputType==="マイカン" ? "block" : "none";
+  if(typeof previewRate==="function") previewRate();
+}
+
+function renderInputPositions(){
+  const wrap=document.getElementById("inputPositionButtons");
+  const select=document.getElementById("inputPositionSelect");
+  if(!inputType || !POSITIONS[inputType]) inputType="2P";
+  const list=POSITIONS[inputType] || [];
+
+  if(!list.length){
+    if(wrap) wrap.innerHTML='<div class="notice">この種目のポジション設定がありません。</div>';
+    if(select) select.innerHTML='';
+    return;
+  }
+
+  if(!inputPosition || !list.includes(inputPosition)) inputPosition=list[0];
+
+  // ボタン表示：元データに入っていた入力ポジションを必ず出す
+  if(wrap){
+    wrap.innerHTML=list.map((p,i)=>{
+      const active=p===inputPosition ? 'active' : '';
+      const color=LINE_COLORS[i%LINE_COLORS.length];
+      return `<button type="button" style="--pos-color:${color}" class="position-btn color-mode ${active}" onclick="setInputPosition('${jsArg(p)}')">${safeText(p)}</button>`;
+    }).join("");
+  }
+
+  // 念のためのプルダウン表示：スマホ・キャッシュ環境でもポジションが消えないようにする
+  if(select){
+    select.innerHTML=list.map(p=>`<option value="${safeText(p)}" ${p===inputPosition?'selected':''}>${safeText(p)}</option>`).join("");
+    select.value=inputPosition;
+  }
+}
+
+function setInputPosition(p){
+  inputPosition=p;
+  const select=document.getElementById("inputPositionSelect");
+  if(select) select.value=p;
+  renderInputPositions();
+}
+
+function forceInputPositionRepair(){
+  const inputView=document.getElementById("inputView");
+  const typeWrap=document.getElementById("inputTypeButtons");
+  const posWrap=document.getElementById("inputPositionButtons");
+  if(!inputView || !typeWrap || !posWrap) return;
+  if(!inputType || !TYPES.includes(inputType)) inputType="2P";
+  if(!POSITIONS[inputType] || !POSITIONS[inputType].length) inputType="2P";
+  const list=POSITIONS[inputType] || [];
+  if(!inputPosition || !list.includes(inputPosition)) inputPosition=list[0] || "";
+  renderInputTypes();
+  renderInputPositions();
+  // 念押し：描画後も空なら、カード型ボタンを直接復元
+  if(!posWrap.innerHTML.trim() && list.length){
+    posWrap.innerHTML=list.map((p,i)=>{
+      const active=p===inputPosition ? 'active' : '';
+      const color=LINE_COLORS[i%LINE_COLORS.length];
+      return `<button type="button" style="--pos-color:${color}" class="position-btn color-mode ${active}" onclick="setInputPosition('${jsArg(p)}')">${safeText(p)}</button>`;
+    }).join("");
+  }
+  const normal=document.getElementById("normalFields");
+  const mikan=document.getElementById("mikanFields");
+  if(normal) normal.style.display = inputType==="マイカン" ? "none" : "block";
+  if(mikan) mikan.style.display = inputType==="マイカン" ? "block" : "none";
+}
+
+
+/* v7.2 FIX: open-day date auto + graph refresh + removed monthly all-position card */
+function forceTodayDateInput(){
   try{
+    const iso=today();
+    const display=todayDisplay();
     const d=document.getElementById("dateInput");
     if(d && !editId){
-      const t=today();
-      if(d.value !== t){
-        d.value = t;
-        d.setAttribute("value", t);
-      }
+      d.type="hidden";
+      d.value=iso;
+      d.setAttribute("value",iso);
+      d.dataset.iso=iso;
+      d.dataset.date=iso;
     }
-    if(typeof renderInputTypes === "function") renderInputTypes();
-    if(typeof renderInputPositions === "function") renderInputPositions();
-    if(typeof repairInputNumberButtons === "function") repairInputNumberButtons();
-    if(typeof previewRate === "function") previewRate();
-    if(typeof renderToday === "function") renderToday();
-  }catch(e){console.error("first open input init error", e);}
+    const badge=document.getElementById("inputTodayBadge");
+    if(badge) badge.textContent=display;
+    if(typeof renderToday==="function")renderToday();
+  }catch(e){console.error("date auto fix",e)}
 }
-function runFirstOpenInputInitOnly(){
-  firstOpenInputInitOnly();
-  setTimeout(firstOpenInputInitOnly, 0);
-  setTimeout(firstOpenInputInitOnly, 80);
-  setTimeout(firstOpenInputInitOnly, 250);
-  setTimeout(firstOpenInputInitOnly, 700);
+function scheduleTodayDateInput(){
+  forceTodayDateInput();
+  setTimeout(forceTodayDateInput,0);
+  setTimeout(forceTodayDateInput,80);
+  setTimeout(forceTodayDateInput,250);
+  setTimeout(forceTodayDateInput,700);
 }
-const __originalInit_firstOpenOnly = init;
-init = function(){
-  __originalInit_firstOpenOnly();
-  runFirstOpenInputInitOnly();
+const __v72_originalInit=init;
+init=function(){
+  __v72_originalInit();
+  scheduleTodayDateInput();
 };
-const __originalLoginWithId_firstOpenOnly = loginWithId;
-loginWithId = async function(){
-  await __originalLoginWithId_firstOpenOnly();
-  runFirstOpenInputInitOnly();
-};
-const __originalAutoLogin_firstOpenOnly = autoLogin;
-autoLogin = async function(){
-  const ok = await __originalAutoLogin_firstOpenOnly();
-  runFirstOpenInputInitOnly();
-  return ok;
-};
-window.addEventListener("pageshow", runFirstOpenInputInitOnly);
-window.addEventListener("focus", firstOpenInputInitOnly);
+if(typeof loginWithId==="function"){
+  const __v72_originalLoginWithId=loginWithId;
+  loginWithId=async function(){
+    await __v72_originalLoginWithId();
+    scheduleTodayDateInput();
+    if(typeof renderGraphs==="function")renderGraphs();
+  };
+}
+if(typeof autoLogin==="function"){
+  const __v72_originalAutoLogin=autoLogin;
+  autoLogin=async function(){
+    const ok=await __v72_originalAutoLogin();
+    scheduleTodayDateInput();
+    if(ok && typeof renderGraphs==="function")renderGraphs();
+    return ok;
+  };
+}
+window.addEventListener("pageshow",scheduleTodayDateInput);
+window.addEventListener("focus",forceTodayDateInput);
 
+
+
+
+/* v8.0 FIX: シューティング入力横に日付＋時刻を固定表示 */
+function formatInputDateTimeDisplay(){
+  const now = new Date();
+  const week = ["日","月","火","水","木","金","土"];
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,"0");
+  const d = String(now.getDate()).padStart(2,"0");
+  const h = String(now.getHours()).padStart(2,"0");
+  const min = String(now.getMinutes()).padStart(2,"0");
+  return `${y}.${m}.${d}（${week[now.getDay()]}） ${h}:${min}`;
+}
+function updateInputDateTimeDisplay(){
+  const badge = document.getElementById("inputTodayBadge") || document.getElementById("todayBadge");
+  if(badge) badge.textContent = formatInputDateTimeDisplay();
+
+  const hiddenDate = document.getElementById("dateInput");
+  if(hiddenDate && !editId){
+    hiddenDate.type = "hidden";
+    hiddenDate.value = today();
+    hiddenDate.dataset.iso = today();
+    hiddenDate.dataset.date = today();
+  }
+}
+function startInputDateTimeClock(){
+  updateInputDateTimeDisplay();
+  setTimeout(updateInputDateTimeDisplay, 0);
+  setTimeout(updateInputDateTimeDisplay, 200);
+  setTimeout(updateInputDateTimeDisplay, 700);
+  if(!window.__ninjaDateTimeClock){
+    window.__ninjaDateTimeClock = setInterval(updateInputDateTimeDisplay, 10000);
+  }
+}
 
 init();
+startInputDateTimeClock();
+updateInputDateTimeDisplay();
+setTimeout(updateInputDateTimeDisplay, 0);
+setTimeout(updateInputDateTimeDisplay, 200);
+window.addEventListener('pageshow', updateInputDateTimeDisplay);
+window.addEventListener('focus', updateInputDateTimeDisplay);
+
+// v7.2: ログイン直後・ページ復帰直後に大きいポジションボタンを必ず復元
+window.addEventListener("load",()=>{
+  forceInputPositionRepair();
+  setTimeout(forceInputPositionRepair,100);
+  setTimeout(forceInputPositionRepair,400);
+});
+window.addEventListener("pageshow",()=>{
+  forceInputPositionRepair();
+  setTimeout(forceInputPositionRepair,100);
+});
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden) forceInputPositionRepair();
+});
 </script>
 </body>
 </html>

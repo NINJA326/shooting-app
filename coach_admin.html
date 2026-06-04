@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v5.7</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v7.7</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -49,7 +49,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v5.7</div>
+  <div class="profile">コーチ管理専用 v7.7</div>
 </header>
 
 <main>
@@ -165,6 +165,7 @@ function adminLogin(){
    document.getElementById("loginScreen").classList.add("hidden");
    loadGasUrlToAdmin();
    loadDashboard();
+   setTimeout(()=>coachLoadPlayers(false),300);
  }else{
    alert("パスワードが違います");
  }
@@ -174,7 +175,7 @@ function showView(id,btn){
  document.getElementById(id).classList.add("active");
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
  btn.classList.add("active");
- if(id==="playersView")coachLoadPlayers();
+ if(id==="playersView")coachLoadPlayers(true);
  if(id==="settingsView")loadGasUrlToAdmin();
 }
 function coachJsonp(action, params={}){
@@ -218,30 +219,36 @@ async function coachAddPlayer(){
    coachLoadPlayers();
  }catch(e){msg.innerHTML="追加に失敗しました。Apps Scriptを確認してください。"}
 }
-async function coachLoadPlayers(){
+async function coachLoadPlayers(showDetail=true){
  const status=document.getElementById("coachPlayerStatus");
  const list=document.getElementById("coachPlayerList");
  if(!status||!list)return;
  status.innerHTML="選手一覧を取得中...";
  list.innerHTML="";
  try{
-   const res=await coachJsonp("listPlayers");
-   if(res.status!=="ok"){status.innerHTML=res.message||"取得できませんでした。";return}
-   const players=res.players||[];
+   let res=await coachJsonp("listPlayers");
+   if(!res || res.status!=="ok"){
+     // 古いApps Scriptが残っている場合の予備呼び出し
+     res=await coachJsonp("players");
+   }
+   if(!res || res.status!=="ok"){
+     status.innerHTML=(res&&res.message?res.message:"取得できませんでした。Apps Scriptを最新版に貼り替えて再デプロイしてください。");
+     return;
+   }
+   const players=Array.isArray(res.players)?res.players:[];
    status.innerHTML=`登録選手：${players.length}人`;
    list.innerHTML=players.length?players.map(p=>`
      <div class="list-item" style="cursor:pointer" onclick="coachShowPlayerDetail('${jsArg(p.playerId)}')">
        <b>${safeText(p.name)}</b> <span class="badge">${safeText(p.category)}</span><br>
        <span class="small">ID：${safeText(p.playerId)} / 作成：${safeText(p.createdAt||"-")}</span>
      </div>
-   `).join(""):"<div class='small'>登録選手がいません。</div>";
- }catch(e){status.innerHTML="選手一覧の取得に失敗しました。";}
+   `).join(""):`<div class="notice">登録選手がいません。上の「選手追加」から選手ID・初回パスワード・選手名を登録してください。</div>`;
+ }catch(e){
+   console.error(e);
+   status.innerHTML="選手一覧の取得に失敗しました。Apps ScriptのURL・アクセス権限・再デプロイを確認してください。";
+   if(showDetail)list.innerHTML=`<div class="notice">原因候補：① Apps Scriptを貼り替えていない ② デプロイを更新していない ③ WebアプリURLが古い ④ アクセス権限が「全員」になっていない</div>`;
+ }
 }
-async 
-
-async 
-
-
 let selectedCoachPlayerId=null;
 
 function drawMonthlyGrowth(monthly){
