@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v8.5
+ * NINJA SHOOTING AVERAGE v8.9
  * 選手ランキング対応 Apps Script
  */
 
@@ -41,11 +41,12 @@ function doGet(e) {
     else if (action === 'rankings') result = getRankings_();
     else if (action === 'listPlayers' || action === 'players') result = listPlayers_();
     else if (action === 'playerDetail') result = playerDetail_(p.playerId);
+    else if (action === 'playerRecords') result = playerRecords_(p.playerId);
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
     else {
       updateSummary_();
-      result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v8.5' };
+      result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v8.9' };
     }
   } catch (err) {
     log_('GET_ERROR', String(err));
@@ -202,6 +203,37 @@ function playerDetail_(playerId) {
   const records = getActiveRecords_().filter(r => r.player === player.name && r.category === player.category);
   return buildPlayerDetail_(player, records);
 }
+
+
+function playerRecords_(playerId) {
+  playerId = String(playerId || '').trim();
+  if (!playerId) return { status:'error', message:'選手IDがありません。' };
+
+  const players = listPlayers_().players;
+  const player = players.find(p => p.playerId === playerId);
+  if (!player) return { status:'error', message:'選手が見つかりません。' };
+
+  const records = getActiveRecords_()
+    .filter(r => r.player === player.name && r.category === player.category)
+    .sort((a,b) => String(a.date).localeCompare(String(b.date)))
+    .map(r => ({
+      id: r.id,
+      date: r.date,
+      practice: r.practice || '',
+      player: r.player,
+      category: r.category,
+      type: r.type,
+      position: r.position,
+      made: Number(r.made || 0),
+      attempts: Number(r.attempts || 0),
+      rate: Number(r.rate || 0),
+      createdAt: '',
+      syncAction: 'cloud'
+    }));
+
+  return { status:'ok', player, records };
+}
+
 
 function buildPlayerDetail_(player, records) {
   const made = records.reduce((s,r)=>s+r.made,0);
