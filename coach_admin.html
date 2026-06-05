@@ -140,6 +140,34 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 </div>
 
 <script>
+
+/* v8.8 FIX: コーチ用も古いキャッシュを自動削除 */
+(function(){
+  const APP_VERSION = "8.8-coach";
+  const VERSION_KEY = "ninja_coach_app_version_seen";
+  async function clearOldAppCache(){
+    try{
+      if("serviceWorker" in navigator){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(reg => reg.unregister()));
+      }
+      if(window.caches){
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(k => k.startsWith("ninja-shooting-")).map(k => caches.delete(k)));
+      }
+      const seen = localStorage.getItem(VERSION_KEY);
+      if(seen !== APP_VERSION){
+        localStorage.setItem(VERSION_KEY, APP_VERSION);
+        if(!location.search.includes("fresh=1")){
+          location.replace(location.pathname + "?fresh=1&v=8.8");
+        }
+      }
+    }catch(e){}
+  }
+  clearOldAppCache();
+})();
+
+
 const DEFAULT_GAS_URL="https://script.google.com/macros/s/AKfycbyrsLUPSq5UTAbi95GkKUh_Rhug1MdABZzVJ2Mb6rDRQjHhrPYKU2IrFHpSVCO4j5eRzg/exec";
 const LS_GAS_URL="ninja_gas_url_v1";
 let dashboardData=null;

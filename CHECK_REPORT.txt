@@ -1,15 +1,26 @@
-NINJA SHOOTING AVERAGE v8.7
+NINJA SHOOTING AVERAGE v8.8
 
 【今回の修正】
-- ランキング画面の表示文を変更
-  「このポジションの記録がありません。」→「ランキング外」
+- 自動更新対応を追加
+- 古いService Workerを自動解除
+- 古い ninja-shooting キャッシュを自動削除
+- 固定URLでも最新版を読み込みやすく修正
+- 選手用・コーチ用どちらにも対応
+- sw.jsをキャッシュ保存しない方式に変更
+
+【運用】
+選手へ毎回 ?v=88 のURLを送る必要はありません。
+基本URLは固定のままでOKです。
+
+選手用：
+https://ninja326.github.io/shooting-app/
+
+コーチ用：
+https://ninja326.github.io/shooting-app/coach_admin.html
 
 【触っていない内容】
 - 入力ポジション
 - 保存処理
-- 保存後の数値リセット
-- 日付＋時刻表示
-- データ/グラフ描画本体
 - ランキング計算
-- コーチアプリ
+- データ/グラフ描画本体
 - Apps Script
