@@ -1,6 +1,6 @@
 /**
- * NINJA SHOOTING AVERAGE v7.7
- * 管理専用コーチアプリ対応 Apps Script
+ * NINJA SHOOTING AVERAGE v8.5
+ * 選手ランキング対応 Apps Script
  */
 
 const SHEET_RECORDS = 'shooting_records';
@@ -45,7 +45,7 @@ function doGet(e) {
     else if (action === 'dashboard') result = dashboard_();
     else {
       updateSummary_();
-      result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v7.7' };
+      result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v8.5' };
     }
   } catch (err) {
     log_('GET_ERROR', String(err));
@@ -292,7 +292,19 @@ function getRankings_() {
     rankingMap[key].push({ player:g.player, category:g.category, made:g.made, attempts:g.attempts, rate:g.rate });
   });
   Object.keys(rankingMap).forEach(key => { rankingMap[key] = rankingMap[key].filter(r => Number(r.attempts||0) >= RANK_MIN_ATTEMPTS).sort((a,b)=>b.rate-a.rate||b.attempts-a.attempts); });
-  updateSummary_();
+  
+  const overallMap = new Map();
+  active.forEach(r => {
+    const key = `${r.player}|${r.category}`;
+    if (!overallMap.has(key)) overallMap.set(key, { player:r.player, category:r.category, made:0, attempts:0 });
+    const g = overallMap.get(key);
+    g.made += r.made;
+    g.attempts += r.attempts;
+  });
+  rankingMap.__overall = Array.from(overallMap.values())
+    .map(g => ({ ...g, rate: g.attempts>0?Math.round(g.made/g.attempts*100):0 }))
+    .filter(g => g.attempts > 0);
+updateSummary_();
   return { status:'ok', generatedAt:new Date().toISOString(), rankings:rankingMap };
 }
 
