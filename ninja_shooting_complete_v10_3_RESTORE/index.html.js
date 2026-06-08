@@ -1,0 +1,1670 @@
+
+
+/* v8.8 FIX: 固定URLで最新版を読み込みやすくする自動更新対応 */
+(function(){
+  const APP_VERSION = "10.3";
+  const VERSION_KEY = "ninja_app_version_seen";
+  async function clearOldAppCache(){
+    try{
+      if("serviceWorker" in navigator){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(reg => reg.unregister()));
+      }
+      if(window.caches){
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(k => k.startsWith("ninja-shooting-")).map(k => caches.delete(k)));
+      }
+      const seen = localStorage.getItem(VERSION_KEY);
+      if(seen !== APP_VERSION){
+        localStorage.setItem(VERSION_KEY, APP_VERSION);
+        if(!location.search.includes("fresh=1")){
+          location.replace(location.pathname + "?fresh=1&v=" + APP_VERSION);
+        }
+      }
+    }catch(e){
+      console.warn("auto update cache clear skipped", e);
+    }
+  }
+  clearOldAppCache();
+})();
+
+
+const DEFAULT_GAS_URL="https://script.google.com/macros/s/AKfycbyrsLUPSq5UTAbi95GkKUh_Rhug1MdABZzVJ2Mb6rDRQjHhrPYKU2IrFHpSVCO4j5eRzg/exec";
+const RANK_MIN_ATTEMPTS=500;
+const TYPES=["2P","3P","FT","マイカン"];
+const POSITIONS={
+ "2P":["右0度（コーナーミドル）","左0度（コーナーミドル）","右45度（ウィングミドル）","左45度（ウィングミドル）","90度（トップミドル）","右エルボー","左エルボー"],
+ "3P":["右0度（コーナー）","左0度（コーナー）","右45度（ウィング）","左45度（ウィング）","90度（トップ）"],
+ "FT":["フリースロー"],
+ "マイカン":["右レイアップ","左レイアップ"]
+};
+const LINE_COLORS=["#d91828","#111827","#2563eb","#16a34a","#f59e0b","#7c3aed","#0f766e","#db2777"];
+const TYPE_COLORS={"2P":"#d91828","3P":"#111827","FT":"#2563eb","マイカン":"#16a34a"};
+const QUICK_VALUES=[5,10,20,25,30,50,75,100,150,200,300,500];
+const LS_PROFILE="ninja_profile_clean_v1", LS_RECORDS="ninja_records_clean_v1", LS_GAS_URL="ninja_gas_url_v1";
+function safeUuid(prefix="id"){
+  try{
+    if(window.crypto && typeof window.crypto.randomUUID==="function") return window.safeUuid();
+  }catch(e){}
+  return prefix+"-"+Date.now()+"-"+Math.random().toString(36).slice(2);
+}
+
+let cloudRankings=null;
+let cloudRankFetchedAt=null;
+let inputType="2P", inputPosition=POSITIONS["2P"][0];
+let rankType="2P", rankPosition=POSITIONS["2P"][0];
+let compareType="2P", allPositionGrowthType="2P";
+let editId=null, typeRateRegions=[], barRegions=[], growthRegions=[], modalLinePoints=[], positionLinePoints=[], growthPosition=POSITIONS['2P'][0];
+
+function today(){const d=new Date();const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');const day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`}
+function todayDisplay(){const d=new Date();return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`}
+function displayDateFromIso(value){const s=String(value||'');const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${Number(m[1])}.${Number(m[2])}.${Number(m[3])}`:s}
+function isoDateFromDisplay(value){const s=String(value||'').trim();let m=s.match(/^(\d{4})[.\/年-](\d{1,2})[.\/月-](\d{1,2})/);if(m){return `${m[1]}-${String(Number(m[2])).padStart(2,'0')}-${String(Number(m[3])).padStart(2,'0')}`}return s}
+function getInputDateValue(){const d=document.getElementById('dateInput');if(!d)return today();return d.dataset.iso || isoDateFromDisplay(d.value) || today()}
+function load(k,f){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(f))}catch(e){return f}}
+function saveLocal(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function getProfile(){return load(LS_PROFILE,null)} function getRecords(){return load(LS_RECORDS,[])} function setRecords(v){saveLocal(LS_RECORDS,v)}
+function n(id){return Number(document.getElementById(id)?.value||0)} function pct(m,a){return a>0?Math.round(m/a*100):0}
+function safeText(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+function jsArg(s){return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'")}
+
+
+const LS_AUTH="ninja_auth_v4";
+
+function getAuth(){return load(LS_AUTH,null)}
+function setAuth(auth){saveLocal(LS_AUTH,auth)}
+function clearAuth(){localStorage.removeItem(LS_AUTH)}
+
+function jsonp(action, params={}){
+ return new Promise((resolve,reject)=>{
+   const url=getGasUrl();
+   if(!url){reject(new Error("Apps Script URL未設定"));return}
+   const callback="authCb_"+Date.now()+"_"+Math.floor(Math.random()*100000);
+   const qs=new URLSearchParams({...params,action,callback}).toString();
+   const script=document.createElement("script");
+   window[callback]=function(data){
+     resolve(data);
+     delete window[callback];
+     script.remove();
+   };
+   script.onerror=function(){
+     reject(new Error("通信エラー"));
+     delete window[callback];
+     script.remove();
+   };
+   script.src=url+(url.includes("?")?"&":"?")+qs;
+   document.body.appendChild(script);
+ });
+}
+
+async function loginWithId(){
+ const playerId=document.getElementById("loginId").value.trim();
+ const password=document.getElementById("loginPassword").value.trim();
+ const msg=document.getElementById("loginMessage");
+ if(!playerId||!password){
+   msg.innerHTML="選手IDとパスワードを入力してください。";
+   return;
+ }
+ msg.innerHTML="ログイン中...";
+ try{
+   const res=await jsonp("loginPlayer",{playerId,password});
+   if(res.status!=="ok"){
+     msg.innerHTML=res.message||"ログインできませんでした。";
+     return;
+   }
+   const prof={playerId:res.player.playerId,name:res.player.name,category:res.player.category};
+   setAuth({playerId,password});
+   saveLocal(LS_PROFILE,prof);
+   applyProfile(prof);
+   document.getElementById("loginScreen").classList.add("hidden");
+   refresh();
+   forceDateTimeAfterLogin();
+   forceInputPositionRepair();
+   setTimeout(forceInputPositionRepair,50);
+   setTimeout(forceInputPositionRepair,300);
+   if(typeof renderPlayerManage==='function')renderPlayerManage();
+   syncMyRecordsFromSheet(true);
+ }catch(e){
+   msg.innerHTML="ログインに失敗しました。通信環境を確認してください。";
+ }
+}
+
+async function autoLogin(){
+ const auth=getAuth();
+ if(!auth)return false;
+ try{
+   const res=await jsonp("loginPlayer",{playerId:auth.playerId,password:auth.password});
+   if(res.status==="ok"){
+     const prof={playerId:res.player.playerId,name:res.player.name,category:res.player.category};
+     saveLocal(LS_PROFILE,prof);
+     applyProfile(prof);
+     document.getElementById("loginScreen").classList.add("hidden");
+     forceDateTimeAfterLogin();
+     setTimeout(forceInputPositionRepair,0);
+     setTimeout(forceInputPositionRepair,150);
+     syncMyRecordsFromSheet(false);
+     return true;
+   }
+ }catch(e){}
+ return false;
+}
+
+function logoutAccount(){
+ if(!confirm("ログアウトしますか？"))return;
+ clearAuth();
+ localStorage.removeItem(LS_PROFILE);
+ document.getElementById("loginScreen").classList.remove("hidden");
+}
+
+function showLogin(){
+ document.getElementById("loginScreen").classList.remove("hidden");
+}
+
+function renderPlayerManage(){
+ const prof=getProfile();
+ const box=document.getElementById("playerManageProfile");
+ const sel=document.getElementById("playerCategorySelect");
+ if(!prof){
+   if(box)box.innerHTML="ログイン情報がありません。";
+   return;
+ }
+ if(box)box.innerHTML=`<b>${safeText(prof.name)}</b> <span class="badge">${safeText(prof.category)}</span><br>ID：${safeText(prof.playerId||"")}`;
+ if(sel)sel.value=prof.category;
+}
+
+async function changeMyCategory(){
+ const auth=getAuth();
+ const prof=getProfile();
+ const msg=document.getElementById("categoryMessage");
+ const category=document.getElementById("playerCategorySelect").value;
+ if(!auth||!prof){
+   msg.innerHTML="ログイン情報がありません。再ログインしてください。";
+   return;
+ }
+ msg.innerHTML="変更中...";
+ try{
+   const res=await jsonp("updatePlayerCategory",{playerId:auth.playerId,category});
+   if(res.status!=="ok"){
+     msg.innerHTML=res.message||"変更できませんでした。";
+     return;
+   }
+   prof.category=category;
+   saveLocal(LS_PROFILE,prof);
+   applyProfile(prof);
+   renderPlayerManage();
+   msg.innerHTML='<span class="success">カテゴリーを変更しました。</span>';
+ }catch(e){
+   msg.innerHTML="変更に失敗しました。通信環境を確認してください。";
+ }
+}
+
+async function changeMyPassword(){
+ const auth=getAuth();
+ const msg=document.getElementById("passwordMessage");
+ if(!auth){
+   msg.innerHTML="ログイン情報がありません。再ログインしてください。";
+   return;
+ }
+ const oldPassword=document.getElementById("oldPasswordInput").value.trim();
+ const newPassword=document.getElementById("newPasswordInput").value.trim();
+ if(!oldPassword||!newPassword){
+   msg.innerHTML="現在のパスワードと新しいパスワードを入力してください。";
+   return;
+ }
+ if(newPassword.length<4){
+   msg.innerHTML="新しいパスワードは4文字以上にしてください。";
+   return;
+ }
+ msg.innerHTML="変更中...";
+ try{
+   const res=await jsonp("changePassword",{playerId:auth.playerId,oldPassword,newPassword});
+   if(res.status!=="ok"){
+     msg.innerHTML=res.message||"変更できませんでした。";
+     return;
+   }
+   setAuth({playerId:auth.playerId,password:newPassword});
+   document.getElementById("oldPasswordInput").value="";
+   document.getElementById("newPasswordInput").value="";
+   msg.innerHTML="パスワードを変更しました。";
+ }catch(e){
+   msg.innerHTML="変更に失敗しました。通信環境を確認してください。";
+ }
+}
+
+function init(){
+ const __dateEl=document.getElementById("dateInput");if(__dateEl){__dateEl.type="hidden";__dateEl.value=today();__dateEl.dataset.iso=today();}
+ renderSharedQuickButtons();renderInputTypes();renderInputPositions();renderRankSelectors();renderCompareButtons();renderAllPositionGrowthButtons();
+ autoLogin().then(ok=>{if(!ok){document.getElementById("loginScreen").classList.remove("hidden")}});
+ previewRate();refresh();setupCanvasClicks();setupPositionLineClick();
+}
+function applyProfile(p){document.getElementById("headerUser").textContent=p.name+" / "+p.category;document.getElementById("playerView").value=p.name;document.getElementById("categoryView").value=p.category;document.getElementById("adminName").value=p.name;document.getElementById("adminCategory").value=p.category}
+
+
+
+
+
+
+function updateProfile(){const name=document.getElementById("adminName").value.trim(),category=document.getElementById("adminCategory").value;if(!name)return;const p={name,category};saveLocal(LS_PROFILE,p);applyProfile(p);refresh();alert("変更しました")}
+
+
+/* v7.2 fixed input position */
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* v7.2 FIX: input shooting position buttons */
+function renderInputTypes(){
+ const wrap=document.getElementById("inputTypeButtons");
+ if(!wrap)return;
+ if(!inputType||!TYPES.includes(inputType))inputType="2P";
+ wrap.innerHTML=TYPES.map(t=>`
+   <button type="button" class="type-btn ${t===inputType?'active':''}" onclick="setInputType('${t}')">${t}</button>
+ `).join("");
+}
+
+function setInputType(t){
+ inputType=t;
+ const list=POSITIONS[t]||[];
+ inputPosition=list[0]||"";
+ renderInputTypes();
+ renderInputPositions();
+ const normal=document.getElementById("normalFields");
+ const mikan=document.getElementById("mikanFields");
+ if(normal)normal.style.display=t==="マイカン"?"none":"block";
+ if(mikan)mikan.style.display=t==="マイカン"?"block":"none";
+ if(typeof previewRate==="function")previewRate();
+}
+
+function renderInputPositions(){
+ const wrap=document.getElementById("inputPositionButtons");
+ if(!wrap)return;
+ const list=POSITIONS[inputType]||[];
+ if(!list.includes(inputPosition))inputPosition=list[0]||"";
+ wrap.innerHTML=list.map((p,i)=>`
+   <button type="button" style="--pos-color:${LINE_COLORS[i%LINE_COLORS.length]}" class="position-btn color-mode ${p===inputPosition?'active':''}" onclick="setInputPosition('${jsArg(p)}')">${safeText(p)}</button>
+ `).join("");
+}
+
+function setInputPosition(p){
+ inputPosition=p;
+ renderInputPositions();
+}
+
+function renderSharedQuickButtons(){document.getElementById("madeQuickButtons").innerHTML=QUICK_VALUES.map(v=>`<button type="button" onclick="setMade(${v})">${v}</button>`).join("");document.getElementById("attemptQuickButtons").innerHTML=QUICK_VALUES.map(v=>`<button type="button" onclick="setAttempt(${v})">${v}</button>`).join("")}
+
+
+
+
+
+
+
+
+function setMade(v){document.getElementById("madeInput").value=v;previewRate()} function setAttempt(v){document.getElementById("attemptInput").value=v;previewRate()}
+function previewRate(){if(inputType==="マイカン"){document.getElementById("mikanPreview").textContent=`右${pct(n("rightMade"),n("rightAttempt"))}% / 左${pct(n("leftMade"),n("leftAttempt"))}%`}else{document.getElementById("ratePreview").textContent=pct(n("madeInput"),n("attemptInput"))+"%"}}
+function valid(m,a){if(a<=0){alert("試投数を入力してください");return false}if(m<0||m>a){alert("成功数は試投数以下にしてください");return false}return true}
+
+
+/* v7.2 final fixed controls */
+
+// 入力：種目・ポジション
+
+
+
+
+
+
+
+
+
+// グラフ：2P・3P切替
+function renderAllPositionGrowthButtons(){
+ const wrap=document.getElementById("allPositionTypeButtons");
+ if(!wrap)return;
+ wrap.innerHTML=["2P","3P"].map(t=>`<button type="button" class="type-btn ${t===allPositionGrowthType?'active':''}" onclick="setAllPositionGrowthType('${t}')">${t}</button>`).join("");
+ renderGrowthPositionButtons();
+}
+function setAllPositionGrowthType(t){
+ allPositionGrowthType=t;
+ growthPosition=POSITIONS[t][0];
+ renderAllPositionGrowthButtons();
+ renderGraphs();
+}
+function renderGrowthPositionButtons(){
+ const wrap=document.getElementById("growthPositionButtons");
+ if(!wrap)return;
+ const positions=POSITIONS[allPositionGrowthType]||[];
+ if(!positions.includes(growthPosition))growthPosition=positions[0];
+ wrap.innerHTML=positions.map((p,i)=>`<button type="button" style="--pos-color:${LINE_COLORS[i%LINE_COLORS.length]}" class="position-btn color-mode ${p===growthPosition?'active':''}" onclick="setGrowthPosition('${jsArg(p)}')">${safeText(p)}</button>`).join("");
+}
+function setGrowthPosition(p){
+ growthPosition=p;
+ renderGrowthPositionButtons();
+ renderGraphs();
+ if(typeof openGraphModal==="function")openGraphModal(p);
+}
+
+// 比較：2P・3P切替
+function renderCompareButtons(){
+ const wrap=document.getElementById("compareTypeButtons");
+ if(!wrap)return;
+ wrap.innerHTML=["2P","3P"].map(t=>`<button type="button" class="type-btn ${t===compareType?'active':''}" onclick="setCompareType('${t}')">${t}</button>`).join("");
+}
+function setCompareType(t){
+ compareType=t;
+ renderCompareButtons();
+ renderGraphs();
+}
+
+// 順位：種目・ポジション切替
+
+function getMyRankText(type, position){
+ const cloudText=getMyCloudRankText(type,position);
+ if(cloudText!==null)return cloudText;
+ const prof=getProfile();
+ if(!prof)return "";
+ const groups={};
+ getRecords().filter(r=>r.type===type&&r.position===position).forEach(r=>{
+  const key=r.player+"|"+r.category;
+  groups[key]=groups[key]||{player:r.player,category:r.category,made:0,attempts:0};
+  groups[key].made+=Number(r.made||0);
+  groups[key].attempts+=Number(r.attempts||0);
+ });
+ const rows=Object.values(groups)
+  .map(x=>({...x,rate:pct(x.made,x.attempts)}))
+  .filter(x=>x.attempts>=RANK_MIN_ATTEMPTS)
+  .sort((a,b)=>b.rate-a.rate||b.attempts-a.attempts);
+ const myKey=prof.name+"|"+prof.category;
+ const allGroups=Object.values(groups);
+ const mine=allGroups.find(r=>(r.player+"|"+r.category)===myKey);
+ if(!mine||mine.attempts<RANK_MIN_ATTEMPTS)return `${mine?mine.attempts:0}/500`;
+ const idx=rows.findIndex(r=>r.player===prof.name&&r.category===prof.category);
+ if(idx<0)return `${mine.attempts}/500`;
+ return `${idx+1}位/${rows.length}人`;
+}
+
+
+function renderOverallRanking(){
+ const prof=getProfile();
+ const attemptsEl=document.getElementById("overallAttemptsRank");
+ const madeEl=document.getElementById("overallMadeRank");
+ const rateEl=document.getElementById("overallRateRank");
+ const detail=document.getElementById("overallRankingDetail");
+ if(!attemptsEl||!madeEl||!rateEl||!detail)return;
+
+ if(!prof){
+   attemptsEl.innerHTML="-"; madeEl.innerHTML="-"; rateEl.innerHTML="-";
+   detail.innerHTML="ログイン情報がありません。";
+   return;
+ }
+
+ let rows=null;
+ if(cloudRankings && Array.isArray(cloudRankings.__overall)){
+   rows=cloudRankings.__overall;
+ }else{
+   const groups={};
+   getRecords().forEach(r=>{
+     const key=(r.player||"")+"|"+(r.category||"");
+     groups[key]=groups[key]||{player:r.player,category:r.category,made:0,attempts:0};
+     groups[key].made+=Number(r.made||0);
+     groups[key].attempts+=Number(r.attempts||0);
+   });
+   rows=Object.values(groups).map(x=>({...x,rate:pct(x.made,x.attempts)}));
+ }
+
+ const my=rows.find(r=>r.player===prof.name && r.category===prof.category);
+ if(!my || Number(my.attempts||0)<=0){
+   attemptsEl.innerHTML="-"; madeEl.innerHTML="-"; rateEl.innerHTML="-";
+   detail.innerHTML="まだランキング対象の記録がありません。";
+   return;
+ }
+
+ const totalPlayers=rows.filter(r=>Number(r.attempts||0)>0).length;
+ const byAttempts=rows.slice().filter(r=>Number(r.attempts||0)>0).sort((a,b)=>Number(b.attempts||0)-Number(a.attempts||0));
+ const byMade=rows.slice().filter(r=>Number(r.attempts||0)>0).sort((a,b)=>Number(b.made||0)-Number(a.made||0));
+ const byRate=rows.slice().filter(r=>Number(r.attempts||0)>0).sort((a,b)=>Number(b.rate||0)-Number(a.rate||0)||Number(b.attempts||0)-Number(a.attempts||0));
+
+ const findRank=(arr)=>arr.findIndex(r=>r.player===prof.name && r.category===prof.category)+1;
+
+ const attemptsRank=findRank(byAttempts);
+ const madeRank=findRank(byMade);
+ const rateRank=findRank(byRate);
+
+ attemptsEl.innerHTML=attemptsRank>0?`${attemptsRank}位<br><span style="font-size:11px;color:#6b7280">${Number(my.attempts||0)}本</span>`:"-";
+ madeEl.innerHTML=madeRank>0?`${madeRank}位<br><span style="font-size:11px;color:#6b7280">${Number(my.made||0)}本</span>`:"-";
+ rateEl.innerHTML=rateRank>0?`${rateRank}位<br><span style="font-size:11px;color:#6b7280">${Number(my.rate||0)}%</span>`:"-";
+
+ detail.innerHTML=`<div class="list-item">
+   <b>${safeText(prof.name)}</b> <span class="badge">${safeText(prof.category)}</span><br>
+   総試投数：<span class="stat-attempt">${Number(my.attempts||0)}</span>本（${attemptsRank}位 / ${totalPlayers}人）<br>
+   総成功数：<span class="stat-made">${Number(my.made||0)}</span>本（${madeRank}位 / ${totalPlayers}人）<br>
+   総合成功率：<b>${Number(my.rate||0)}%</b>（${rateRank}位 / ${totalPlayers}人）
+ </div>`;
+}
+
+function renderRanking(){
+ let rows=null;
+ const cloudRows=getCloudRankRows(rankType,rankPosition);
+ if(cloudRows){
+   rows=cloudRows
+    .filter(r=>Number(r.attempts||0)>=RANK_MIN_ATTEMPTS)
+    .slice(0,5)
+    .map(r=>({player:r.player,category:r.category,made:Number(r.made||0),attempts:Number(r.attempts||0),rate:Number(r.rate||0)}));
+ }else{
+   const groups={};
+   getRecords().filter(r=>r.type===rankType&&r.position===rankPosition).forEach(r=>{
+    const key=r.player+"|"+r.category;
+    groups[key]=groups[key]||{player:r.player,category:r.category,made:0,attempts:0};
+    groups[key].made+=Number(r.made||0);groups[key].attempts+=Number(r.attempts||0);
+   });
+   rows=Object.values(groups).map(x=>({...x,rate:pct(x.made,x.attempts)}))
+    .filter(x=>x.attempts>=RANK_MIN_ATTEMPTS)
+    .sort((a,b)=>b.rate-a.rate||b.attempts-a.attempts).slice(0,5);
+ }
+ const el=document.getElementById("rankingList");
+ if(!el)return;
+ el.innerHTML=rows.length?rows.map((r,i)=>`<div class="list-item rank-card rank-${i+1}"><span class="ranknum">${i+1}位</span> <b>${safeText(r.player)}</b> <span class="badge">${safeText(r.category)}</span><br>${r.rate}%　<span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span></div>`).join(""):`ランキング外`;
+}
+
+function renderRankSelectors(){
+ const typeWrap=document.getElementById("rankTypeButtons");
+ const posWrap=document.getElementById("rankPositionButtons");
+ if(!typeWrap||!posWrap)return;
+ typeWrap.innerHTML=TYPES.map(t=>`<button type="button" class="type-btn ${t===rankType?'active':''}" onclick="setRankType('${t}')">${t}</button>`).join("");
+ if(!POSITIONS[rankType].includes(rankPosition))rankPosition=POSITIONS[rankType][0];
+ posWrap.innerHTML=(POSITIONS[rankType]||[]).map((p,i)=>{
+  const rankText=typeof getMyRankText==="function"?getMyRankText(rankType,p):"";
+  return `<button type="button" style="--pos-color:${LINE_COLORS[i%LINE_COLORS.length]}" class="position-btn color-mode ${p===rankPosition?'active':''}" onclick="setRankPosition('${jsArg(p)}')">
+    <span>${safeText(p)}</span>
+    <span style="float:right;font-size:12px;font-weight:900;opacity:.9">${rankText}</span>
+  </button>`;
+ }).join("");
+}
+function setRankType(t){
+ rankType=t;
+ rankPosition=POSITIONS[t][0];
+ renderRankSelectors();
+ renderRanking();
+}
+function setRankPosition(p){
+ rankPosition=p;
+ renderRankSelectors();
+ renderRanking();
+}
+
+
+function clearInputNumbersAfterSave(){
+ const ids=["madeInput","attemptInput","rightMade","rightAttempt","leftMade","leftAttempt"];
+ ids.forEach(id=>{
+   const el=document.getElementById(id);
+   if(el)el.value="";
+ });
+ if(typeof previewRate==="function")previewRate();
+}
+
+function saveRecord(){
+ const prof=getProfile(); if(!prof){alert("ログイン登録してください");return}
+ const date=getInputDateValue(), practice=document.getElementById("practiceInput").value; let rows=getRecords();
+ if(editId){const idx=rows.findIndex(r=>r.id===editId);if(idx<0){cancelEdit();return}if(inputType==="マイカン"){alert("マイカンは削除して入力し直してください");return}const made=n("madeInput"),attempts=n("attemptInput");if(!valid(made,attempts))return;rows[idx]={...rows[idx],date,practice,player:prof.name,category:prof.category,type:inputType,position:inputPosition,made,attempts,rate:pct(made,attempts),updatedAt:new Date().toISOString(),syncAction:"update"};setRecords(rows);clearInputNumbersAfterSave();(typeof sendToSheet==='function'?sendToSheet:function(){})([rows[idx]]);document.getElementById("message").innerHTML=`<div class="success">変更しました。${made}/${attempts}（${pct(made,attempts)}%）</div>`;cancelEdit(false);refresh();return}
+ let msg="", toSync=[];
+ if(inputType==="マイカン"){const rm=n("rightMade"),ra=n("rightAttempt"),lm=n("leftMade"),la=n("leftAttempt");if(!valid(rm,ra)||!valid(lm,la))return;const r1={id:safeUuid(),date,practice,player:prof.name,category:prof.category,type:"マイカン",position:"右レイアップ",made:rm,attempts:ra,rate:pct(rm,ra),createdAt:new Date().toISOString(),syncAction:"create"};const r2={id:safeUuid(),date,practice,player:prof.name,category:prof.category,type:"マイカン",position:"左レイアップ",made:lm,attempts:la,rate:pct(lm,la),createdAt:new Date().toISOString(),syncAction:"create"};rows.push(r1,r2);toSync=[r1,r2];msg=`<div class="success">保存しました。右 ${rm}/${ra}・左 ${lm}/${la}${bestMessage([r1,r2])}</div>`}
+ else{const made=n("madeInput"),attempts=n("attemptInput");if(!valid(made,attempts))return;const rec={id:safeUuid(),date,practice,player:prof.name,category:prof.category,type:inputType,position:inputPosition,made,attempts,rate:pct(made,attempts),createdAt:new Date().toISOString(),syncAction:"create"};rows.push(rec);toSync=[rec];msg=`<div class="success">保存しました。${inputType} ${inputPosition} ${made}/${attempts}（${rec.rate}%）${bestMessage([rec])}</div>`}
+ setRecords(rows);cloudRankings=null;document.getElementById("message").innerHTML=msg;clearInputNumbersAfterSave();(typeof sendToSheet==='function'?sendToSheet:function(){})(toSync);refresh();forceInputPositionRepair();setTimeout(forceInputPositionRepair,100);setTimeout(()=>syncMyRecordsFromSheet(false),1200);
+}
+function bestMessage(newRows){const rows=getRecords();let out="";newRows.forEach(r=>{const best=rows.filter(x=>x.player===r.player&&x.type===r.type&&x.position===r.position&&x.id!==r.id).reduce((m,x)=>Math.max(m,x.rate),0);if(r.attempts>=5&&r.rate>best)out+=`<br>🎉 自己ベスト更新！ ${best}% → ${r.rate}%`});return out}
+
+/* v8.9 FIX: スプレッドシートを正本にして端末データを上書き */
+async function syncMyRecordsFromSheet(showMessage=false){
+  const prof = getProfile();
+  const status = document.getElementById("cloudLoadStatus") || document.getElementById("syncStatus");
+  if(!prof || !prof.playerId){
+    if(status && showMessage) status.innerHTML = "スプレッドシート同期：ログイン情報がありません。";
+    return false;
+  }
+  if(!getGasUrl()){
+    if(status && showMessage) status.innerHTML = "スプレッドシート同期：Apps Script URL未設定です。";
+    return false;
+  }
+  try{
+    if(status && showMessage) status.innerHTML = "スプレッドシートから記録を取得中...";
+    const res = await jsonp("playerRecords", { playerId: prof.playerId });
+    if(!res || res.status !== "ok"){
+      if(status) status.innerHTML = "スプレッドシート同期：取得できませんでした。Apps Scriptを最新版に更新してください。";
+      return false;
+    }
+    const cloudRecords = Array.isArray(res.records) ? res.records : [];
+    setRecords(cloudRecords);
+    cloudRankings = null;
+    refresh();
+    if(typeof forceInputPositionRepair==="function") forceInputPositionRepair();
+    if(typeof updateInputDateTimeDisplay==="function") updateInputDateTimeDisplay();
+    if(status) status.innerHTML = `スプレッドシート同期済み：${cloudRecords.length}件`;
+    return true;
+  }catch(e){
+    console.error("syncMyRecordsFromSheet", e);
+    if(status) status.innerHTML = "スプレッドシート同期に失敗しました。通信環境を確認してください。";
+    return false;
+  }
+}
+
+function refresh(){renderToday();renderRecordView();renderGraphs();renderRankSelectors();renderRanking();renderOverallRanking();if(typeof renderAdmin==="function")renderAdmin()}
+document.addEventListener("change",e=>{if(e.target.id==="dateInput")renderToday()});
+
+function renderToday(){const p=getProfile();if(!p)return;const date=getInputDateValue();const list=getRecords().filter(r=>r.player===p.name&&isoDateFromDisplay(r.date)===date);document.getElementById("todayList").innerHTML=list.length?list.slice().reverse().map(r=>`<div class="list-item"><b>${safeText(r.type)}</b> <span class="badge">${safeText(r.position)}</span><br><span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span>　${r.rate}%　<span class="small">${safeText(r.practice)}</span><div class="row" style="margin-top:8px"><button class="secondary" onclick="editRecord('${r.id}')">変更</button><button class="ghost" onclick="deleteRecord('${r.id}')">削除</button></div></div>`).join(""):"まだ記録がありません。"}
+function editRecord(id){const r=getRecords().find(x=>x.id===id);if(!r)return;if(r.type==="マイカン"){alert("マイカンは削除して入力し直してください");return}editId=id;const __editDate=document.getElementById("dateInput");if(__editDate){__editDate.type="hidden";__editDate.value=isoDateFromDisplay(r.date);__editDate.dataset.iso=isoDateFromDisplay(r.date);}document.getElementById("practiceInput").value=r.practice;inputType=r.type;inputPosition=r.position;renderInputTypes();renderInputPositions();document.getElementById("normalFields").style.display="block";document.getElementById("mikanFields").style.display="none";document.getElementById("madeInput").value=r.made;document.getElementById("attemptInput").value=r.attempts;previewRate();document.getElementById("saveBtn").textContent="変更を保存";document.getElementById("cancelEditBtn").style.display="block";document.getElementById("message").innerHTML='<div class="notice">変更モードです。</div>';window.scrollTo({top:0,behavior:"smooth"})}
+function deleteRecord(id){const r=getRecords().find(x=>x.id===id);if(!r)return;if(!confirm(`${r.type} ${r.position} ${r.made}/${r.attempts} を削除しますか？`))return;setRecords(getRecords().filter(x=>x.id!==id));cloudRankings=null;(typeof sendToSheet==='function'?sendToSheet:function(){})([{...r,syncAction:"delete",deletedAt:new Date().toISOString()}]);if(editId===id)cancelEdit(false);refresh()}
+function cancelEdit(clear=true){editId=null;document.getElementById("saveBtn").textContent="保存";document.getElementById("cancelEditBtn").style.display="none";if(clear)document.getElementById("message").innerHTML=""}
+
+function showView(id,btn){document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));btn.classList.add("active");if(id==="inputView"){updateInputDateTimeDisplay();forceInputPositionRepair()}
+ if(id==="graphView"){syncMyRecordsFromSheet(false);renderCompareButtons();renderAllPositionGrowthButtons();renderGraphs()}if(id==="rankView"){syncMyRecordsFromSheet(false);renderRankSelectors();renderRanking();renderOverallRanking();if(getGasUrl()&&!cloudRankings)fetchCloudRankings(false)}
+ if(id==="playerManageView"){renderPlayerManage()}if(id==="recordView")renderRecordView();}
+function myRows(){const p=getProfile();return p?getRecords().filter(r=>r.player===p.name):[]}
+
+function renderRecordView(){const rows=myRows();const totalMade=rows.reduce((s,r)=>s+r.made,0),totalAttempts=rows.reduce((s,r)=>s+r.attempts,0);const a=document.getElementById("recordTotalAttempts");if(!a)return;document.getElementById("recordTotalAttempts").textContent=totalAttempts;document.getElementById("recordTotalMade").textContent=totalMade;document.getElementById("recordAvg").textContent=pct(totalMade,totalAttempts)+"%";const bestMap={};rows.forEach(r=>{const key=r.type+" / "+r.position;if(!bestMap[key]||r.rate>bestMap[key].rate)bestMap[key]=r});const bestRows=Object.entries(bestMap).sort((a,b)=>b[1].rate-a[1].rate).slice(0,8);document.getElementById("bestList").innerHTML=bestRows.length?bestRows.map(([k,r])=>`<div class="list-item"><b>${safeText(k)}</b><br>成功率：<b>${r.rate}%</b>　<span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span><div class="small">${r.date} / ${safeText(r.practice)}</div></div>`).join(""):"まだ記録がありません。";document.getElementById("recentList").innerHTML=rows.length?rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(r=>`<div class="list-item"><b>${r.date}</b> <span class="badge">${safeText(r.type)}</span> <span class="badge">${safeText(r.position)}</span><br><span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span>　<b>${r.rate}%</b><div class="small">${safeText(r.practice)}</div></div>`).join(""):"まだ記録がありません。"}
+
+
+function renderMonthlyGrowthRanking(rows){
+ const el=document.getElementById("monthlyGrowthRanking");
+ if(!el)return;
+
+ const now=new Date();
+ const ym=now.toISOString().slice(0,7);
+ const monthRows=rows.filter(r=>String(r.date||"").slice(0,7)===ym);
+ const pastRows=rows.filter(r=>String(r.date||"").slice(0,7)<ym);
+
+ const keys=[...new Set(monthRows.map(r=>r.type+"|"+r.position))];
+ const ranking=keys.map(key=>{
+   const [type,position]=key.split("|");
+   const current=monthRows.filter(r=>r.type===type&&r.position===position);
+   const past=pastRows.filter(r=>r.type===type&&r.position===position);
+   const cm=current.reduce((s,r)=>s+r.made,0);
+   const ca=current.reduce((s,r)=>s+r.attempts,0);
+   const pm=past.reduce((s,r)=>s+r.made,0);
+   const pa=past.reduce((s,r)=>s+r.attempts,0);
+   const currentRate=pct(cm,ca);
+   const pastRate=pa>0?pct(pm,pa):0;
+   return {type,position,currentRate,pastRate,growth:currentRate-pastRate,made:cm,attempts:ca};
+ }).filter(x=>x.attempts>0).sort((a,b)=>b.growth-a.growth||b.currentRate-a.currentRate).slice(0,5);
+
+ if(!ranking.length){
+   el.innerHTML="今月の記録がまだありません。入力すると成長ランキングが表示されます。";
+   return;
+ }
+
+ const colors=["#d91828","#111827","#2563eb","#16a34a","#f59e0b"];
+ el.innerHTML=ranking.map((r,i)=>`
+   <div class="list-item" style="border-left:10px solid ${colors[i%colors.length]}">
+     <span class="ranknum" style="color:${colors[i%colors.length]}">${i+1}位</span>
+     <b>${safeText(r.type)} / ${safeText(r.position)}</b><br>
+     今月：<b>${r.currentRate}%</b>　
+     前回まで：${r.pastRate}%　
+     <b style="color:${r.growth>=0?'#16a34a':'#d91828'}">${r.growth>=0?'+':''}${r.growth}%</b><br>
+     <span class="small">成功数 <span class="stat-made">${r.made}</span> / 試投数 <span class="stat-attempt">${r.attempts}</span></span>
+   </div>
+ `).join("");
+}
+
+
+function shortDateLabel(dateText){
+ const s=String(dateText||"");
+ if(s.length>=10)return s.slice(5,10).replace("-","/");
+ if(s.length>=7)return s.slice(5,7)+"月";
+ return s;
+}
+
+function renderGrowthDateList(){
+ const box=document.getElementById("growthDateNote");
+ if(!box)return;
+ box.innerHTML="";
+}
+
+
+function showGrowthPointDetail(point){
+ const box=document.getElementById("growthDateNote");
+ if(!box||!point)return;
+ const rate=point.rate!=null?point.rate:pct(point.made,point.attempts);
+ box.innerHTML=`<div class="list-item"><b>${safeText(point.date||point.month||"")}</b><br>ポジション：${safeText(point.position||growthPosition||"")}<br>成功率：<b>${rate}%</b><br>成功数：<span class="stat-made">${point.made||0}</span> / 試投数：<span class="stat-attempt">${point.attempts||0}</span></div>`;
+}
+
+function attachGrowthCanvasClick(canvas, points){
+ if(!canvas||!points||!points.length)return;
+ canvas.onclick=function(ev){
+   const rect=canvas.getBoundingClientRect();
+   const x=(ev.clientX-rect.left)*(canvas.width/rect.width);
+   const y=(ev.clientY-rect.top)*(canvas.height/rect.height);
+   let nearest=null,dist=999999;
+   points.forEach(p=>{
+     if(p.x==null||p.y==null)return;
+     const d=Math.hypot(p.x-x,p.y-y);
+     if(d<dist){dist=d;nearest=p;}
+   });
+   if(nearest&&dist<42)showGrowthPointDetail(nearest);
+ };
+}
+
+
+function attachFallbackGrowthClick(){
+ const c=document.getElementById("growthChart")||document.querySelector("#graphView canvas");
+ if(!c)return;
+ const rows=getRecords().filter(r=>r.type===allPositionGrowthType&&r.position===growthPosition&&Number(r.attempts||0)>0);
+ if(!rows.length)return;
+ c.onclick=function(ev){
+   const rect=c.getBoundingClientRect();
+   const x=(ev.clientX-rect.left)*(c.width/rect.width);
+   const idx=Math.max(0,Math.min(rows.length-1,Math.round((x/c.width)*(rows.length-1))));
+   const r=rows[idx];
+   showGrowthPointDetail({...r,rate:pct(r.made,r.attempts),position:growthPosition});
+ };
+}
+
+
+function drawAxisTitles(ctx, c, yTitle="本数", xTitle="日付"){
+ ctx.save();
+ ctx.fillStyle="#111827";
+ ctx.font="bold 12px sans-serif";
+ ctx.textAlign="center";
+ ctx.fillText(xTitle, c.width/2, c.height-4);
+ ctx.translate(12, c.height/2);
+ ctx.rotate(-Math.PI/2);
+ ctx.fillText(yTitle, 0, 0);
+ ctx.restore();
+}
+
+function drawReadableDateLabels(ctx, points, canvasHeight){
+ ctx.save();
+ ctx.fillStyle="#374151";
+ ctx.font="11px sans-serif";
+ ctx.textAlign="center";
+ const minGap=44;
+ let lastX=-999;
+ points.forEach((p,i)=>{
+   if(i===points.length-1 || p.x-lastX>=minGap){
+     ctx.save();
+     ctx.translate(p.x, canvasHeight-20);
+     ctx.rotate(-Math.PI/5);
+     ctx.fillText(shortDateLabel(p.date||p.month||p.label),0,0);
+     ctx.restore();
+     lastX=p.x;
+   }
+ });
+ ctx.restore();
+}
+
+function drawCountYAxis(ctx, c, maxValue, left, top, h){
+ ctx.save();
+ ctx.strokeStyle="#e5e7eb";
+ ctx.fillStyle="#6b7280";
+ ctx.font="10px sans-serif";
+ ctx.lineWidth=1;
+ const steps=4;
+ for(let i=0;i<=steps;i++){
+   const value=Math.round(maxValue-(maxValue*i/steps));
+   const y=top+i*h/steps;
+   ctx.beginPath();
+   ctx.moveTo(left,y);
+   ctx.lineTo(c.width-18,y);
+   ctx.stroke();
+   ctx.fillText(String(value)+"本",18,y+4);
+ }
+ ctx.restore();
+}
+
+
+
+
+
+
+let monthlyGraphType="2P";
+let monthlyGraphMonth="";
+
+function getRecordMonth(r){
+ const s=String(r.date||"");
+ return s.length>=7?s.slice(0,7):"";
+}
+
+function getAvailableMonthsForType(type){
+ const set=new Set();
+ getRecords().filter(r=>r.type===type).forEach(r=>{
+   const m=getRecordMonth(r);
+   if(m)set.add(m);
+ });
+ return Array.from(set).sort();
+}
+
+function renderMonthlyTypeButtons(){
+ const wrap=document.getElementById("monthlyTypeButtons");
+ if(!wrap)return;
+ wrap.innerHTML=["2P","3P"].map(t=>`<button type="button" class="type-btn ${monthlyGraphType===t?'active':''}" onclick="setMonthlyGraphType('${t}')">${t}</button>`).join("");
+}
+
+function renderMonthlyMonthButtons(){
+ const wrap=document.getElementById("monthlyMonthButtons");
+ if(!wrap)return;
+ const months=getAvailableMonthsForType(monthlyGraphType);
+ if(!months.length){
+   monthlyGraphMonth="";
+   wrap.innerHTML='<div class="small">記録がありません。</div>';
+   return;
+ }
+ if(!monthlyGraphMonth||!months.includes(monthlyGraphMonth))monthlyGraphMonth=months[months.length-1];
+ wrap.innerHTML=months.map(m=>`<button type="button" class="type-btn ${monthlyGraphMonth===m?'active':''}" onclick="setMonthlyGraphMonth('${m}')">${m.slice(5)}月</button>`).join("");
+}
+
+function setMonthlyGraphType(t){
+ monthlyGraphType=t;
+ monthlyGraphMonth="";
+ 
+}
+
+function setMonthlyGraphMonth(m){
+ monthlyGraphMonth=m;
+ 
+}
+
+function renderMonthlyAllPositionGraph(){
+ renderMonthlyTypeButtons();
+ renderMonthlyMonthButtons();
+ drawMonthlyAllPositionChart();
+}
+
+function drawMonthlyAllPositionChart(){
+ const c=document.getElementById("monthlyAllPositionCanvas");
+ const detail=document.getElementById("monthlyAllPositionDetail");
+ if(!c)return;
+ const ctx=c.getContext("2d");
+ ctx.clearRect(0,0,c.width,c.height);
+ const positions=POSITIONS[monthlyGraphType]||[];
+ const rows=getRecords().filter(r=>r.type===monthlyGraphType && getRecordMonth(r)===monthlyGraphMonth);
+ if(!rows.length){
+   ctx.fillStyle="#6b7280";ctx.font="14px sans-serif";ctx.fillText("この月の記録がありません",c.width/2-80,c.height/2);
+   if(detail)detail.innerHTML="線や点を押すと詳細が表示されます。";
+   return;
+ }
+
+ const daily={};
+ rows.forEach(r=>{
+   const d=String(r.date||"");
+   if(!d)return;
+   daily[d]=daily[d]||{date:d,made:0,attempts:0,positions:{}};
+   daily[d].made+=Number(r.made||0);
+   daily[d].attempts+=Number(r.attempts||0);
+   const p=r.position||"";
+   daily[d].positions[p]=daily[d].positions[p]||{made:0,attempts:0};
+   daily[d].positions[p].made+=Number(r.made||0);
+   daily[d].positions[p].attempts+=Number(r.attempts||0);
+ });
+ const data=Object.values(daily).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ const left=58,right=20,top=26,bottom=70;
+ const w=c.width-left-right,h=c.height-top-bottom;
+ const maxValue=Math.max(10,...data.map(d=>d.attempts));
+ drawCountYAxis(ctx,c,maxValue,left,top,h);
+
+ const points=data.map((d,i)=>{
+   const x=left+i*(w/Math.max(1,data.length-1));
+   const yAttempts=top+(maxValue-d.attempts)*h/maxValue;
+   const yMade=top+(maxValue-d.made)*h/maxValue;
+   return {...d,x,yAttempts,yMade,label:shortDateLabel(d.date)};
+ });
+
+ // 試投数 黒線
+ ctx.beginPath();
+ points.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.yAttempts);else ctx.lineTo(p.x,p.yAttempts)});
+ ctx.strokeStyle="#111827";ctx.lineWidth=4;ctx.stroke();
+
+ // 成功数 赤線
+ ctx.beginPath();
+ points.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.yMade);else ctx.lineTo(p.x,p.yMade)});
+ ctx.strokeStyle="#d91828";ctx.lineWidth=4;ctx.stroke();
+
+ points.forEach(p=>{
+   ctx.beginPath();ctx.arc(p.x,p.yAttempts,6,0,Math.PI*2);ctx.fillStyle="#111827";ctx.fill();
+   ctx.fillStyle="#111827";ctx.font="11px sans-serif";ctx.fillText(p.attempts+"本",p.x-12,p.yAttempts-10);
+
+   ctx.beginPath();ctx.arc(p.x,p.yMade,6,0,Math.PI*2);ctx.fillStyle="#d91828";ctx.fill();
+   ctx.fillStyle="#d91828";ctx.font="11px sans-serif";ctx.fillText(p.made+"本",p.x-12,p.yMade+18);
+ });
+
+ drawReadableDateLabels(ctx,points,c.height);
+ drawAxisTitles(ctx,c,"本数","日付");
+
+ // 凡例
+ ctx.fillStyle="#d91828";ctx.fillRect(left,8,14,5);ctx.fillStyle="#111827";ctx.font="12px sans-serif";ctx.fillText("成功数",left+20,13);
+ ctx.fillStyle="#111827";ctx.fillRect(left+88,8,14,5);ctx.fillText("試投数",left+108,13);
+
+ c.onclick=function(ev){
+   const rect=c.getBoundingClientRect();
+   const x=(ev.clientX-rect.left)*(c.width/rect.width);
+   let nearest=null,dist=9999;
+   points.forEach(p=>{const d=Math.abs(p.x-x);if(d<dist){dist=d;nearest=p}});
+   if(nearest&&detail){
+     const posHtml=positions.map(pos=>{
+       const item=nearest.positions[pos]||{made:0,attempts:0};
+       return `<div>${safeText(pos)}：<span class="stat-made">${item.made}</span>/<span class="stat-attempt">${item.attempts}</span></div>`;
+     }).join("");
+     detail.innerHTML=`<div class="list-item"><b>${safeText(nearest.date)}</b><br>${monthlyGraphType} 全ポジション<br>成功数：<span class="stat-made">${nearest.made}</span>本<br>試投数：<span class="stat-attempt">${nearest.attempts}</span>本<hr>${posHtml}</div>`;
+   }
+ };
+}
+
+function renderGraphs(){renderGrowthDateList();setTimeout(attachFallbackGrowthClick,0);const rows=myRows();drawAllPositionLines(rows,allPositionGrowthType);renderMonthlyGrowthRanking(rows);drawBars(rows,compareType);drawRadar("radar2",POSITIONS["2P"],rows.filter(r=>r.type==="2P"));drawRadar("radar3",POSITIONS["3P"],rows.filter(r=>r.type==="3P"));const totalM=rows.reduce((s,r)=>s+r.made,0),totalA=rows.reduce((s,r)=>s+r.attempts,0);document.getElementById("avgAll").textContent=totalM;document.getElementById("totalAttempts").textContent=totalA;document.getElementById("bestRate").textContent=(rows.reduce((m,r)=>Math.max(m,r.rate),0)||0)+"%"}
+function clearCanvas(id){const c=document.getElementById(id);if(!c)return[null,null];const ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);return[c,ctx]}
+function empty(ctx,c){ctx.font="14px sans-serif";ctx.fillStyle="#111827";ctx.fillText("データがありません",c.width/2-55,c.height/2)}
+
+
+
+
+
+function drawTypeRateSummary(rows){const [c,ctx]=clearCanvas("typeRateCanvas");if(!c||!ctx)return;typeRateRegions=[];const detail=document.getElementById("typeRateDetail");if(detail)detail.style.display="none";const data=TYPES.map(type=>{const g=rows.filter(r=>r.type===type);const made=g.reduce((s,r)=>s+r.made,0),attempts=g.reduce((s,r)=>s+r.attempts,0);return{type,made,attempts,rate:pct(made,attempts),color:TYPE_COLORS[type],items:g}});if(!data.some(d=>d.attempts>0)){empty(ctx,c);return}const left=86,top=24,barH=30,gap=20,maxW=c.width-left-48;data.forEach((d,i)=>{const y=top+i*(barH+gap);ctx.fillStyle=d.color;ctx.fillRect(12,y+7,12,12);ctx.fillStyle="#111827";ctx.font="14px sans-serif";ctx.fillText(d.type,32,y+20);ctx.fillStyle="#f3f4f6";ctx.fillRect(left,y,maxW,barH);ctx.fillStyle=d.color;ctx.fillRect(left,y,maxW*d.rate/100,barH);ctx.fillStyle="#111827";ctx.font="13px sans-serif";ctx.fillText(d.rate+"%",left+Math.min(maxW*d.rate/100+8,maxW-34),y+20);ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";ctx.fillText(d.made+"/"+d.attempts,left+maxW-56,y+20);typeRateRegions.push({x:0,y:y-6,w:c.width,h:barH+12,data:d})});ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";}
+
+
+
+function drawAllPositionLines(rows,type){
+ const c=document.getElementById("positionLineCanvas");
+ if(!c)return;
+ const ctx=c.getContext("2d");
+ ctx.clearRect(0,0,c.width,c.height);
+ positionLinePoints=[];
+ const detail=document.getElementById("positionLineDetail");
+ if(detail)detail.style.display="none";
+
+ const typeRows=rows.filter(r=>r.type===type);
+ const dates=[...new Set(typeRows.map(r=>r.date))].sort().slice(-12);
+ axesLine(ctx,c);
+ if(!dates.length){empty(ctx,c);return}
+
+ const left=40,right=20,top=30,bottom=38;
+ ctx.fillStyle="#111827";
+ ctx.font="12px sans-serif";
+ ctx.fillText(type+" 全ポジション推移",38,18);
+
+ // 日付表示
+ ctx.fillStyle="#6b7280";
+ ctx.font="10px sans-serif";
+ dates.forEach((d,i)=>{
+   const x=left+i*((c.width-left-right)/Math.max(1,dates.length-1));
+   if(i===0 || i===dates.length-1 || dates.length<=6) ctx.fillText(d.slice(5),x-12,c.height-12);
+ });
+
+ POSITIONS[type].forEach((pos,pi)=>{
+   const color=LINE_COLORS[pi%LINE_COLORS.length];
+   const series=dates.map(date=>{
+     const g=typeRows.filter(r=>r.date===date && r.position===pos);
+     const made=g.reduce((s,r)=>s+r.made,0);
+     const attempts=g.reduce((s,r)=>s+r.attempts,0);
+     return {date,type,position:pos,made,attempts,rate:pct(made,attempts),items:g,color};
+   });
+
+   if(!series.some(v=>v.attempts>0))return;
+
+   ctx.beginPath();
+   let started=false;
+   series.forEach((v,i)=>{
+     if(v.attempts<=0){started=false;return}
+     v.x=left+i*((c.width-left-right)/Math.max(1,dates.length-1));
+     v.y=c.height-bottom-v.rate*(c.height-top-bottom)/100;
+     positionLinePoints.push(v);
+     if(!started){ctx.moveTo(v.x,v.y);started=true}else ctx.lineTo(v.x,v.y);
+   });
+   ctx.lineWidth=3;
+   ctx.strokeStyle=color;
+   ctx.globalAlpha=0.85;
+   ctx.stroke();
+   ctx.globalAlpha=1;
+
+   series.forEach(v=>{
+     if(v.attempts<=0)return;
+     ctx.beginPath();
+     ctx.arc(v.x,v.y,5,0,Math.PI*2);
+     ctx.fillStyle=color;
+     ctx.fill();
+   });
+ });
+
+ // 色ラベル
+ let lx=16, ly=c.height-26;
+ POSITIONS[type].forEach((pos,pi)=>{
+   const color=LINE_COLORS[pi%LINE_COLORS.length];
+   const label=pos.replace("（コーナーミドル）","").replace("（ウィングミドル）","").replace("（コーナー）","").replace("（ウィング）","");
+   ctx.fillStyle=color;
+   ctx.fillRect(lx,ly-8,9,9);
+   ctx.fillStyle="#374151";
+   ctx.font="9px sans-serif";
+   ctx.fillText(label,lx+12,ly);
+   lx += Math.min(98, label.length*8+34);
+   if(lx>c.width-90){lx=16;ly+=13;}
+ });
+
+ ctx.fillStyle="#6b7280";
+ ctx.font="11px sans-serif";
+ ctx.fillText("点をタップで詳細",40,30);
+}
+function axesLine(ctx,c){
+ ctx.strokeStyle="#e5e7eb";ctx.lineWidth=1;
+ for(let i=0;i<=4;i++){
+   const y=24+i*(c.height-58)/4;
+   ctx.beginPath();ctx.moveTo(35,y);ctx.lineTo(c.width-20,y);ctx.stroke();
+ }
+ ctx.fillStyle="#111827";ctx.strokeStyle="#111827";
+}
+function setupPositionLineClick(){
+ const c=document.getElementById("positionLineCanvas");
+ if(!c)return;
+ c.onclick=function(ev){
+   const rect=c.getBoundingClientRect();
+   const x=(ev.clientX-rect.left)*(c.width/rect.width);
+   const y=(ev.clientY-rect.top)*(c.height/rect.height);
+   let nearest=null,dist=9999;
+   positionLinePoints.forEach(p=>{const d=Math.hypot(p.x-x,p.y-y);if(d<dist){dist=d;nearest=p}});
+   if(nearest&&dist<32)showPositionLineDetail(nearest);
+ };
+}
+function showPositionLineDetail(p){
+ const el=document.getElementById("positionLineDetail");
+ if(!el)return;
+ const type=p.type || p.items[0]?.type || "";
+ const position=p.position || p.items[0]?.position || "";
+ const practice=[...new Set(p.items.map(i=>i.practice||i.schedule))].join(" / ");
+ el.style.display="block";
+ el.innerHTML=`<b>${p.date}</b> <span class="badge">${safeText(type)}</span> <span class="badge">${safeText(position)}</span><br>
+ <div style="font-size:22px;font-weight:900;margin:6px 0;color:${p.color||"#111827"}">${p.rate}%</div>
+ <div>成功数：<span class="stat-made">${p.made}</span> 本</div>
+ <div>試投数：<span class="stat-attempt">${p.attempts}</span> 本</div>
+ <div>練習：${safeText(practice)}</div>`;
+}
+function openPositionGrowthModal(position){
+ if(typeof openGraphModal==="function") openGraphModal(position);
+}
+
+function drawAllPositionGrowthBars(rows,type){const [c,ctx]=clearCanvas("allPositionGrowthCanvas");growthRegions=[];const detail=document.getElementById("allPositionGrowthDetail");if(detail)detail.style.display="none";const labels=POSITIONS[type];const data=labels.map((label,i)=>{const g=rows.filter(r=>r.type===type&&r.position===label);const made=g.reduce((s,r)=>s+r.made,0),attempts=g.reduce((s,r)=>s+r.attempts,0);return{label,made,attempts,rate:pct(made,attempts),color:LINE_COLORS[i%LINE_COLORS.length],items:g,type}});if(!data.some(d=>d.attempts>0)){empty(ctx,c);return}const left=156,top=22,barH=24,gap=14,maxW=c.width-left-38;ctx.font="11px sans-serif";data.forEach((d,i)=>{const y=top+i*(barH+gap);ctx.fillStyle=d.color;ctx.fillRect(8,y+5,10,10);ctx.fillStyle="#374151";ctx.fillText(d.label,22,y+16);ctx.fillStyle="#f3f4f6";ctx.fillRect(left,y,maxW,barH);ctx.fillStyle=d.color;ctx.fillRect(left,y,maxW*d.rate/100,barH);ctx.fillStyle="#111827";ctx.fillText(d.rate+"% / "+d.attempts+"本",left+Math.min(maxW*d.rate/100+6,maxW-70),y+16);growthRegions.push({x:0,y:y-4,w:c.width,h:barH+8,data:d})});ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";}
+function drawBars(rows,type){
+ const [c,ctx]=clearCanvas("barCanvas");
+ if(!c||!ctx)return;
+ barRegions=[];
+ const bd=document.getElementById("barDetail");
+ if(bd)bd.style.display="none";
+ const title=document.getElementById("compareTitle");
+ if(title)title.textContent=type+" 全ポジション比較（累計本数）";
+ const labels=POSITIONS[type]||[];
+ const data=labels.map((label,i)=>{
+   const g=rows.filter(r=>r.type===type&&r.position===label);
+   const made=g.reduce((s,r)=>s+Number(r.made||0),0);
+   const attempts=g.reduce((s,r)=>s+Number(r.attempts||0),0);
+   return{label,made,attempts,rate:pct(made,attempts),color:LINE_COLORS[i%LINE_COLORS.length],items:g,type};
+ });
+ if(!data.some(d=>d.attempts>0)){empty(ctx,c);return}
+ const left=154,top=28,barH=15,gap=28,maxW=c.width-left-44;
+ const maxValue=Math.max(10,...data.map(d=>d.attempts));
+ ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";
+ ctx.fillText("上：成功数（赤） / 下：試投数（黒）",left,14);
+ data.forEach((d,i)=>{
+   const y=top+i*(barH*2+gap);
+   ctx.fillStyle=d.color;ctx.fillRect(8,y+10,10,10);
+   ctx.fillStyle="#374151";ctx.font="11px sans-serif";ctx.fillText(d.label,22,y+18);
+   // 上：成功数 赤
+   ctx.fillStyle="#fee2e2";ctx.fillRect(left,y,maxW,barH);
+   ctx.fillStyle="#d91828";ctx.fillRect(left,y,maxW*d.made/maxValue,barH);
+   // 下：試投数 黒
+   ctx.fillStyle="#f3f4f6";ctx.fillRect(left,y+barH+4,maxW,barH);
+   ctx.fillStyle="#111827";ctx.fillRect(left,y+barH+4,maxW*d.attempts/maxValue,barH);
+   ctx.fillStyle="#d91828";ctx.font="10px sans-serif";
+   ctx.fillText(d.made+"本",left+Math.min(maxW*d.made/maxValue+5,maxW-32),y+11);
+   ctx.fillStyle="#fff";
+   ctx.fillText(d.attempts+"本",left+8,y+barH+15);
+   ctx.fillStyle="#374151";ctx.font="10px sans-serif";ctx.fillText(d.rate+"%",c.width-36,y+24);
+   barRegions.push({x:0,y:y-4,w:c.width,h:barH*2+16,data:d});
+ });
+ ctx.fillStyle="#6b7280";ctx.font="11px sans-serif";
+}
+function radarColor(rate){if(rate>=80)return"#16a34a";if(rate>=60)return"#2563eb";if(rate>=40)return"#f59e0b";return"#d91828"}
+function drawRadar(id,labels,rows){
+ const [c,ctx]=clearCanvas(id);
+ if(!c||!ctx)return;
+ const cx=c.width/2,cy=c.height/2+8,R=106;
+ const data=labels.map((lab,i)=>{
+   const g=rows.filter(r=>r.position===lab);
+   const made=g.reduce((s,r)=>s+Number(r.made||0),0);
+   const attempts=g.reduce((s,r)=>s+Number(r.attempts||0),0);
+   const rate=pct(made,attempts);
+   const ang=-Math.PI/2+i*2*Math.PI/labels.length;
+   return{label:lab,made,attempts,rate,ang,color:radarColor(rate)};
+ });
+ if(!rows.length||!data.some(d=>d.attempts>0)){empty(ctx,c);return}
+ const maxRateRaw=Math.max(...data.map(d=>d.rate));
+ const scaleMax=Math.max(20,Math.min(100,Math.ceil(maxRateRaw/10)*10));
+ ctx.strokeStyle="#e5e7eb";ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";ctx.lineWidth=1;
+ for(let ring=1;ring<=4;ring++){
+   const val=Math.round(scaleMax*ring/4);
+   const rr=R*ring/4;
+   ctx.beginPath();
+   for(let i=0;i<labels.length;i++){
+     const a=-Math.PI/2+i*2*Math.PI/labels.length;
+     const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
+     if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+   }
+   ctx.closePath();ctx.stroke();
+   ctx.fillText(val+"%",cx+4,cy-rr+10);
+ }
+ data.forEach(d=>{
+   const rr=R*Math.min(d.rate,scaleMax)/scaleMax;
+   d.x=cx+Math.cos(d.ang)*rr;
+   d.y=cy+Math.sin(d.ang)*rr;
+   const label=d.label.replace("（コーナーミドル）","").replace("（ウィングミドル）","").replace("（コーナー）","").replace("（ウィング）","");
+   ctx.fillStyle="#111827";ctx.font="10px sans-serif";
+   ctx.fillText(label,cx+Math.cos(d.ang)*(R+40)-32,cy+Math.sin(d.ang)*(R+40));
+ });
+ ctx.beginPath();
+ data.forEach((d,i)=>{if(i===0)ctx.moveTo(d.x,d.y);else ctx.lineTo(d.x,d.y)});
+ ctx.closePath();ctx.globalAlpha=.16;ctx.fillStyle="#111827";ctx.fill();ctx.globalAlpha=1;
+ data.forEach((d,i)=>{
+   const next=data[(i+1)%data.length];
+   ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(next.x,next.y);ctx.strokeStyle=d.color;ctx.lineWidth=4;ctx.stroke();
+ });
+ data.forEach(d=>{
+   ctx.beginPath();ctx.arc(d.x,d.y,6,0,Math.PI*2);ctx.fillStyle=d.color;ctx.fill();
+   if(d.attempts>0){
+     ctx.fillStyle="#111827";ctx.font="bold 10px sans-serif";ctx.fillText(d.rate+"%",d.x-12,d.y-10);
+   }
+ });
+ ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";
+}
+
+function setupCanvasClicks(){["typeRateCanvas","allPositionGrowthCanvas","barCanvas"].forEach(id=>{const c=document.getElementById(id);if(!c)return;c.onclick=function(ev){const rect=c.getBoundingClientRect(),x=(ev.clientX-rect.left)*(c.width/rect.width),y=(ev.clientY-rect.top)*(c.height/rect.height);let arr=id==="typeRateCanvas"?typeRateRegions:id==="allPositionGrowthCanvas"?growthRegions:barRegions;const hit=arr.find(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);if(hit)showBarLikeDetail(hit.data,id)}})}
+function showBarLikeDetail(d,id){const el=document.getElementById(id==="typeRateCanvas"?"typeRateDetail":id==="allPositionGrowthCanvas"?"allPositionGrowthDetail":"barDetail");if(!el)return;const best=d.items.reduce((m,r)=>Math.max(m,r.rate),0),latest=d.items.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];el.style.display="block";el.innerHTML=`<b>${safeText(d.type)}${d.label?" / "+safeText(d.label):""}</b><br><div style="font-size:22px;font-weight:900;margin:6px 0;color:${d.color}">${d.rate}%</div><div>成功数：<span class="stat-made">${d.made}</span> 本</div><div>試投数：<span class="stat-attempt">${d.attempts}</span> 本</div><div>自己ベスト：<b>${best}%</b></div>${latest?`<div class="small">最新：${latest.date} / ${safeText(latest.position||latest.practice)} / ${latest.rate}%</div>`:""}`}
+
+
+
+
+
+function getGasUrl(){return localStorage.getItem(LS_GAS_URL)||DEFAULT_GAS_URL||""}function saveGasUrl(){const url=document.getElementById("gasUrlInput").value.trim();if(!url){alert("Apps ScriptのURLを入力してください");return}localStorage.setItem(LS_GAS_URL,url);document.getElementById("gasStatus").innerHTML="連携URLを保存しました。"}function loadGasUrlToAdmin(){const el=document.getElementById("gasUrlInput");if(el)el.value=getGasUrl();const st=document.getElementById("gasStatus");if(st)st.innerHTML=getGasUrl()?"連携URL：設定済み":"連携URL：未設定"}
+async function sendToSheet(recordsToSend){const url=getGasUrl(),status=document.getElementById("syncStatus");if(!url){if(status)status.innerHTML="スプレッドシート連携：未設定（端末内には保存済み）";return}try{await fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"addRecords",records:recordsToSend})});if(status)status.innerHTML="スプレッドシートへ送信しました。"}catch(e){if(status)status.innerHTML="スプレッドシート送信に失敗しました。端末内には保存済みです。"}}
+async function testGasConnection(){const url=getGasUrl()||document.getElementById("gasUrlInput").value.trim();if(!url){alert("Apps ScriptのURLを入力してください");return}localStorage.setItem(LS_GAS_URL,url);const p=getProfile()||{name:"テスト選手",category:"テスト"};const testRecord={id:"test-"+Date.now(),date:today(),practice:"送信テスト",player:p.name,category:p.category,type:"TEST",position:"接続確認",made:1,attempts:1,rate:100,createdAt:new Date().toISOString()};try{await fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"test",records:[testRecord]})});document.getElementById("gasStatus").innerHTML="送信テストを実行しました。スプレッドシートを確認してください。"}catch(e){document.getElementById("gasStatus").innerHTML="送信テストに失敗しました。"}}
+
+
+/* v7.2 fixed realtime ranking */
+function getRankKey(type, position){return type+"|"+position}
+
+function gasJsonp(action, params={}){
+ return new Promise((resolve,reject)=>{
+   const url=getGasUrl();
+   if(!url){reject(new Error("Apps Script URL未設定"));return}
+   const callback="gasCb_"+Date.now()+"_"+Math.floor(Math.random()*100000);
+   const qs=new URLSearchParams({...params,action,callback}).toString();
+   const script=document.createElement("script");
+   window[callback]=function(data){
+     resolve(data);
+     delete window[callback];
+     script.remove();
+   };
+   script.onerror=function(){
+     reject(new Error("通信エラー"));
+     delete window[callback];
+     script.remove();
+   };
+   script.src=url+(url.includes("?")?"&":"?")+qs;
+   document.body.appendChild(script);
+ });
+}
+
+async function fetchCloudRankings(showAlert=false){
+ const status=document.getElementById("teamRankStatus");
+ if(!getGasUrl()){
+   if(status)status.innerHTML="Apps Script URLが未設定です。";
+   if(showAlert)alert("Apps Script URLが未設定です");
+   return;
+ }
+ if(status)status.innerHTML="ランキングを取得中...";
+ try{
+   const data=await gasJsonp("rankings");
+   if(!data || data.status!=="ok")throw new Error((data&&data.message)||"取得失敗");
+   cloudRankings=data.rankings||{};
+   cloudRankFetchedAt=new Date();
+   if(status)status.innerHTML="ランキング：スプレッドシート反映済み";
+   renderRankSelectors();
+   renderRanking();
+   renderOverallRanking();
+   if(showAlert)alert("ランキングを更新しました");
+ }catch(e){
+   console.error("ranking fetch error",e);
+   if(status)status.innerHTML="ランキングの取得に失敗。Apps Scriptを最新版に更新してください。";
+   if(showAlert)alert("ランキング取得に失敗しました。Apps Script v7.2へ貼り替え・再デプロイを確認してください。");
+ }
+}
+
+function getCloudRankRows(type, position){
+ if(!cloudRankings)return null;
+ return cloudRankings[getRankKey(type,position)] || [];
+}
+
+function getMyCloudRankText(type, position){
+ const prof=getProfile();
+ if(!prof)return "";
+ const rows=getCloudRankRows(type,position);
+ if(!rows)return null;
+ const idx=rows.findIndex(r=>r.player===prof.name&&r.category===prof.category);
+ if(idx<0)return "未記録";
+ return `${idx+1}位/${rows.length}人`;
+}
+
+
+
+
+
+
+
+function renderRanking(){
+ let rows=null;
+ const cloudRows=getCloudRankRows(rankType,rankPosition);
+ if(cloudRows){
+   rows=cloudRows.slice(0,5).map(r=>({player:r.player,category:r.category,made:Number(r.made||0),attempts:Number(r.attempts||0),rate:Number(r.rate||0)}));
+ }else{
+   const groups={};
+   getRecords().filter(r=>r.type===rankType&&r.position===rankPosition).forEach(r=>{
+    const key=r.player+"|"+r.category;
+    groups[key]=groups[key]||{player:r.player,category:r.category,made:0,attempts:0};
+    groups[key].made+=r.made;groups[key].attempts+=r.attempts;
+   });
+   rows=Object.values(groups).map(x=>({...x,rate:pct(x.made,x.attempts)})).filter(x=>x.attempts>0).sort((a,b)=>b.rate-a.rate||b.attempts-a.attempts).slice(0,5);
+ }
+ const el=document.getElementById("rankingList");
+ if(!el)return;
+ el.innerHTML=rows.length?rows.map((r,i)=>`<div class="list-item rank-card rank-${i+1}"><span class="ranknum">${i+1}位</span> <b>${safeText(r.player)}</b> <span class="badge">${safeText(r.category)}</span><br>${r.rate}%　<span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span></div>`).join(""):"ランキング外";
+}
+
+function adminLogin(){if(document.getElementById("adminPass").value==="ninja"){document.body.classList.add("admin");loadGasUrlToAdmin();renderAdmin()}else alert("パスワードが違います")}
+function renderAdmin(){const table=document.getElementById("adminTable");if(!table)return;const rows=getRecords().slice().reverse();table.innerHTML="<tr><th>日付</th><th>選手</th><th>カテゴリ</th><th>練習</th><th>種目</th><th>位置</th><th>成功</th><th>試投</th><th>%</th></tr>"+rows.map(r=>`<tr><td>${r.date}</td><td>${safeText(r.player)}</td><td>${safeText(r.category)}</td><td>${safeText(r.practice)}</td><td>${safeText(r.type)}</td><td>${safeText(r.position)}</td><td>${r.made}</td><td>${r.attempts}</td><td>${r.rate}</td></tr>`).join("")}
+function downloadCSV(){const header=["日付","選手","カテゴリー","練習","種目","ポジション","成功数","試投数","成功率"],rows=getRecords().map(r=>[r.date,r.player,r.category,r.practice,r.type,r.position,r.made,r.attempts,r.rate]);const csv=[header,...rows].map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="shooting_records.csv";a.click()}
+function clearRecords(){if(confirm("全記録を削除しますか？")){setRecords([]);refresh()}}
+
+
+/* v7.2 FIX: 入力ポジションが消える問題を強制修正 */
+function renderInputTypes(){
+  const wrap=document.getElementById("inputTypeButtons");
+  if(!wrap)return;
+  if(!inputType || !TYPES.includes(inputType)) inputType="2P";
+  wrap.innerHTML=TYPES.map(t=>
+    `<button type="button" class="type-btn ${t===inputType?'active':''}" onclick="setInputType('${t}')">${t}</button>`
+  ).join("");
+}
+
+function setInputType(t){
+  inputType=t;
+  const list=POSITIONS[inputType] || [];
+  inputPosition=list[0] || "";
+  renderInputTypes();
+  renderInputPositions();
+  const normal=document.getElementById("normalFields");
+  const mikan=document.getElementById("mikanFields");
+  if(normal) normal.style.display = inputType==="マイカン" ? "none" : "block";
+  if(mikan) mikan.style.display = inputType==="マイカン" ? "block" : "none";
+  if(typeof previewRate==="function") previewRate();
+}
+
+function renderInputPositions(){
+  const wrap=document.getElementById("inputPositionButtons");
+  const select=document.getElementById("inputPositionSelect");
+  if(!inputType || !POSITIONS[inputType]) inputType="2P";
+  const list=POSITIONS[inputType] || [];
+
+  if(!list.length){
+    if(wrap) wrap.innerHTML='<div class="notice">この種目のポジション設定がありません。</div>';
+    if(select) select.innerHTML='';
+    return;
+  }
+
+  if(!inputPosition || !list.includes(inputPosition)) inputPosition=list[0];
+
+  // ボタン表示：元データに入っていた入力ポジションを必ず出す
+  if(wrap){
+    wrap.innerHTML=list.map((p,i)=>{
+      const active=p===inputPosition ? 'active' : '';
+      const color=LINE_COLORS[i%LINE_COLORS.length];
+      return `<button type="button" style="--pos-color:${color}" class="position-btn color-mode ${active}" onclick="setInputPosition('${jsArg(p)}')">${safeText(p)}</button>`;
+    }).join("");
+  }
+
+  // 念のためのプルダウン表示：スマホ・キャッシュ環境でもポジションが消えないようにする
+  if(select){
+    select.innerHTML=list.map(p=>`<option value="${safeText(p)}" ${p===inputPosition?'selected':''}>${safeText(p)}</option>`).join("");
+    select.value=inputPosition;
+  }
+}
+
+function setInputPosition(p){
+  inputPosition=p;
+  const select=document.getElementById("inputPositionSelect");
+  if(select) select.value=p;
+  renderInputPositions();
+}
+
+function forceInputPositionRepair(){
+  const inputView=document.getElementById("inputView");
+  const typeWrap=document.getElementById("inputTypeButtons");
+  const posWrap=document.getElementById("inputPositionButtons");
+  if(!inputView || !typeWrap || !posWrap) return;
+  if(!inputType || !TYPES.includes(inputType)) inputType="2P";
+  if(!POSITIONS[inputType] || !POSITIONS[inputType].length) inputType="2P";
+  const list=POSITIONS[inputType] || [];
+  if(!inputPosition || !list.includes(inputPosition)) inputPosition=list[0] || "";
+  renderInputTypes();
+  renderInputPositions();
+  // 念押し：描画後も空なら、カード型ボタンを直接復元
+  if(!posWrap.innerHTML.trim() && list.length){
+    posWrap.innerHTML=list.map((p,i)=>{
+      const active=p===inputPosition ? 'active' : '';
+      const color=LINE_COLORS[i%LINE_COLORS.length];
+      return `<button type="button" style="--pos-color:${color}" class="position-btn color-mode ${active}" onclick="setInputPosition('${jsArg(p)}')">${safeText(p)}</button>`;
+    }).join("");
+  }
+  const normal=document.getElementById("normalFields");
+  const mikan=document.getElementById("mikanFields");
+  if(normal) normal.style.display = inputType==="マイカン" ? "none" : "block";
+  if(mikan) mikan.style.display = inputType==="マイカン" ? "block" : "none";
+}
+
+
+/* v7.2 FIX: open-day date auto + graph refresh + removed monthly all-position card */
+function forceTodayDateInput(){
+  try{
+    const iso=today();
+    const display=todayDisplay();
+    const d=document.getElementById("dateInput");
+    if(d && !editId){
+      d.type="hidden";
+      d.value=iso;
+      d.setAttribute("value",iso);
+      d.dataset.iso=iso;
+      d.dataset.date=iso;
+    }
+    const badge=document.getElementById("inputTodayBadge");
+    if(badge) badge.textContent=display;
+    if(typeof renderToday==="function")renderToday();
+  }catch(e){console.error("date auto fix",e)}
+}
+function scheduleTodayDateInput(){
+  forceTodayDateInput();
+  setTimeout(forceTodayDateInput,0);
+  setTimeout(forceTodayDateInput,80);
+  setTimeout(forceTodayDateInput,250);
+  setTimeout(forceTodayDateInput,700);
+}
+const __v72_originalInit=init;
+init=function(){
+  __v72_originalInit();
+  scheduleTodayDateInput();
+};
+if(typeof loginWithId==="function"){
+  const __v72_originalLoginWithId=loginWithId;
+  loginWithId=async function(){
+    await __v72_originalLoginWithId();
+    scheduleTodayDateInput();
+    if(typeof renderGraphs==="function")renderGraphs();
+  };
+}
+if(typeof autoLogin==="function"){
+  const __v72_originalAutoLogin=autoLogin;
+  autoLogin=async function(){
+    const ok=await __v72_originalAutoLogin();
+    scheduleTodayDateInput();
+    if(ok && typeof renderGraphs==="function")renderGraphs();
+    return ok;
+  };
+}
+window.addEventListener("pageshow",scheduleTodayDateInput);
+window.addEventListener("focus",forceTodayDateInput);
+
+
+
+
+/* v8.0 FIX: シューティング入力横に日付＋時刻を固定表示 */
+function formatInputDateTimeDisplay(){
+  const now = new Date();
+  const week = ["日","月","火","水","木","金","土"];
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,"0");
+  const d = String(now.getDate()).padStart(2,"0");
+  const h = String(now.getHours()).padStart(2,"0");
+  const min = String(now.getMinutes()).padStart(2,"0");
+  return `${y}.${m}.${d}（${week[now.getDay()]}） ${h}:${min}`;
+}
+function updateInputDateTimeDisplay(){
+  const badge = document.getElementById("inputTodayBadge") || document.getElementById("todayBadge");
+  if(badge) badge.textContent = formatInputDateTimeDisplay();
+
+  const hiddenDate = document.getElementById("dateInput");
+  if(hiddenDate && !editId){
+    hiddenDate.type = "hidden";
+    hiddenDate.value = today();
+    hiddenDate.dataset.iso = today();
+    hiddenDate.dataset.date = today();
+  }
+}
+function startInputDateTimeClock(){
+  updateInputDateTimeDisplay();
+  setTimeout(updateInputDateTimeDisplay, 0);
+  setTimeout(updateInputDateTimeDisplay, 200);
+  setTimeout(updateInputDateTimeDisplay, 700);
+  if(!window.__ninjaDateTimeClock){
+    window.__ninjaDateTimeClock = setInterval(updateInputDateTimeDisplay, 10000);
+  }
+}
+
+
+/* v8.3 FIX: ログイン直後に日付＋時刻を必ず表示 */
+function forceDateTimeAfterLogin(){
+  try{
+    if(typeof updateInputDateTimeDisplay === "function"){
+      updateInputDateTimeDisplay();
+      setTimeout(updateInputDateTimeDisplay, 0);
+      setTimeout(updateInputDateTimeDisplay, 80);
+      setTimeout(updateInputDateTimeDisplay, 250);
+      setTimeout(updateInputDateTimeDisplay, 700);
+    }
+    if(typeof forceTodayDateInput === "function"){
+      forceTodayDateInput();
+      setTimeout(forceTodayDateInput, 120);
+    }
+    if(typeof forceInputPositionRepair === "function"){
+      forceInputPositionRepair();
+      setTimeout(forceInputPositionRepair, 120);
+    }
+  }catch(e){
+    console.error("forceDateTimeAfterLogin", e);
+  }
+}
+
+
+/* v9.0 ADD: 成長記録・アジリティー記録 */
+const LS_GROWTH_RECORDS="ninja_growth_records_v1";
+const LS_AGILITY_RECORDS="ninja_agility_records_v1";
+const AGILITY_TYPES=[
+  {name:"シャトルラン", unit:"回", placeholder:"例：80"},
+  {name:"反復横跳び", unit:"回", placeholder:"例：55"},
+  {name:"L字コーンドリル", unit:"秒", placeholder:"例：12.35"},
+  {name:"垂直跳び", unit:"cm", placeholder:"例：48.5"}
+];
+let agilityType=AGILITY_TYPES[0].name;
+let growthLinePoints=[], agilityLinePoints=[];
+
+function getGrowthRecords(){return load(LS_GROWTH_RECORDS,[])}
+function setGrowthRecords(v){saveLocal(LS_GROWTH_RECORDS,v)}
+function getAgilityRecords(){return load(LS_AGILITY_RECORDS,[])}
+function setAgilityRecords(v){saveLocal(LS_AGILITY_RECORDS,v)}
+function myGrowthRows(){const p=getProfile();return p?getGrowthRecords().filter(r=>r.player===p.name):[]}
+function myAgilityRows(){const p=getProfile();return p?getAgilityRecords().filter(r=>r.player===p.name):[]}
+function parseDecimalValue(value){
+  const s=String(value||"").replace(/,/g,".").replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).replace(/[^0-9.]/g,"");
+  const parts=s.split(".");
+  const clean=parts.length>1?parts[0]+"."+parts.slice(1).join(""):parts[0];
+  return Number(clean);
+}
+function normalizeDecimalInput(el){
+  const old=el.value;
+  let v=String(old||"").replace(/,/g,".").replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).replace(/[^0-9.]/g,"");
+  const parts=v.split(".");
+  if(parts.length>2)v=parts[0]+"."+parts.slice(1).join("");
+  el.value=v;
+}
+function formatHeightInput(el){
+  let v=String(el.value||"").replace(/,/g,".").replace(/[０-９]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)).replace(/[^0-9.]/g,"");
+  const parts=v.split(".");
+  if(parts.length>2)v=parts[0]+"."+parts.slice(1).join("");
+  if(!v.includes(".") && v.length===3) v=v+".";
+  el.value=v;
+}
+function finishDecimalInput(el,digits=1){
+  normalizeDecimalInput(el);
+  const n=parseDecimalValue(el.value);
+  if(Number.isFinite(n) && n>0) el.value=n.toFixed(digits);
+}
+function renderRecordDates(){
+  const g=document.getElementById("growthDateView"); if(g)g.value=formatInputDateTimeDisplay();
+  const a=document.getElementById("agilityDateView"); if(a)a.value=formatInputDateTimeDisplay();
+}
+function renderAgilityTypeButtons(){
+  const wrap=document.getElementById("agilityTypeButtons"); if(!wrap)return;
+  wrap.innerHTML=AGILITY_TYPES.map(x=>`<button type="button" class="metric-btn ${x.name===agilityType?'active':''}" onclick="setAgilityType('${jsArg(x.name)}')">${safeText(x.name)}</button>`).join("");
+  const meta=AGILITY_TYPES.find(x=>x.name===agilityType)||AGILITY_TYPES[0];
+  const label=document.getElementById("agilityValueLabel"); if(label)label.textContent=`記録（${meta.unit}）`;
+  const hint=document.getElementById("agilityUnitHint"); if(hint)hint.textContent=`単位：${meta.unit}`;
+  const input=document.getElementById("agilityValueInput"); if(input)input.placeholder=meta.placeholder;
+}
+function setAgilityType(t){agilityType=t;renderAgilityTypeButtons();renderAgilityView();}
+function saveGrowthRecord(){
+  const prof=getProfile(); if(!prof){alert("ログインしてください");return}
+  const height=parseDecimalValue(document.getElementById("heightInput").value);
+  const weight=parseDecimalValue(document.getElementById("weightInput").value);
+  if(!Number.isFinite(height)||height<=0){document.getElementById("growthMessage").innerHTML="身長を入力してください。";return}
+  if(!Number.isFinite(weight)||weight<=0){document.getElementById("growthMessage").innerHTML="体重を入力してください。";return}
+  const rec={id:safeUuid(),date:today(),player:prof.name,category:prof.category,height:Number(height.toFixed(1)),weight:Number(weight.toFixed(1)),createdAt:new Date().toISOString(),syncAction:"create"};
+  const rows=getGrowthRecords(); rows.push(rec); setGrowthRecords(rows);
+  document.getElementById("heightInput").value=""; document.getElementById("weightInput").value="";
+  document.getElementById("growthMessage").innerHTML=`<div class="success">保存しました。身長 ${rec.height}cm / 体重 ${rec.weight}kg</div>`;
+  sendGrowthToSheet([rec]); renderGrowthView();
+}
+function saveAgilityRecord(){
+  const prof=getProfile(); if(!prof){alert("ログインしてください");return}
+  const value=parseDecimalValue(document.getElementById("agilityValueInput").value);
+  if(!Number.isFinite(value)||value<=0){document.getElementById("agilityMessage").innerHTML="記録を入力してください。";return}
+  const meta=AGILITY_TYPES.find(x=>x.name===agilityType)||AGILITY_TYPES[0];
+  const rec={id:safeUuid(),date:today(),player:prof.name,category:prof.category,type:agilityType,value:Number(value.toFixed(2)),unit:meta.unit,createdAt:new Date().toISOString(),syncAction:"create"};
+  const rows=getAgilityRecords(); rows.push(rec); setAgilityRecords(rows);
+  document.getElementById("agilityValueInput").value="";
+  document.getElementById("agilityMessage").innerHTML=`<div class="success">保存しました。${safeText(rec.type)} ${rec.value}${safeText(rec.unit)}</div>`;
+  sendAgilityToSheet([rec]); renderAgilityView();
+}
+async function sendGrowthToSheet(records){
+  const url=getGasUrl(); if(!url)return;
+  try{await fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"addGrowthRecords",records})});setTimeout(()=>syncGrowthRecordsFromSheet(false),900);}catch(e){}
+}
+async function sendAgilityToSheet(records){
+  const url=getGasUrl(); if(!url)return;
+  try{await fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"addAgilityRecords",records})});setTimeout(()=>syncAgilityRecordsFromSheet(false),900);}catch(e){}
+}
+async function syncGrowthRecordsFromSheet(showMessage=false){
+  const prof=getProfile(); if(!prof||!prof.playerId||!getGasUrl())return false;
+  try{const res=await jsonp("growthRecords",{playerId:prof.playerId}); if(res&&res.status==="ok"&&Array.isArray(res.records)){setGrowthRecords(res.records); renderGrowthView(); return true;}}catch(e){}
+  return false;
+}
+async function syncAgilityRecordsFromSheet(showMessage=false){
+  const prof=getProfile(); if(!prof||!prof.playerId||!getGasUrl())return false;
+  try{const res=await jsonp("agilityRecords",{playerId:prof.playerId}); if(res&&res.status==="ok"&&Array.isArray(res.records)){setAgilityRecords(res.records); renderAgilityView(); return true;}}catch(e){}
+  return false;
+}
+function renderGrowthView(){renderRecordDates(); drawGrowthLineGraph(); renderGrowthRecent();}
+function renderAgilityView(){renderRecordDates(); renderAgilityTypeButtons(); drawAgilityLineGraph(); renderAgilityRecent();}
+function renderGrowthRecent(){
+  const el=document.getElementById("growthRecentList"); if(!el)return;
+  const rows=myGrowthRows().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,10);
+  el.innerHTML=rows.length?rows.map(r=>`<div class="list-item"><b>${safeText(r.date)}</b><br>身長：<b>${r.height}cm</b> / 体重：<b>${r.weight}kg</b></div>`).join(""):"まだ記録がありません。";
+}
+function renderAgilityRecent(){
+  const el=document.getElementById("agilityRecentList"); if(!el)return;
+  const rows=myAgilityRows().slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,10);
+  el.innerHTML=rows.length?rows.map(r=>`<div class="list-item"><b>${safeText(r.date)}</b> <span class="badge">${safeText(r.type)}</span><br>記録：<b>${r.value}${safeText(r.unit||"")}</b></div>`).join(""):"まだ記録がありません。";
+}
+function drawSimpleAxes(ctx,c,left,top,w,h,min,max,suffix){
+  ctx.strokeStyle="#e5e7eb";ctx.lineWidth=1;ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";
+  for(let i=0;i<=4;i++){const y=top+i*h/4;const val=max-(max-min)*i/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(left+w,y);ctx.stroke();ctx.fillText(val.toFixed(1)+suffix,4,y+4)}
+}
+function drawGrowthLineGraph(){
+  const c=document.getElementById("growthLineCanvas"); if(!c)return; const ctx=c.getContext("2d"); ctx.clearRect(0,0,c.width,c.height); growthLinePoints=[];
+  const detail=document.getElementById("growthGraphDetail"); if(detail)detail.style.display="none";
+  const rows=myGrowthRows().slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(-12);
+  if(!rows.length){empty(ctx,c);return}
+  const left=54,right=20,top=28,bottom=54,w=c.width-left-right,h=c.height-top-bottom;
+  const vals=rows.flatMap(r=>[Number(r.height||0),Number(r.weight||0)]).filter(v=>v>0);
+  let min=Math.floor(Math.min(...vals)-2), max=Math.ceil(Math.max(...vals)+2); if(max<=min)max=min+10;
+  drawSimpleAxes(ctx,c,left,top,w,h,min,max,"");
+  const makePoints=(key,label)=>rows.map((r,i)=>({date:r.date,label,x:left+i*w/Math.max(1,rows.length-1),y:top+(max-Number(r[key]||0))*h/(max-min),value:Number(r[key]||0),record:r,key}));
+  const heightPts=makePoints("height","身長"); const weightPts=makePoints("weight","体重");
+  [{pts:heightPts,color:"#d91828"},{pts:weightPts,color:"#111827"}].forEach(line=>{ctx.beginPath();line.pts.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});ctx.strokeStyle=line.color;ctx.lineWidth=4;ctx.stroke();line.pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fillStyle=line.color;ctx.fill();growthLinePoints.push({...p,color:line.color});});});
+  ctx.fillStyle="#d91828";ctx.fillRect(left,8,14,5);ctx.fillStyle="#111827";ctx.font="12px sans-serif";ctx.fillText("身長(cm)",left+20,13);ctx.fillRect(left+88,8,14,5);ctx.fillText("体重(kg)",left+108,13);
+  ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";rows.forEach((r,i)=>{const x=left+i*w/Math.max(1,rows.length-1);ctx.fillText(String(r.date).slice(5).replace('-', '/'),x-12,c.height-18)});
+  c.onclick=function(ev){const rect=c.getBoundingClientRect();const x=(ev.clientX-rect.left)*(c.width/rect.width),y=(ev.clientY-rect.top)*(c.height/rect.height);let near=null,dist=9999;growthLinePoints.forEach(p=>{const d=Math.hypot(p.x-x,p.y-y);if(d<dist){dist=d;near=p}});if(near&&dist<36&&detail){detail.style.display="block";detail.innerHTML=`<b>${safeText(near.date)}</b><br>${safeText(near.label)}：<b>${near.value}${near.key==='height'?'cm':'kg'}</b><br>身長：${near.record.height}cm / 体重：${near.record.weight}kg`;}};
+}
+function drawAgilityLineGraph(){
+  const c=document.getElementById("agilityLineCanvas"); if(!c)return; const ctx=c.getContext("2d"); ctx.clearRect(0,0,c.width,c.height); agilityLinePoints=[];
+  const detail=document.getElementById("agilityGraphDetail"); if(detail)detail.style.display="none";
+  const meta=AGILITY_TYPES.find(x=>x.name===agilityType)||AGILITY_TYPES[0];
+  const rows=myAgilityRows().filter(r=>r.type===agilityType).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(-12);
+  if(!rows.length){empty(ctx,c);return}
+  const left=54,right=20,top=28,bottom=54,w=c.width-left-right,h=c.height-top-bottom;
+  const vals=rows.map(r=>Number(r.value||0)).filter(v=>v>0); let min=Math.max(0,Math.floor(Math.min(...vals)-2)), max=Math.ceil(Math.max(...vals)+2); if(max<=min)max=min+10;
+  drawSimpleAxes(ctx,c,left,top,w,h,min,max,meta.unit);
+  const pts=rows.map((r,i)=>({date:r.date,x:left+i*w/Math.max(1,rows.length-1),y:top+(max-Number(r.value||0))*h/(max-min),value:Number(r.value||0),record:r}));
+  ctx.beginPath();pts.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});ctx.strokeStyle="#d91828";ctx.lineWidth=4;ctx.stroke();
+  pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle="#d91828";ctx.fill();ctx.fillStyle="#111827";ctx.font="11px sans-serif";ctx.fillText(String(p.value),p.x-10,p.y-10);agilityLinePoints.push(p);});
+  ctx.fillStyle="#111827";ctx.font="12px sans-serif";ctx.fillText(`${agilityType}（${meta.unit}）`,left,14);
+  ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";rows.forEach((r,i)=>{const x=left+i*w/Math.max(1,rows.length-1);ctx.fillText(String(r.date).slice(5).replace('-', '/'),x-12,c.height-18)});
+  c.onclick=function(ev){const rect=c.getBoundingClientRect();const x=(ev.clientX-rect.left)*(c.width/rect.width),y=(ev.clientY-rect.top)*(c.height/rect.height);let near=null,dist=9999;agilityLinePoints.forEach(p=>{const d=Math.hypot(p.x-x,p.y-y);if(d<dist){dist=d;near=p}});if(near&&dist<36&&detail){detail.style.display="block";detail.innerHTML=`<b>${safeText(near.date)}</b> <span class="badge">${safeText(agilityType)}</span><br>記録：<b>${near.value}${safeText(meta.unit)}</b>`;}};
+}
+const __v90_refresh=refresh;
+refresh=function(){__v90_refresh(); renderGrowthView(); renderAgilityView();};
+const __v90_showView=showView;
+showView=function(id,btn){__v90_showView(id,btn); if(id==="growthView"){syncGrowthRecordsFromSheet(false);renderGrowthView();} if(id==="agilityView"){syncAgilityRecordsFromSheet(false);renderAgilityView();}};
+const __v90_autoLogin=autoLogin;
+autoLogin=async function(){const ok=await __v90_autoLogin(); if(ok){syncGrowthRecordsFromSheet(false);syncAgilityRecordsFromSheet(false);} return ok;};
+const __v90_loginWithId=loginWithId;
+loginWithId=async function(){await __v90_loginWithId(); syncGrowthRecordsFromSheet(false); syncAgilityRecordsFromSheet(false);};
+setInterval(renderRecordDates,10000);
+
+/* v10.1 FIX: アジリティー種目選択を完全独立化。ボタン＋プルダウン両対応 */
+(function(){
+  var TYPES_FIXED=[
+    {name:"シャトルラン", unit:"回", placeholder:"例：80"},
+    {name:"反復横跳び", unit:"回", placeholder:"例：55"},
+    {name:"L字コーンドリル", unit:"秒", placeholder:"例：12.35"},
+    {name:"垂直跳び", unit:"cm", placeholder:"例：48.5"}
+  ];
+
+  function existsType(name){
+    return TYPES_FIXED.some(function(x){ return x.name === name; });
+  }
+
+  window.ninjaGetAgilityType=function(){
+    var current = window.__ninjaCurrentAgilityType || (typeof agilityType === "string" ? agilityType : "") || "シャトルラン";
+    return existsType(current) ? current : "シャトルラン";
+  };
+
+  window.ninjaSelectAgility=function(name){
+    if(!existsType(name)) name = "シャトルラン";
+    window.__ninjaCurrentAgilityType = name;
+    try{ agilityType = name; }catch(e){}
+
+    var meta = TYPES_FIXED.find(function(x){ return x.name === name; }) || TYPES_FIXED[0];
+
+    var label=document.getElementById("agilityValueLabel");
+    if(label) label.textContent = "記録（" + meta.unit + "）";
+
+    var hint=document.getElementById("agilityUnitHint");
+    if(hint) hint.textContent = "単位：" + meta.unit;
+
+    var input=document.getElementById("agilityValueInput");
+    if(input) input.placeholder = meta.placeholder;
+
+    var select=document.getElementById("agilityTypeSelect");
+    if(select && select.value !== name) select.value = name;
+
+    var wrap=document.getElementById("agilityTypeButtons");
+    if(wrap){
+      Array.prototype.forEach.call(wrap.querySelectorAll(".metric-btn"), function(btn){
+        var btnType = btn.getAttribute("data-agility-type") || btn.textContent.trim();
+        btn.classList.toggle("active", btnType === name);
+      });
+    }
+
+    if(typeof renderRecordDates === "function") renderRecordDates();
+    if(typeof drawAgilityLineGraph === "function") drawAgilityLineGraph();
+    if(typeof renderAgilitySummary === "function") renderAgilitySummary();
+    if(typeof renderAgilityRecent === "function") renderAgilityRecent();
+
+    var msg=document.getElementById("agilityMessage");
+    if(msg) msg.innerHTML = '<span class="success">種目：' + safeText(name) + ' を選択中</span>';
+    return false;
+  };
+
+  window.renderAgilityTypeButtons=function(){
+    var wrap=document.getElementById("agilityTypeButtons");
+    var current=window.ninjaGetAgilityType();
+
+    if(wrap){
+      wrap.innerHTML = TYPES_FIXED.map(function(x){
+        var active = x.name === current ? "active" : "";
+        return '<button type="button" class="metric-btn ' + active + '" data-agility-type="' + x.name + '" onclick="return ninjaSelectAgility(this.getAttribute(\"data-agility-type\"))">' + x.name + '</button>';
+      }).join("");
+    }
+
+    var select=document.getElementById("agilityTypeSelect");
+    if(select){
+      select.innerHTML = TYPES_FIXED.map(function(x){
+        return '<option value="' + x.name + '"' + (x.name===current ? ' selected' : '') + '>' + x.name + '</option>';
+      }).join("");
+    }
+
+    window.ninjaSelectAgility(current);
+  };
+
+  window.setAgilityType = window.ninjaSelectAgility;
+  window.selectAgilityTypeFromButton = window.ninjaSelectAgility;
+
+  function handleAgilityTap(e){
+    var target=e.target;
+    if(!target || !target.closest) return;
+    var btn=target.closest("#agilityTypeButtons .metric-btn");
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var name=btn.getAttribute("data-agility-type") || btn.textContent.trim();
+    window.ninjaSelectAgility(name);
+  }
+
+  ["pointerdown","click","touchstart"].forEach(function(evtName){
+    document.addEventListener(evtName, handleAgilityTap, true);
+  });
+
+  window.forceAgilityButtonsVisible=function(){
+    window.renderAgilityTypeButtons();
+  };
+
+  document.addEventListener("DOMContentLoaded", function(){
+    window.forceAgilityButtonsVisible();
+    setTimeout(window.forceAgilityButtonsVisible,100);
+    setTimeout(window.forceAgilityButtonsVisible,500);
+  });
+
+  setTimeout(function(){ if(window.forceAgilityButtonsVisible) window.forceAgilityButtonsVisible(); },0);
+  setTimeout(function(){ if(window.forceAgilityButtonsVisible) window.forceAgilityButtonsVisible(); },300);
+  setTimeout(function(){ if(window.forceAgilityButtonsVisible) window.forceAgilityButtonsVisible(); },1000);
+})();
+
+init();
+startInputDateTimeClock();
+forceDateTimeAfterLogin();
+updateInputDateTimeDisplay();
+setTimeout(updateInputDateTimeDisplay, 0);
+setTimeout(updateInputDateTimeDisplay, 200);
+window.addEventListener('pageshow', updateInputDateTimeDisplay);
+window.addEventListener('focus', updateInputDateTimeDisplay);
+
+// v7.2: ログイン直後・ページ復帰直後に大きいポジションボタンを必ず復元
+window.addEventListener("load",()=>{
+  forceDateTimeAfterLogin();
+  forceInputPositionRepair();
+  setTimeout(forceInputPositionRepair,100);
+  setTimeout(forceInputPositionRepair,400);
+});
+window.addEventListener("pageshow",()=>{
+  forceInputPositionRepair();
+  setTimeout(forceInputPositionRepair,100);
+});
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden) forceInputPositionRepair();
+});

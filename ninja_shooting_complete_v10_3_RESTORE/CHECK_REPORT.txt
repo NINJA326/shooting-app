@@ -1,0 +1,14 @@
+NINJA SHOOTING AVERAGE v10.3
+
+【緊急修正】
+- v10.2で成長記録・アジリティー記録が消えていたため、v10.1の完成画面をベースに復元。
+- JavaScriptが「async is not defined」で途中停止する原因を修正。
+- 成長記録タブ・アジリティー記録タブを維持。
+- アジリティー種目：シャトルラン／反復横跳び／L字コーンドリル／垂直跳び。
+- アジリティー種目はボタン＋プルダウン両方で選択可能。
+- localファイルでも保存IDが作れるように修正。
+- Apps Scriptは growth_records / agility_records 対応版を同梱。
+
+【アップロード】
+テストGitHubにはZIP内の全ファイルをアップしてください。
+特に index.html / google_apps_script_code.js / manifest.json / sw.js を差し替えてください。
