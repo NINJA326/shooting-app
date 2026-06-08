@@ -1,20 +1,9 @@
 {
   "name": "NINJA SHOOTING AVERAGE",
-  "short_name": "NINJA",
-  "start_url": "./index.html?v=8.9",
+  "short_name": "NINJA SHOOT",
+  "start_url": "./index.html?v=10.3",
   "display": "standalone",
   "background_color": "#111827",
   "theme_color": "#111827",
-  "icons": [
-    {
-      "src": "ninja_icon_192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "ninja_icon_512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "icons": []
 }
