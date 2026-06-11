@@ -49,6 +49,7 @@ function doGet(e) {
     else if (action === 'playerDetail') result = playerDetail_(p.playerId);
     else if (action === 'playerRecords') result = playerRecords_(p.playerId);
     else if (action === 'growthRecords') result = growthRecords_(p.playerId);
+    else if (action === 'growthSummary') result = growthSummary_();
     else if (action === 'agilityRecords') result = agilityRecords_(p.playerId);
     else if (action === 'agilityRankings') result = agilityRankings_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
@@ -279,6 +280,46 @@ function growthRecords_(playerId) {
   const records = getActiveGrowthRecords_().filter(r=>r.player===player.name && r.category===player.category).sort((a,b)=>String(a.measuredAtIso||a.createdAt||a.date).localeCompare(String(b.measuredAtIso||b.createdAt||b.date))).map(r=>({...r, syncAction:'cloud'}));
   return { status:'ok', player, records };
 }
+
+function growthSummary_() {
+  const players = listPlayers_().players;
+  const records = getActiveGrowthRecords_();
+  const byPlayer = new Map();
+  records.forEach(r => {
+    const key = `${r.player}|${r.category}`;
+    if (!byPlayer.has(key)) byPlayer.set(key, []);
+    byPlayer.get(key).push(r);
+  });
+  const latestByPlayer = players.map(p => {
+    const key = `${p.name}|${p.category}`;
+    const list = (byPlayer.get(key) || []).slice().sort((a,b) => String(a.measuredAtIso||a.createdAt||a.date).localeCompare(String(b.measuredAtIso||b.createdAt||b.date)));
+    const latest = list.length ? list[list.length - 1] : null;
+    return {
+      playerId: p.playerId,
+      player: p.name,
+      category: p.category,
+      height: latest ? Number(latest.height || 0) : 0,
+      weight: latest ? Number(latest.weight || 0) : 0,
+      date: latest ? (latest.date || '') : '',
+      recordsCount: list.length,
+      records: list
+    };
+  });
+  const avg = (items) => {
+    const valid = items.filter(x => Number(x.height||0) > 0 && Number(x.weight||0) > 0);
+    const height = valid.length ? Math.round((valid.reduce((s,x)=>s+Number(x.height||0),0)/valid.length)*10)/10 : 0;
+    const weight = valid.length ? Math.round((valid.reduce((s,x)=>s+Number(x.weight||0),0)/valid.length)*10)/10 : 0;
+    return { count: valid.length, height, weight };
+  };
+  const categories = ['男子U13','男子U14','男子U15','女子U13','女子U14','女子U15'];
+  const categoryAverages = categories.map(category => ({ category, ...avg(latestByPlayer.filter(x => x.category === category)) }));
+  const genderAverages = [
+    { gender:'男子全カテゴリー', ...avg(latestByPlayer.filter(x => String(x.category||'').indexOf('男子') === 0)) },
+    { gender:'女子全カテゴリー', ...avg(latestByPlayer.filter(x => String(x.category||'').indexOf('女子') === 0)) }
+  ];
+  return { status:'ok', generatedAt:new Date().toISOString(), players:latestByPlayer, categoryAverages, genderAverages };
+}
+
 function agilityRecords_(playerId) {
   const player = findPlayer_(playerId); if (!player) return { status:'error', message:'選手が見つかりません。' };
   const records = getActiveAgilityRecords_().filter(r=>r.player===player.name && r.category===player.category).sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(r=>({...r, syncAction:'cloud'}));

@@ -33,3 +33,16 @@ NINJA SHOOTING AVERAGE v10.3
 - 順位が上がった選手は、✨RANK UP表示・明るい背景・強調枠で華々しく表示。
 - 順位が下がった場合は、派手な色を使わず通常表示。
 - Apps Scriptはv10.5のagilityRankings APIをそのまま利用。
+
+
+【v10.7 修正】
+- コーチ管理画面に「成長記録」タブを追加。
+- 選手をプルダウンで選び、一人一人の身長・体重の成長グラフを表示。
+- 最新の身長・体重・測定日・記録数を表示。
+- U13/U14/U15などカテゴリー別の平均身長・平均体重を表示。
+- 男子全カテゴリー合計平均、女子全カテゴリー合計平均を表示。
+- Apps Scriptに growthSummary API を追加。
+
+【アップロード】
+index.html / coach_admin.html / google_apps_script_code.js / manifest.json / sw.js を差し替えてください。
+Apps Scriptは貼り替え後に必ず「デプロイを管理」→「編集」→「新しいバージョン」で再デプロイしてください。

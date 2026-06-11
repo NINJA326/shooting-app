@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v7.7</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v10.7</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -26,7 +26,7 @@ button.secondary{background:var(--dark)}button.ghost{background:#f3f4f6;color:#1
 .small{font-size:12px;color:var(--muted);line-height:1.5}.success{padding:10px 12px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;color:#166534;font-size:13px;line-height:1.5}.notice{padding:10px 12px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.5}
 .list-item{border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:8px;background:#fff}.badge{display:inline-block;background:#f3f4f6;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;color:#374151}
 .stat-made{color:#d91828;font-weight:900}.stat-attempt{color:#111827;font-weight:900}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:7px 8px env(safe-area-inset-bottom)}.tabs-inner{max-width:560px;width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.tab{background:#fff;color:#6b7280;border:none;box-shadow:none;padding:8px 2px;border-radius:12px;font-size:11px;font-weight:900}.tab.active{background:#fee2e2;color:var(--brand)}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:7px 8px env(safe-area-inset-bottom)}.tabs-inner{max-width:560px;width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.tab{background:#fff;color:#6b7280;border:none;box-shadow:none;padding:8px 2px;border-radius:12px;font-size:11px;font-weight:900}.tab.active{background:#fee2e2;color:var(--brand)}
 .view{display:none}.view.active{display:block}
 .login-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}.login-card{max-width:440px;width:100%}
 .hidden{display:none!important}
@@ -49,7 +49,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v7.7</div>
+  <div class="profile">コーチ管理専用 v10.7</div>
 </header>
 
 <main>
@@ -114,6 +114,35 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
   </div>
 </section>
 
+
+<section id="growthCoachView" class="view">
+  <div class="card">
+    <h2>身長・体重 成長記録</h2>
+    <p class="small">選手をプルダウンで選ぶと、一人一人の身長・体重の推移を確認できます。</p>
+    <button class="secondary" onclick="loadGrowthCoachData()">成長記録を更新</button>
+    <div id="growthCoachStatus" class="small" style="margin-top:8px">成長記録を更新してください。</div>
+    <label>選手選択</label>
+    <select id="growthPlayerSelect" onchange="renderSelectedGrowthPlayer()"></select>
+  </div>
+
+  <div class="card">
+    <h2>選手別 成長グラフ</h2>
+    <div id="growthPlayerSummary" class="small" style="margin-bottom:8px">選手を選択してください。</div>
+    <canvas id="coachGrowthCanvas" width="520" height="300"></canvas>
+    <div id="coachGrowthDetail" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>カテゴリー平均</h2>
+    <div id="growthCategoryAverage" class="small">データがありません。</div>
+  </div>
+
+  <div class="card">
+    <h2>男女 全カテゴリー平均</h2>
+    <div id="growthGenderAverage" class="small">データがありません。</div>
+  </div>
+</section>
+
 <section id="settingsView" class="view">
   <div class="card">
     <h2>スプレッドシート連携</h2>
@@ -135,6 +164,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
   <button class="tab active" onclick="showView('dashboardView',this)">ホーム</button>
   <button class="tab" onclick="showView('playersView',this)">選手管理</button>
   <button class="tab" onclick="showView('detailView',this)">詳細</button>
+  <button class="tab" onclick="showView('growthCoachView',this)">成長記録</button>
   <button class="tab" onclick="showView('settingsView',this)">設定</button>
 </div></nav>
 </div>
@@ -143,7 +173,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 /* v8.8 FIX: コーチ用も古いキャッシュを自動削除 */
 (function(){
-  const APP_VERSION = "8.8-coach";
+  const APP_VERSION = "10.7-coach";
   const VERSION_KEY = "ninja_coach_app_version_seen";
   async function clearOldAppCache(){
     try{
@@ -159,7 +189,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
       if(seen !== APP_VERSION){
         localStorage.setItem(VERSION_KEY, APP_VERSION);
         if(!location.search.includes("fresh=1")){
-          location.replace(location.pathname + "?fresh=1&v=8.8");
+          location.replace(location.pathname + "?fresh=1&v=10.7-coach");
         }
       }
     }catch(e){}
@@ -204,6 +234,7 @@ function showView(id,btn){
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
  btn.classList.add("active");
  if(id==="playersView")coachLoadPlayers(true);
+ if(id==="growthCoachView")loadGrowthCoachData();
  if(id==="settingsView")loadGasUrlToAdmin();
 }
 function coachJsonp(action, params={}){
@@ -401,6 +432,90 @@ async function loadDashboard(){
    typeBox.innerHTML=byType.length?byType.map(x=>`<div class="list-item"><b>${safeText(x.type)}</b>　${x.rate}%　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"データがありません。";
    st.innerHTML="更新しました。";
  }catch(e){st.innerHTML="取得に失敗しました。Apps Scriptを確認してください。";}
+}
+
+
+let coachGrowthData=null;
+let coachGrowthPoints=[];
+
+function oneDecimal(v){return Number(v||0).toFixed(1).replace('.0','.0')}
+function avgCard(label,item){return `<div class="list-item"><b>${safeText(label)}</b><br>人数：${item.count||0}人<br>平均身長：<b>${oneDecimal(item.height)}cm</b><br>平均体重：<b>${oneDecimal(item.weight)}kg</b></div>`}
+
+async function loadGrowthCoachData(){
+ const st=document.getElementById("growthCoachStatus");
+ const sel=document.getElementById("growthPlayerSelect");
+ if(st)st.innerHTML="成長記録を取得中...";
+ try{
+   const res=await coachJsonp("growthSummary");
+   if(res.status!=="ok"){
+     if(st)st.innerHTML=res.message||"成長記録を取得できませんでした。Apps Scriptを最新版に更新してください。";
+     return;
+   }
+   coachGrowthData=res;
+   const players=(res.players||[]).slice().sort((a,b)=>String(a.category).localeCompare(String(b.category),'ja')||String(a.player).localeCompare(String(b.player),'ja'));
+   if(sel){
+     sel.innerHTML=players.length?players.map(p=>`<option value="${safeText(p.playerId)}">${safeText(p.category)} / ${safeText(p.player)}</option>`).join(""):"<option>登録選手がいません</option>";
+   }
+   renderGrowthAverages();
+   renderSelectedGrowthPlayer();
+   if(st)st.innerHTML=`更新しました。対象選手：${players.length}人`;
+ }catch(e){
+   if(st)st.innerHTML="成長記録の取得に失敗しました。Apps ScriptのURL・再デプロイを確認してください。";
+ }
+}
+
+function renderGrowthAverages(){
+ if(!coachGrowthData)return;
+ const cat=document.getElementById("growthCategoryAverage");
+ const gen=document.getElementById("growthGenderAverage");
+ if(cat)cat.innerHTML=(coachGrowthData.categoryAverages||[]).map(x=>avgCard(x.category,x)).join("")||"データがありません。";
+ if(gen)gen.innerHTML=(coachGrowthData.genderAverages||[]).map(x=>avgCard(x.gender,x)).join("")||"データがありません。";
+}
+
+function renderSelectedGrowthPlayer(){
+ const sel=document.getElementById("growthPlayerSelect");
+ const summary=document.getElementById("growthPlayerSummary");
+ const detail=document.getElementById("coachGrowthDetail");
+ if(!coachGrowthData||!sel)return;
+ const player=(coachGrowthData.players||[]).find(p=>p.playerId===sel.value) || (coachGrowthData.players||[])[0];
+ if(!player){
+   if(summary)summary.innerHTML="選手データがありません。";
+   drawCoachGrowthChart(null);
+   return;
+ }
+ const records=(player.records||[]).slice().sort((a,b)=>String(a.measuredAtIso||a.createdAt||a.date).localeCompare(String(b.measuredAtIso||b.createdAt||b.date)));
+ if(summary){
+   summary.innerHTML=`<div class="list-item"><b>${safeText(player.player)}</b> <span class="badge">${safeText(player.category)}</span><br>最新：身長 <b>${oneDecimal(player.height)}cm</b> / 体重 <b>${oneDecimal(player.weight)}kg</b><br>測定日：${safeText(player.date||'-')} / 記録数：${records.length}件</div>`;
+ }
+ if(detail)detail.innerHTML="グラフの点を押すと詳細が表示されます。";
+ drawCoachGrowthChart(records);
+}
+
+function drawCoachGrowthChart(records){
+ const c=document.getElementById("coachGrowthCanvas");
+ if(!c)return;
+ const ctx=c.getContext("2d");
+ ctx.clearRect(0,0,c.width,c.height);
+ coachGrowthPoints=[];
+ if(!records||!records.length){ctx.fillStyle="#111827";ctx.font="14px sans-serif";ctx.fillText("成長記録がありません",c.width/2-70,c.height/2);return;}
+ const left=48,right=28,top=28,bottom=44,w=c.width-left-right,h=c.height-top-bottom;
+ const heights=records.map(r=>Number(r.height||0)).filter(Boolean);
+ const weights=records.map(r=>Number(r.weight||0)).filter(Boolean);
+ const values=heights.concat(weights);
+ const min=Math.max(0,Math.floor((Math.min(...values)-5)/10)*10);
+ const max=Math.ceil((Math.max(...values)+5)/10)*10;
+ ctx.strokeStyle="#e5e7eb";ctx.lineWidth=1;ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";
+ for(let i=0;i<=4;i++){const y=top+i*h/4;const v=Math.round(max-(max-min)*i/4);ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(c.width-right,y);ctx.stroke();ctx.fillText(String(v),12,y+4)}
+ const makePoints=(key,label)=>records.map((r,i)=>{const x=left+i*(w/Math.max(1,records.length-1));const v=Number(r[key]||0);const y=top+(max-v)*h/Math.max(1,(max-min));return {...r,x,y,value:v,key,label};});
+ const hPts=makePoints('height','身長');
+ const wPts=makePoints('weight','体重');
+ function drawLine(points,color){ctx.beginPath();points.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});ctx.strokeStyle=color;ctx.lineWidth=4;ctx.stroke();points.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();coachGrowthPoints.push(p);ctx.fillStyle=color;ctx.font="10px sans-serif";ctx.fillText(oneDecimal(p.value),p.x-12,p.y-10);});}
+ drawLine(hPts,"#d91828");
+ drawLine(wPts,"#111827");
+ ctx.fillStyle="#d91828";ctx.fillRect(left,8,14,5);ctx.fillStyle="#111827";ctx.font="12px sans-serif";ctx.fillText("身長cm",left+20,13);
+ ctx.fillStyle="#111827";ctx.fillRect(left+90,8,14,5);ctx.fillText("体重kg",left+110,13);
+ records.forEach((r,i)=>{const x=left+i*(w/Math.max(1,records.length-1));ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";ctx.fillText(String(r.date||'').slice(5).replace('-','/'),x-12,c.height-14);});
+ c.onclick=function(ev){const rect=c.getBoundingClientRect();const x=(ev.clientX-rect.left)*(c.width/rect.width);const y=(ev.clientY-rect.top)*(c.height/rect.height);let near=null,dist=9999;coachGrowthPoints.forEach(p=>{const d=Math.hypot(p.x-x,p.y-y);if(d<dist){dist=d;near=p;}});if(near&&dist<35){const box=document.getElementById("coachGrowthDetail");if(box)box.innerHTML=`<div class="list-item"><b>${safeText(near.date||'-')}</b><br>${safeText(near.label)}：<b>${oneDecimal(near.value)}${near.key==='height'?'cm':'kg'}</b><br>身長：${oneDecimal(near.height)}cm / 体重：${oneDecimal(near.weight)}kg</div>`;}};
 }
 
 function downloadCSV(){
