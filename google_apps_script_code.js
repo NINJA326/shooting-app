@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v9.5
+ * NINJA SHOOTING AVERAGE v10.5
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
@@ -50,9 +50,10 @@ function doGet(e) {
     else if (action === 'playerRecords') result = playerRecords_(p.playerId);
     else if (action === 'growthRecords') result = growthRecords_(p.playerId);
     else if (action === 'agilityRecords') result = agilityRecords_(p.playerId);
+    else if (action === 'agilityRankings') result = agilityRankings_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v9.5' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v10.5' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
@@ -282,6 +283,52 @@ function agilityRecords_(playerId) {
   const player = findPlayer_(playerId); if (!player) return { status:'error', message:'選手が見つかりません。' };
   const records = getActiveAgilityRecords_().filter(r=>r.player===player.name && r.category===player.category).sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(r=>({...r, syncAction:'cloud'}));
   return { status:'ok', player, records };
+}
+
+
+function agilityRankings_() {
+  const types = ['シャトルラン','反復横跳び','L字コーンドリル','垂直跳び'];
+  const records = getActiveAgilityRecords_();
+  const rankings = {};
+  types.forEach(type => {
+    const byPlayer = new Map();
+    records.filter(r => r.type === type).forEach(r => {
+      const key = `${r.player}|${r.category}`;
+      if (!byPlayer.has(key)) byPlayer.set(key, []);
+      byPlayer.get(key).push(r);
+    });
+    const currentRows = [];
+    const previousRows = [];
+    byPlayer.forEach((list, key) => {
+      list.sort((a,b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+      const current = list[list.length - 1];
+      const previous = list.length >= 2 ? list[list.length - 2] : null;
+      currentRows.push({
+        key,
+        player: current.player,
+        category: current.category,
+        type: current.type,
+        value: Number(current.value || 0),
+        unit: current.unit || '',
+        date: current.date || '',
+        previousValue: previous ? Number(previous.value || 0) : null,
+        previousDate: previous ? (previous.date || '') : ''
+      });
+      if (previous) previousRows.push({ key, value: Number(previous.value || 0) });
+    });
+    const higherIsBetter = type !== 'L字コーンドリル';
+    const sorter = (a,b) => higherIsBetter ? (Number(b.value||0) - Number(a.value||0)) : (Number(a.value||0) - Number(b.value||0));
+    currentRows.sort(sorter);
+    previousRows.sort(sorter);
+    const prevRankMap = new Map();
+    previousRows.forEach((r,i) => prevRankMap.set(r.key, i + 1));
+    rankings[type] = currentRows.map((r,i) => ({
+      rank: i + 1,
+      previousRank: prevRankMap.get(r.key) || null,
+      ...r
+    }));
+  });
+  return { status:'ok', generatedAt:new Date().toISOString(), rankings };
 }
 
 function formatDate_(value) { if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd'); return String(value || ''); }
