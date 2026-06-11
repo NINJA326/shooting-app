@@ -2,7 +2,7 @@
 
 /* v8.8 FIX: 固定URLで最新版を読み込みやすくする自動更新対応 */
 (function(){
-  const APP_VERSION = "10.5";
+  const APP_VERSION = "10.6";
   const VERSION_KEY = "ninja_app_version_seen";
   async function clearOldAppCache(){
     try{
@@ -1391,6 +1391,7 @@ const AGILITY_TYPES=[
   {name:"垂直跳び", unit:"cm", placeholder:"例：48.5"}
 ];
 let agilityType=AGILITY_TYPES[0].name;
+let agilityRankingType=AGILITY_TYPES[0].name;
 let growthLinePoints=[], agilityLinePoints=[];
 
 function getGrowthRecords(){return load(LS_GROWTH_RECORDS,[])}
@@ -1557,52 +1558,79 @@ function drawAgilityLineGraph(){
 
 let agilityRankingsCache=null;
 let agilityRankingsFetchedAt=null;
+function getAgilityRankingTypes(){return (typeof AGILITY_TYPES!=="undefined"?AGILITY_TYPES:[]).map(x=>x.name)}
+function setAgilityRankingType(type){
+  const types=getAgilityRankingTypes();
+  if(!types.includes(type))type=types[0]||"";
+  agilityRankingType=type;
+  renderAgilityRankingTypeButtons();
+  renderAgilityRankings();
+}
+function renderAgilityRankingTypeButtons(){
+  const types=getAgilityRankingTypes();
+  if(!types.length)return;
+  if(!types.includes(agilityRankingType))agilityRankingType=types[0];
+  const wrap=document.getElementById("agilityRankingTypeButtons");
+  if(wrap){
+    wrap.innerHTML=types.map(t=>`<button type="button" class="metric-btn ${t===agilityRankingType?'active':''}" onclick="setAgilityRankingType('${jsArg(t)}')">${safeText(t)}</button>`).join("");
+  }
+  const select=document.getElementById("agilityRankingTypeSelect");
+  if(select){
+    select.innerHTML=types.map(t=>`<option value="${safeText(t)}" ${t===agilityRankingType?'selected':''}>${safeText(t)}</option>`).join("");
+    select.value=agilityRankingType;
+  }
+}
 function formatRankChange(row){
   const cur=Number(row.rank||0);
   const prev=Number(row.previousRank||0);
   if(!cur)return "-";
-  if(!prev)return `初回 → 今回${cur}位`;
+  if(!prev)return `<span class="rank-up-text">初回 → 今回${cur}位 ✨</span>`;
   const diff=prev-cur;
-  const icon=diff>0?"⬆️":diff<0?"⬇️":"➡️";
-  const color=diff>0?"#16a34a":diff<0?"#d91828":"#6b7280";
-  return `<span style="color:${color};font-weight:900">前回${prev}位 → 今回${cur}位 ${icon}</span>`;
+  if(diff>0)return `<span class="rank-up-text">前回${prev}位 → 今回${cur}位 ✨ ${diff}ランクUP</span>`;
+  if(diff<0)return `<span style="color:#6b7280;font-weight:900">前回${prev}位 → 今回${cur}位</span>`;
+  return `<span style="color:#6b7280;font-weight:900">前回${prev}位 → 今回${cur}位</span>`;
 }
 function renderAgilityRankings(){
+  renderAgilityRankingTypeButtons();
   const box=document.getElementById("agilityRankingList");
   const st=document.getElementById("agilityRankingStatus");
   if(!box)return;
   const prof=getProfile();
-  const types=(typeof AGILITY_TYPES!=="undefined"?AGILITY_TYPES:[]).map(x=>x.name);
   const rankings=agilityRankingsCache&&agilityRankingsCache.rankings?agilityRankingsCache.rankings:null;
   if(!rankings){
     if(st)st.innerHTML="順位データ未取得です。";
-    box.innerHTML="順位を更新してください。";
+    box.innerHTML="種目を選んで「順位を更新」を押してください。";
     return;
   }
   if(st){
     const t=agilityRankingsFetchedAt?new Date(agilityRankingsFetchedAt).toLocaleString("ja-JP"):"";
     st.innerHTML=t?`順位更新済み：${safeText(t)}`:"順位更新済み";
   }
-  box.innerHTML=types.map(type=>{
-    const rows=Array.isArray(rankings[type])?rankings[type]:[];
-    const meta=(AGILITY_TYPES||[]).find(x=>x.name===type)||{unit:""};
-    if(!rows.length){
-      return `<div class="list-item"><b>${safeText(type)}</b><br><span class="small">まだ記録がありません。</span></div>`;
-    }
-    const top=rows.slice(0,10).map(r=>{
-      const isMine=prof && r.player===prof.name && r.category===prof.category;
-      const klass=isMine?' style="background:#fff7ed;border-color:#fed7aa"':'';
-      return `<div class="list-item"${klass}>`+
-        `<span class="ranknum">${Number(r.rank||0)}位</span> <b>${safeText(r.player)}</b> <span class="badge">${safeText(r.category)}</span><br>`+
-        `記録：<b>${Number(r.value||0)}${safeText(r.unit||meta.unit||"")}</b>　`+
-        `${formatRankChange(r)}<br>`+
-        `<span class="small">今回：${safeText(r.date||"-")} / 前回：${safeText(r.previousDate||"-")}</span>`+
-        `</div>`;
-    }).join("");
-    const my=prof?rows.find(r=>r.player===prof.name&&r.category===prof.category):null;
-    const myHtml=my?`<div class="notice"><b>自分：</b>${formatRankChange(my)} / 記録 ${Number(my.value||0)}${safeText(my.unit||meta.unit||"")}</div>`:"";
-    return `<div style="margin-bottom:12px"><h2 style="font-size:15px;margin:10px 0 8px">${safeText(type)} 順位</h2>${myHtml}${top}</div>`;
+  const type=agilityRankingType;
+  const rows=Array.isArray(rankings[type])?rankings[type]:[];
+  const meta=(AGILITY_TYPES||[]).find(x=>x.name===type)||{unit:""};
+  if(!rows.length){
+    box.innerHTML=`<div class="list-item"><b>${safeText(type)}</b><br><span class="small">まだ記録がありません。</span></div>`;
+    return;
+  }
+  const my=prof?rows.find(r=>r.player===prof.name&&r.category===prof.category):null;
+  const myHtml=my?`<div class="notice"><b>自分：</b>${formatRankChange(my)}<br>記録：<b>${Number(my.value||0)}${safeText(my.unit||meta.unit||"")}</b> / ${safeText(my.date||"-")}</div>`:"";
+  const top=rows.slice(0,15).map(r=>{
+    const cur=Number(r.rank||0);
+    const prev=Number(r.previousRank||0);
+    const isUp=prev ? prev>cur : false;
+    const isMine=prof && r.player===prof.name && r.category===prof.category;
+    const klass=isUp?' rank-up-spark':(isMine?'':'');
+    const style=isMine&&!isUp?' style="background:#fff7ed;border-color:#fed7aa"':'';
+    const crown=cur===1?'🏆 ':cur===2?'🥈 ':cur===3?'🥉 ':'';
+    return `<div class="list-item${klass}"${style}>`+
+      `<span class="ranknum">${crown}${cur}位</span> <b>${safeText(r.player)}</b> <span class="badge">${safeText(r.category)}</span><br>`+
+      `記録：<b>${Number(r.value||0)}${safeText(r.unit||meta.unit||"")}</b>　`+
+      `${formatRankChange(r)}<br>`+
+      `<span class="small">今回：${safeText(r.date||"-")} / 前回：${safeText(r.previousDate||"-")}</span>`+
+      `</div>`;
   }).join("");
+  box.innerHTML=`<h2 style="font-size:15px;margin:10px 0 8px">${safeText(type)} 順位</h2>${myHtml}${top}`;
 }
 async function fetchAgilityRankings(showMessage=false){
   const st=document.getElementById("agilityRankingStatus");
