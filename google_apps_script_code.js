@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v10.8
+ * NINJA SHOOTING AVERAGE v11.0
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
@@ -53,7 +53,7 @@ function doGet(e) {
     else if (action === 'agilityRecords') result = agilityRecords_(p.playerId);
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v10.8' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.0' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
@@ -167,13 +167,13 @@ function findPlayer_(playerId) {
 function playerDetail_(playerId) {
   const player = findPlayer_(playerId);
   if (!player) return { status:'error', message:'選手が見つかりません。' };
-  const records = getActiveRecords_().filter(r => r.player === player.name && r.category === player.category);
+  const records = getActiveRecords_().filter(r => r.player === player.name);
   return buildPlayerDetail_(player, records);
 }
 function playerRecords_(playerId) {
   const player = findPlayer_(playerId);
   if (!player) return { status:'error', message:'選手が見つかりません。' };
-  const records = getActiveRecords_().filter(r => r.player === player.name && r.category === player.category).sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(r => ({...r, syncAction:'cloud'}));
+  const records = getActiveRecords_().filter(r => r.player === player.name).sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(r => ({...r, syncAction:'cloud'}));
   return { status:'ok', player, records };
 }
 function buildPlayerDetail_(player, records) {
