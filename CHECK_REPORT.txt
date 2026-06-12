@@ -1,14 +1,11 @@
-NINJA SHOOTING AVERAGE v11.0
+NINJA SHOOTING AVERAGE v11.1
 
-【今回の修正】
-- コーチアプリの選手管理をダウンリスト選択式に変更。
-- 選手を選ぶと、スプレッドシート shooting_records からシューティング詳細を表示。
-- 詳細が反映されない原因対策として、Apps Script の playerDetail を「選手名」で取得する方式に修正。
-  ※カテゴリー変更後でも過去記録が表示されやすくなります。
-- 得意ポジション・不得意ポジションを選手管理内で表示。
-- カテゴリー変更を選手詳細から削除し、設定タブへ移動。
-- コーチアプリバージョンを v11.0 に更新。
+【修正】
+- 選手用 index.html が v8.9 に戻っていた問題を修正
+- 選手用を v10.6 系の成長記録・アジリティー記録入りに戻し、v11.1として再発行
+- コーチアプリは v11.0 修正版を同梱
+- manifest / sw も v11.1 に更新
 
 【アップロード】
-index.html / coach_admin.html / google_apps_script_code.js / manifest.json / sw.js を差し替えてください。
-Apps Script は貼り替え後に必ず「デプロイを管理」→「編集」→「新しいバージョン」で再デプロイしてください。
+GitHubにはZIPの中身をリポジトリ直下へ上書きしてください。
+Apps Scriptは google_apps_script_code.js を貼り替えて再デプロイしてください。
