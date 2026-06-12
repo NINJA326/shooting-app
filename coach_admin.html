@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v10.8</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v10.9</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -26,7 +26,7 @@ button.secondary{background:var(--dark)}button.ghost{background:#f3f4f6;color:#1
 .small{font-size:12px;color:var(--muted);line-height:1.5}.success{padding:10px 12px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;color:#166534;font-size:13px;line-height:1.5}.notice{padding:10px 12px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.5}
 .list-item{border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:8px;background:#fff}.badge{display:inline-block;background:#f3f4f6;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;color:#374151}
 .stat-made{color:#d91828;font-weight:900}.stat-attempt{color:#111827;font-weight:900}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:7px 8px env(safe-area-inset-bottom)}.tabs-inner{max-width:560px;width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.tab{background:#fff;color:#6b7280;border:none;box-shadow:none;padding:8px 2px;border-radius:12px;font-size:11px;font-weight:900}.tab.active{background:#fee2e2;color:var(--brand)}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:7px 8px env(safe-area-inset-bottom)}.tabs-inner{max-width:560px;width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.tab{background:#fff;color:#6b7280;border:none;box-shadow:none;padding:8px 2px;border-radius:12px;font-size:11px;font-weight:900}.tab.active{background:#fee2e2;color:var(--brand)}
 .view{display:none}.view.active{display:block}
 .login-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}.login-card{max-width:440px;width:100%}
 .hidden{display:none!important}
@@ -49,7 +49,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v10.8</div>
+  <div class="profile">コーチ管理専用 v10.9</div>
 </header>
 
 <main>
@@ -82,38 +82,18 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 <section id="playersView" class="view">
   <div class="card">
-    <h2>選手追加</h2>
-    <p class="small">選手IDと初回パスワードはコーチが作成します。</p>
-    <label>選手ID</label>
-    <input id="coachNewPlayerId" placeholder="例：ninja001">
-    <label>初回パスワード</label>
-    <input id="coachNewPassword" placeholder="例：1234">
-    <label>選手名</label>
-    <input id="coachNewName" placeholder="例：山田 太郎">
-    <label>カテゴリー</label>
-    <select id="coachNewCategory">
-      <option>男子U13</option><option>男子U14</option><option>男子U15</option>
-      <option>女子U13</option><option>女子U14</option><option>女子U15</option>
-    </select>
-    <button style="margin-top:10px" onclick="coachAddPlayer()">選手を追加</button>
-    <div id="coachAddPlayerMessage" class="small" style="margin-top:8px"></div>
-  </div>
-
-  <div class="card">
-    <h2>登録選手一覧</h2>
+    <h2>選手管理</h2>
+    <p class="small">選手名を押すと、シューティング詳細・得意ポジション・不得意ポジションを確認できます。</p>
     <button class="secondary" onclick="coachLoadPlayers()">選手一覧を更新</button>
     <div id="coachPlayerStatus" class="small" style="margin-top:8px">選手一覧を更新してください。</div>
     <div id="coachPlayerList" style="margin-top:10px"></div>
   </div>
-</section>
 
-<section id="detailView" class="view">
   <div class="card">
-    <h2>選手詳細</h2>
+    <h2>選手別シューティング詳細</h2>
     <div id="coachPlayerDetail" class="small">選手一覧から選手を選択してください。</div>
   </div>
 </section>
-
 
 <section id="growthCoachView" class="view">
   <div class="card">
@@ -146,6 +126,24 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 <section id="settingsView" class="view">
   <div class="card">
+    <h2>選手追加</h2>
+    <p class="small">選手IDと初回パスワードはコーチが作成します。</p>
+    <label>選手ID</label>
+    <input id="coachNewPlayerId" placeholder="例：ninja001">
+    <label>初回パスワード</label>
+    <input id="coachNewPassword" placeholder="例：1234">
+    <label>選手名</label>
+    <input id="coachNewName" placeholder="例：山田 太郎">
+    <label>カテゴリー</label>
+    <select id="coachNewCategory">
+      <option>男子U13</option><option>男子U14</option><option>男子U15</option>
+      <option>女子U13</option><option>女子U14</option><option>女子U15</option>
+    </select>
+    <button style="margin-top:10px" onclick="coachAddPlayer()">選手を追加</button>
+    <div id="coachAddPlayerMessage" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
     <h2>スプレッドシート連携</h2>
     <label>Apps Script WebアプリURL</label>
     <input id="gasUrlInput" placeholder="https://script.google.com/macros/s/xxxxx/exec">
@@ -164,7 +162,6 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <nav class="tabs"><div class="tabs-inner">
   <button class="tab active" onclick="showView('dashboardView',this)">ホーム</button>
   <button class="tab" onclick="showView('playersView',this)">選手管理</button>
-  <button class="tab" onclick="showView('detailView',this)">詳細</button>
   <button class="tab" onclick="showView('growthCoachView',this)">成長記録</button>
   <button class="tab" onclick="showView('settingsView',this)">設定</button>
 </div></nav>
@@ -174,7 +171,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 /* v8.8 FIX: コーチ用も古いキャッシュを自動削除 */
 (function(){
-  const APP_VERSION = "10.8-coach";
+  const APP_VERSION = "10.9-coach";
   const VERSION_KEY = "ninja_coach_app_version_seen";
   async function clearOldAppCache(){
     try{
@@ -190,7 +187,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
       if(seen !== APP_VERSION){
         localStorage.setItem(VERSION_KEY, APP_VERSION);
         if(!location.search.includes("fresh=1")){
-          location.replace(location.pathname + "?fresh=1&v=10.8-coach");
+          location.replace(location.pathname + "?fresh=1&v=10.9-coach");
         }
       }
     }catch(e){}
@@ -358,31 +355,22 @@ function drawMonthlyGrowth(monthly){
 
 async function coachShowPlayerDetail(playerId){
  selectedCoachPlayerId=playerId;
- document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
- document.getElementById("detailView").classList.add("active");
- document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- document.querySelectorAll(".tab")[2].classList.add("active");
-
  const detail=document.getElementById("coachPlayerDetail");
+ if(!detail)return;
  detail.innerHTML="詳細を取得中...";
  try{
    const res=await coachJsonp("playerDetail",{playerId});
    if(res.status!=="ok"){detail.innerHTML=res.message||"詳細を取得できませんでした。";return}
    const p=res.player,total=res.total||{},byType=res.byType||[],byPosition=res.byPosition||[],recent=res.recent||[];
+   const positions=byPosition.slice().filter(x=>Number(x.attempts||0)>0);
+   const bestPositions=positions.slice().sort((a,b)=>Number(b.rate||0)-Number(a.rate||0)||Number(b.attempts||0)-Number(a.attempts||0)).slice(0,5);
+   const weakPositions=positions.slice().sort((a,b)=>Number(a.rate||0)-Number(b.rate||0)||Number(b.attempts||0)-Number(a.attempts||0)).slice(0,5);
+   const bestHtml=bestPositions.length?bestPositions.map((x,i)=>`<div class="list-item" style="border-left:10px solid ${i===0?'#16a34a':'#2563eb'}"><b>${i+1}. ${safeText(x.type)} / ${safeText(x.position)}</b><br>成功率：<b>${x.rate}%</b>　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"<div class='small'>記録がありません。</div>";
+   const weakHtml=weakPositions.length?weakPositions.map((x,i)=>`<div class="list-item" style="border-left:10px solid #f59e0b"><b>${i+1}. ${safeText(x.type)} / ${safeText(x.position)}</b><br>成功率：<b>${x.rate}%</b>　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span><div class="small">重点練習候補</div></div>`).join(""):"<div class='small'>記録がありません。</div>";
    detail.innerHTML=`
      <div class="list-item">
        <b style="font-size:18px">${safeText(p.name)}</b> <span class="badge">${safeText(p.category)}</span><br>
        <span class="small">ID：${safeText(p.playerId)}</span>
-     </div>
-
-     <div class="card" style="box-shadow:none;margin:0 0 10px;padding:12px">
-       <h2>カテゴリー変更</h2>
-       <p class="small">学年更新やカテゴリー変更時に使用します。</p>
-       <select id="detailCategorySelect">
-         ${["男子U13","男子U14","男子U15","女子U13","女子U14","女子U15"].map(cat=>`<option ${cat===p.category?'selected':''}>${cat}</option>`).join("")}
-       </select>
-       <button class="secondary" style="margin-top:8px" onclick="coachUpdatePlayerCategory()">カテゴリーを変更</button>
-       <div id="categoryUpdateMessage" class="small" style="margin-top:8px"></div>
      </div>
 
      <div class="kpi" style="margin-bottom:10px">
@@ -391,15 +379,36 @@ async function coachShowPlayerDetail(playerId){
        <div><b>${total.records||0}</b><span>記録数</span></div>
      </div>
 
+     <h2>得意ポジション</h2>
+     <p class="small">成功率が高い順に表示します。</p>
+     ${bestHtml}
+
+     <h2>不得意ポジション</h2>
+     <p class="small">成功率が低い順に表示します。練習で重点的に確認する候補です。</p>
+     ${weakHtml}
+
      <h2>種目別</h2>
      ${byType.length?byType.map(x=>`<div class="list-item"><b>${safeText(x.type)}</b>　${x.rate}%　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"<div class='small'>記録がありません。</div>"}
 
-     <h2>ポジション別 上位</h2>
-     ${byPosition.length?byPosition.slice(0,10).map(x=>`<div class="list-item"><b>${safeText(x.type)} / ${safeText(x.position)}</b><br>${x.rate}%　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"<div class='small'>記録がありません。</div>"}
+     <h2>ポジション別 全一覧</h2>
+     ${byPosition.length?byPosition.map(x=>`<div class="list-item"><b>${safeText(x.type)} / ${safeText(x.position)}</b><br>${x.rate}%　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"<div class='small'>記録がありません。</div>"}
+
+     <div class="card" style="box-shadow:none;margin:0 0 10px;padding:12px">
+       <h2>カテゴリー変更</h2>
+       <select id="detailCategorySelect">
+         ${["男子U13","男子U14","男子U15","女子U13","女子U14","女子U15"].map(cat=>`<option ${cat===p.category?'selected':''}>${cat}</option>`).join("")}
+       </select>
+       <button class="secondary" style="margin-top:8px" onclick="coachUpdatePlayerCategory()">カテゴリーを変更</button>
+       <div id="categoryUpdateMessage" class="small" style="margin-top:8px"></div>
+     </div>
 
      <h2>直近記録</h2>
      ${recent.length?recent.map(r=>`<div class="list-item"><b>${safeText(r.date)}</b> <span class="badge">${safeText(r.type)}</span> <span class="badge">${safeText(r.position)}</span><br>${r.rate}%　<span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span><div class="small">${safeText(r.practice||"-")}</div></div>`).join(""):"<div class='small'>記録がありません。</div>"}
    `;
+   if(document.getElementById("playersView") && !document.getElementById("playersView").classList.contains("active")){
+     document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+     document.getElementById("playersView").classList.add("active");
+   }
  }catch(e){detail.innerHTML="詳細の取得に失敗しました。";}
 }
 
