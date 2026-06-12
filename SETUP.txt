@@ -1,4 +1,4 @@
-【v11.0 アップロード手順】
+【v11.2 アップロード手順】
 
 1. GitHub の shooting-app にZIP内のファイルをすべてアップロード
 2. Commit changes
@@ -7,4 +7,4 @@
 5. コーチアプリを開いて、選手管理で選手をダウンリストから選択
 
 コーチURL:
-https://ninja326.github.io/shooting-app/coach_admin.html?v=11.0
+https://ninja326.github.io/shooting-app/coach_admin.html?v=11.2
