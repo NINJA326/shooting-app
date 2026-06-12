@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v11.0
+ * NINJA SHOOTING AVERAGE v11.3
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
@@ -51,9 +51,10 @@ function doGet(e) {
     else if (action === 'growthRecords') result = growthRecords_(p.playerId);
     else if (action === 'growthSummary') result = growthSummary_();
     else if (action === 'agilityRecords') result = agilityRecords_(p.playerId);
+    else if (action === 'agilityRankings') result = agilityRankings_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.0' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.3' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
@@ -323,6 +324,39 @@ function agilityRecords_(playerId) {
   const player = findPlayer_(playerId); if (!player) return { status:'error', message:'選手が見つかりません。' };
   const records = getActiveAgilityRecords_().filter(r=>r.player===player.name && r.category===player.category).sort((a,b)=>String(a.date).localeCompare(String(b.date))).map(r=>({...r, syncAction:'cloud'}));
   return { status:'ok', player, records };
+}
+
+
+function agilityRankings_() {
+  const records = getActiveAgilityRecords_();
+  const types = ['シャトルラン','反復横跳び','L字コーンドリル','垂直跳び'];
+  const unitMap = {'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
+  const lowerIsBetter = {'L字コーンドリル': true};
+  const result = {};
+  types.forEach(type => {
+    const typeRecords = records.filter(r => r.type === type && Number(r.value || 0) > 0);
+    const grouped = new Map();
+    typeRecords.forEach(r => {
+      const key = `${r.player}|${r.category}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(r);
+    });
+    const currentRows = [];
+    const previousRows = [];
+    grouped.forEach(list => {
+      list = list.slice().sort((a,b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+      const latest = list[list.length - 1];
+      const previous = list.length >= 2 ? list[list.length - 2] : null;
+      if (latest) currentRows.push({ player:latest.player, category:latest.category, type:latest.type, value:Number(latest.value||0), unit:latest.unit||unitMap[type]||'', date:latest.date||'', previousValue:previous?Number(previous.value||0):0, previousDate:previous?(previous.date||''):'' });
+      if (previous) previousRows.push({ player:previous.player, category:previous.category, type:previous.type, value:Number(previous.value||0), unit:previous.unit||unitMap[type]||'', date:previous.date||'' });
+    });
+    const sortFn = lowerIsBetter[type] ? ((a,b)=>Number(a.value||0)-Number(b.value||0)) : ((a,b)=>Number(b.value||0)-Number(a.value||0));
+    currentRows.sort(sortFn); previousRows.sort(sortFn);
+    const prevRankMap = new Map();
+    previousRows.forEach((r,i)=>prevRankMap.set(`${r.player}|${r.category}`, i+1));
+    result[type] = currentRows.map((r,i)=>Object.assign({}, r, {rank:i+1, previousRank:prevRankMap.get(`${r.player}|${r.category}`)||0}));
+  });
+  return { status:'ok', generatedAt:new Date().toISOString(), rankings:result };
 }
 
 function normalizeDateString_(value) {

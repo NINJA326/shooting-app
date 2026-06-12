@@ -1,4 +1,4 @@
-【v11.2 アップロード手順】
+【v11.3 アップロード手順】
 
 1. GitHub の shooting-app にZIP内のファイルをすべてアップロード
 2. Commit changes

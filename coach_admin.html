@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v11.2</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v11.3</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -26,12 +26,13 @@ button.secondary{background:var(--dark)}button.ghost{background:#f3f4f6;color:#1
 .small{font-size:12px;color:var(--muted);line-height:1.5}.success{padding:10px 12px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;color:#166534;font-size:13px;line-height:1.5}.notice{padding:10px 12px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.5}
 .list-item{border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:8px;background:#fff}.badge{display:inline-block;background:#f3f4f6;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;color:#374151}
 .stat-made{color:#d91828;font-weight:900}.stat-attempt{color:#111827;font-weight:900}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:7px 8px env(safe-area-inset-bottom)}.tabs-inner{max-width:560px;width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.tab{background:#fff;color:#6b7280;border:none;box-shadow:none;padding:8px 2px;border-radius:12px;font-size:11px;font-weight:900}.tab.active{background:#fee2e2;color:var(--brand)}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:7px 8px env(safe-area-inset-bottom)}.tabs-inner{max-width:560px;width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.tab{background:#fff;color:#6b7280;border:none;box-shadow:none;padding:8px 2px;border-radius:12px;font-size:11px;font-weight:900}.tab.active{background:#fee2e2;color:var(--brand)}
 .view{display:none}.view.active{display:block}
 .login-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}.login-card{max-width:440px;width:100%}
 .hidden{display:none!important}
 table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}th{color:#6b7280}
 canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px solid var(--line);touch-action:manipulation}
+.rank-up-spark{background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 45%,#fff 100%);border:2px solid #f59e0b!important;box-shadow:0 10px 24px rgba(245,158,11,.18)}.rank-up-text{display:inline-block;background:#fef3c7;color:#b45309;border-radius:999px;padding:4px 8px;font-weight:900}
 </style>
 </head>
 <body>
@@ -49,7 +50,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v11.2</div>
+  <div class="profile">コーチ管理専用 v11.3</div>
 </header>
 
 <main>
@@ -125,6 +126,28 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
   </div>
 </section>
 
+
+
+<section id="coachAgilityView" class="view">
+  <div class="card">
+    <h2>アジリティー順位一覧</h2>
+    <p class="small">種目をダウンリストで選択して、最新順位を表示します。順位が上がった選手は目立つ表示になります。</p>
+    <button class="secondary" onclick="loadCoachAgilityRankings(true)">順位を更新</button>
+    <div id="coachAgilityStatus" class="small" style="margin-top:8px">順位を更新してください。</div>
+    <label>種目選択</label>
+    <select id="coachAgilityTypeSelect" onchange="renderCoachAgilityRankings()">
+      <option>シャトルラン</option>
+      <option>反復横跳び</option>
+      <option>L字コーンドリル</option>
+      <option>垂直跳び</option>
+    </select>
+  </div>
+  <div class="card">
+    <h2>順位</h2>
+    <div id="coachAgilityRankingList" class="small">まだ順位データがありません。</div>
+  </div>
+</section>
+
 <section id="settingsView" class="view">
   <div class="card">
     <h2>選手追加</h2>
@@ -180,6 +203,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
   <button class="tab active" onclick="showView('dashboardView',this)">ホーム</button>
   <button class="tab" onclick="showView('playersView',this)">選手管理</button>
   <button class="tab" onclick="showView('growthCoachView',this)">成長記録</button>
+  <button class="tab" onclick="showView('coachAgilityView',this)">アジリティー</button>
   <button class="tab" onclick="showView('settingsView',this)">設定</button>
 </div></nav>
 </div>
@@ -188,7 +212,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 /* v8.8 FIX: コーチ用も古いキャッシュを自動削除 */
 (function(){
-  const APP_VERSION = "11.2-coach";
+  const APP_VERSION = "11.3-coach";
   const VERSION_KEY = "ninja_coach_app_version_seen";
   async function clearOldAppCache(){
     try{
@@ -204,7 +228,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
       if(seen !== APP_VERSION){
         localStorage.setItem(VERSION_KEY, APP_VERSION);
         if(!location.search.includes("fresh=1")){
-          location.replace(location.pathname + "?fresh=1&v=11.2-coach");
+          location.replace(location.pathname + "?fresh=1&v=11.3-coach");
         }
       }
     }catch(e){}
@@ -657,6 +681,45 @@ function drawCoachGrowthChart(records){
    }
  };
 }
+
+
+
+/* v11.3 ADD: コーチ用 アジリティー順位一覧 */
+let coachAgilityRankingsCache=null;
+let coachAgilityRankingsFetchedAt=null;
+function coachAgilityRankChange(row){
+  const cur=Number(row.rank||0), prev=Number(row.previousRank||0);
+  if(!cur)return '-';
+  if(!prev)return `<span class="rank-up-text">初回 → 今回${cur}位 ✨</span>`;
+  if(prev>cur)return `<span class="rank-up-text">前回${prev}位 → 今回${cur}位 ✨</span>`;
+  return `<span style="color:#6b7280;font-weight:900">前回${prev}位 → 今回${cur}位</span>`;
+}
+async function loadCoachAgilityRankings(showMessage=false){
+  const st=document.getElementById('coachAgilityStatus');
+  try{
+    if(st)st.innerHTML='順位を取得中...';
+    const res=await coachJsonp('agilityRankings',{});
+    if(!res||res.status!=='ok'){if(st)st.innerHTML=(res&&res.message)||'順位を取得できませんでした。Apps Scriptを最新版に貼り替えて再デプロイしてください。';return;}
+    coachAgilityRankingsCache=res;
+    coachAgilityRankingsFetchedAt=Date.now();
+    renderCoachAgilityRankings();
+  }catch(e){if(st)st.innerHTML='順位の取得に失敗しました。Apps Script URL・再デプロイを確認してください。';}
+}
+function renderCoachAgilityRankings(){
+  const box=document.getElementById('coachAgilityRankingList');
+  const st=document.getElementById('coachAgilityStatus');
+  const sel=document.getElementById('coachAgilityTypeSelect');
+  if(!box||!sel)return;
+  const type=sel.value||'シャトルラン';
+  const rankings=coachAgilityRankingsCache&&coachAgilityRankingsCache.rankings?coachAgilityRankingsCache.rankings:null;
+  if(!rankings){box.innerHTML='順位を更新してください。';return;}
+  if(st){const t=coachAgilityRankingsFetchedAt?new Date(coachAgilityRankingsFetchedAt).toLocaleString('ja-JP'):'';st.innerHTML=t?`順位更新済み：${safeText(t)}`:'順位更新済み';}
+  const rows=Array.isArray(rankings[type])?rankings[type]:[];
+  if(!rows.length){box.innerHTML=`<div class="list-item"><b>${safeText(type)}</b><br>まだ記録がありません。</div>`;return;}
+  box.innerHTML=rows.map(r=>{const cur=Number(r.rank||0), prev=Number(r.previousRank||0), up=prev>cur; const klass=up?' rank-up-spark':''; const crown=cur===1?'🏆 ':cur===2?'🥈 ':cur===3?'🥉 ':'';return `<div class="list-item${klass}"><span class="ranknum">${crown}${cur}位</span> <b>${safeText(r.player)}</b> <span class="badge">${safeText(r.category)}</span><br>記録：<b>${Number(r.value||0)}${safeText(r.unit||'')}</b>　${coachAgilityRankChange(r)}<br><span class="small">今回：${safeText(r.date||'-')} / 前回：${safeText(r.previousDate||'-')}</span></div>`;}).join('');
+}
+const __v113_coachShowView=showView;
+showView=function(id,btn){__v113_coachShowView(id,btn); if(id==='coachAgilityView')loadCoachAgilityRankings(false);};
 
 function downloadCSV(){
  alert("全データはGoogleスプレッドシートの shooting_records を使用してください。");
