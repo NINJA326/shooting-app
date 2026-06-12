@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v10.5
+ * NINJA SHOOTING AVERAGE v10.8
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
@@ -51,10 +51,9 @@ function doGet(e) {
     else if (action === 'growthRecords') result = growthRecords_(p.playerId);
     else if (action === 'growthSummary') result = growthSummary_();
     else if (action === 'agilityRecords') result = agilityRecords_(p.playerId);
-    else if (action === 'agilityRankings') result = agilityRankings_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v10.5' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v10.8' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
@@ -265,7 +264,7 @@ function getActiveGrowthRecords_() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_GROWTH);
   const last = sheet.getLastRow(); if (last < 2) return [];
   const values = sheet.getRange(2,1,last-1,12).getValues(); const byId = new Map();
-  values.forEach(row => { const syncType=String(row[1]||''); const id=String(row[2]||''); if(!id)return; if(syncType==='delete'){byId.delete(id);return;} byId.set(id,{id,date:formatDate_(row[3]),measuredAtDisplay:String(row[4]||''),measuredAtIso:String(row[5]||''),player:String(row[6]||''),category:String(row[7]||''),height:Number(row[8]||0),weight:Number(row[9]||0),createdAt:formatDateTime_(row[10])}); });
+  values.forEach(row => { const syncType=String(row[1]||''); const id=String(row[2]||''); if(!id)return; if(syncType==='delete'){byId.delete(id);return;} byId.set(id,{id: id,date:normalizeDateString_(row[3]||row[5]||row[10]),measuredAtDisplay:String(row[4]||''),measuredAtIso:normalizeDateString_(row[5]||row[3]||row[10]),player:String(row[6]||''),category:String(row[7]||''),height:Number(row[8]||0),weight:Number(row[9]||0),createdAt:formatDateTime_(row[10])}); });
   return Array.from(byId.values()).filter(r=>r.player && r.height>0 && r.weight>0);
 }
 function getActiveAgilityRecords_() {
@@ -277,7 +276,7 @@ function getActiveAgilityRecords_() {
 }
 function growthRecords_(playerId) {
   const player = findPlayer_(playerId); if (!player) return { status:'error', message:'選手が見つかりません。' };
-  const records = getActiveGrowthRecords_().filter(r=>r.player===player.name && r.category===player.category).sort((a,b)=>String(a.measuredAtIso||a.createdAt||a.date).localeCompare(String(b.measuredAtIso||b.createdAt||b.date))).map(r=>({...r, syncAction:'cloud'}));
+  const records = getActiveGrowthRecords_().filter(r=>r.player===player.name && r.category===player.category).sort((a,b)=>growthSortKey_(a).localeCompare(growthSortKey_(b))).map(r=>({...r, syncAction:'cloud'}));
   return { status:'ok', player, records };
 }
 
@@ -292,7 +291,7 @@ function growthSummary_() {
   });
   const latestByPlayer = players.map(p => {
     const key = `${p.name}|${p.category}`;
-    const list = (byPlayer.get(key) || []).slice().sort((a,b) => String(a.measuredAtIso||a.createdAt||a.date).localeCompare(String(b.measuredAtIso||b.createdAt||b.date)));
+    const list = (byPlayer.get(key) || []).slice().sort((a,b) => growthSortKey_(a).localeCompare(growthSortKey_(b)));
     const latest = list.length ? list[list.length - 1] : null;
     return {
       playerId: p.playerId,
@@ -300,7 +299,7 @@ function growthSummary_() {
       category: p.category,
       height: latest ? Number(latest.height || 0) : 0,
       weight: latest ? Number(latest.weight || 0) : 0,
-      date: latest ? (latest.date || '') : '',
+      date: latest ? normalizeDateString_(latest.date || latest.measuredAtIso || latest.createdAt) : '',
       recordsCount: list.length,
       records: list
     };
@@ -326,53 +325,22 @@ function agilityRecords_(playerId) {
   return { status:'ok', player, records };
 }
 
-
-function agilityRankings_() {
-  const types = ['シャトルラン','反復横跳び','L字コーンドリル','垂直跳び'];
-  const records = getActiveAgilityRecords_();
-  const rankings = {};
-  types.forEach(type => {
-    const byPlayer = new Map();
-    records.filter(r => r.type === type).forEach(r => {
-      const key = `${r.player}|${r.category}`;
-      if (!byPlayer.has(key)) byPlayer.set(key, []);
-      byPlayer.get(key).push(r);
-    });
-    const currentRows = [];
-    const previousRows = [];
-    byPlayer.forEach((list, key) => {
-      list.sort((a,b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
-      const current = list[list.length - 1];
-      const previous = list.length >= 2 ? list[list.length - 2] : null;
-      currentRows.push({
-        key,
-        player: current.player,
-        category: current.category,
-        type: current.type,
-        value: Number(current.value || 0),
-        unit: current.unit || '',
-        date: current.date || '',
-        previousValue: previous ? Number(previous.value || 0) : null,
-        previousDate: previous ? (previous.date || '') : ''
-      });
-      if (previous) previousRows.push({ key, value: Number(previous.value || 0) });
-    });
-    const higherIsBetter = type !== 'L字コーンドリル';
-    const sorter = (a,b) => higherIsBetter ? (Number(b.value||0) - Number(a.value||0)) : (Number(a.value||0) - Number(b.value||0));
-    currentRows.sort(sorter);
-    previousRows.sort(sorter);
-    const prevRankMap = new Map();
-    previousRows.forEach((r,i) => prevRankMap.set(r.key, i + 1));
-    rankings[type] = currentRows.map((r,i) => ({
-      rank: i + 1,
-      previousRank: prevRankMap.get(r.key) || null,
-      ...r
-    }));
-  });
-  return { status:'ok', generatedAt:new Date().toISOString(), rankings };
+function normalizeDateString_(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const s = String(value || '').trim();
+  if (!s) return '';
+  let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if (m) return `${m[1]}-${String(Number(m[2])).padStart(2,'0')}-${String(Number(m[3])).padStart(2,'0')}`;
+  m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+  if (m) return `${m[3]}-${String(Number(m[1])).padStart(2,'0')}-${String(Number(m[2])).padStart(2,'0')}`;
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return s;
 }
-
-function formatDate_(value) { if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd'); return String(value || ''); }
+function growthSortKey_(r) {
+  return normalizeDateString_(r.date || r.measuredAtIso || r.createdAt);
+}
+function formatDate_(value) { return normalizeDateString_(value); }
 function formatDateTime_(value) { if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'); return String(value || ''); }
 function json_(obj) { return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
 function log_(type, message) { try { const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_LOGS); if (sheet) sheet.appendRow([new Date(), type, message]); } catch(e) {} }

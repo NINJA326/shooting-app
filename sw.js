@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'ninja-shooting-v10.7';
+const CACHE_VERSION = 'ninja-shooting-v10.8';
 self.addEventListener('install', event => { self.skipWaiting(); });
 self.addEventListener('activate', event => {
   event.waitUntil((async()=>{
