@@ -1,10 +1,10 @@
-【v11.3 アップロード手順】
+【v11.5 アップロード手順】
 
 1. GitHub の shooting-app にZIP内のファイルをすべてアップロード
 2. Commit changes
-3. Google Apps Script に google_apps_script_code.js の中身を全部貼り替え
+3. Apps Scriptがv11.3未満なら google_apps_script_code.js を貼り替え
 4. デプロイを管理 → 編集 → 新しいバージョン → デプロイ
-5. コーチアプリを開いて、選手管理で選手をダウンリストから選択
+5. コーチアプリを開いてホームの「チーム成長一覧」を確認
 
 コーチURL:
-https://ninja326.github.io/shooting-app/coach_admin.html?v=11.2
+https://ninja326.github.io/shooting-app/coach_admin.html?v=11.5
