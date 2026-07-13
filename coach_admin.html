@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v11.7</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v11.8</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -34,7 +34,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;borde
 canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px solid var(--line);touch-action:manipulation}
 .rank-up-spark{background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 45%,#fff 100%);border:2px solid #f59e0b!important;box-shadow:0 10px 24px rgba(245,158,11,.18)}.rank-up-text{display:inline-block;background:#fef3c7;color:#b45309;border-radius:999px;padding:4px 8px;font-weight:900}
 
-/* v11.7 coach list / comparison tables */
+/* v11.8 coach list / comparison tables */
 .app{max-width:980px}.tabs-inner{max-width:980px;grid-template-columns:repeat(5,1fr)}
 .player-group-title{margin:16px 0 8px;font-size:13px;font-weight:900;color:#374151}
 .player-list-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;color:#111827;border:1px solid var(--line);box-shadow:none;text-align:left;margin-bottom:8px;padding:13px 14px}
@@ -64,7 +64,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v11.7</div>
+  <div class="profile">コーチ管理専用 v11.8</div>
 </header>
 
 <main>
@@ -645,7 +645,7 @@ function drawCoachGrowthChart(records){
 
 
 
-/* v11.7 ADD: コーチ用 アジリティー順位一覧 */
+/* v11.8 ADD: コーチ用 アジリティー順位一覧 */
 let coachAgilityRankingsCache=null;
 let coachAgilityRankingsFetchedAt=null;
 function coachAgilityRankChange(row){
@@ -683,9 +683,11 @@ const __v113_coachShowView=showView;
 showView=function(id,btn){__v113_coachShowView(id,btn); if(id==='coachAgilityView')loadCoachAgilityRankings(false);};
 
 
-/* v11.7 coach UI */
+/* v11.8 coach UI */
 let growthMetric='height', agilityMetric='シャトルラン', coachAgilitySummaryData=null;
 function monthKey(v){const s=normalizeCoachGrowthDate(v);const m=s.match(/^(\d{4})-(\d{2})/);return m?`${m[1]}/${Number(m[2])}`:'';}
+function monthSortValue(v){const m=String(v||'').match(/^(\d{4})[\/-](\d{1,2})/);return m?(Number(m[1])*12+Number(m[2])):Number.MAX_SAFE_INTEGER;}
+function dateSortValue(v){const s=normalizeCoachGrowthDate(v);const t=Date.parse(s);return Number.isFinite(t)?t:monthSortValue(v);}
 function renderCoachPlayerList(){
  const box=document.getElementById('coachPlayerList'); if(!box)return;
  if(!coachPlayersCache.length){box.innerHTML='<div class="notice">登録選手がいません。</div>';return;}
@@ -697,7 +699,7 @@ function backToCoachPlayerList(){document.getElementById('coachPlayerDetailPanel
 const __v114_loadPlayers=coachLoadPlayers;
 coachLoadPlayers=async function(showDetail=false){await __v114_loadPlayers(false);renderCoachPlayerList();if(!showDetail)backToCoachPlayerList();};
 function buildGrowthDoubleTable(players){
- const months=[...new Set(players.flatMap(p=>(p.records||[]).map(r=>monthKey(r.date||r.measuredAtIso||r.createdAt)).filter(Boolean)))].sort();
+ const months=[...new Set(players.flatMap(p=>(p.records||[]).map(r=>monthKey(r.date||r.measuredAtIso||r.createdAt)).filter(Boolean)))].sort((a,b)=>monthSortValue(a)-monthSortValue(b));
  if(!months.length)return '<div class="small" style="padding:14px">測定記録がありません。</div>';
  return `<table class="compare-table"><thead><tr><th class="player-cell">選手</th><th>項目</th>${months.map(m=>`<th>${safeText(m)}</th>`).join('')}</tr></thead><tbody>${players.map(p=>{const map={};(p.records||[]).forEach(r=>{const k=monthKey(r.date||r.measuredAtIso||r.createdAt);if(k)map[k]=r;});const player=`<td class="player-cell" rowspan="2" onclick="openGrowthIndividual('${jsArg(p.playerId)}')">${safeText(p.player)}<br><span class="small">${safeText(p.category)}</span></td>`;const h=`<tr>${player}<td class="metric-label">身長</td>${months.map(m=>map[m]&&Number(map[m].height)>0?`<td><span class="value-main">${oneDecimal(map[m].height)}</span>cm</td>`:`<td class="empty-value">―</td>`).join('')}</tr>`;const w=`<tr class="metric-weight"><td class="metric-label">体重</td>${months.map(m=>map[m]&&Number(map[m].weight)>0?`<td><span class="value-main">${oneDecimal(map[m].weight)}</span>kg</td>`:`<td class="empty-value">―</td>`).join('')}</tr>`;return h+w;}).join('')}</tbody></table>`;
 }
@@ -705,7 +707,7 @@ function renderGrowthComparison(){const box=document.getElementById('growthCompa
 function openGrowthIndividual(id){const sel=document.getElementById('growthPlayerSelect');if(sel){sel.value=id;renderSelectedGrowthPlayer();}document.getElementById('growthIndividualCard').classList.remove('hidden-panel');document.getElementById('growthIndividualCard').scrollIntoView({behavior:'smooth',block:'start'});}
 function closeGrowthIndividual(){document.getElementById('growthIndividualCard').classList.add('hidden-panel');}
 function buildAgilityTable(){
- const players=(coachAgilitySummaryData&&coachAgilitySummaryData.players)||[]; const months=[...new Set(players.flatMap(p=>(p.records||[]).filter(r=>r.type===agilityMetric).map(r=>monthKey(r.date)).filter(Boolean)))].sort();
+ const players=(coachAgilitySummaryData&&coachAgilitySummaryData.players)||[]; const months=[...new Set(players.flatMap(p=>(p.records||[]).filter(r=>r.type===agilityMetric).map(r=>monthKey(r.date)).filter(Boolean)))].sort((a,b)=>monthSortValue(a)-monthSortValue(b));
  if(!months.length)return '<div class="small" style="padding:14px">この種目の記録がありません。</div>'; const unitMap={'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
  return `<table class="compare-table"><thead><tr><th class="player-cell">選手</th>${months.map(m=>`<th>${safeText(m)}</th>`).join('')}</tr></thead><tbody>${players.map(p=>{const map={};(p.records||[]).filter(r=>r.type===agilityMetric).forEach(r=>{const k=monthKey(r.date);if(k)map[k]=r;});return `<tr><td class="player-cell" onclick="openAgilityIndividual('${jsArg(p.playerId)}')">${safeText(p.player)}<br><span class="small">${safeText(p.category)}</span></td>${months.map(m=>map[m]?`<td><span class="value-main">${Number(map[m].value||0)}</span>${safeText(map[m].unit||unitMap[agilityMetric]||'')}</td>`:`<td class="empty-value">―</td>`).join('')}</tr>`;}).join('')}</tbody></table>`;
 }
@@ -718,7 +720,7 @@ function renderAgilityMetricButtons(){
 }
 function renderAgilityComparison(){renderAgilityMetricButtons();const box=document.getElementById('agilityComparisonTable');if(box)box.innerHTML=buildAgilityTable();}
 function setAgilityMetric(type,btn){agilityMetric=type;document.querySelectorAll('#agilityMetricButtons .segment-btn').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');renderAgilityComparison();closeAgilityIndividual();}
-function openAgilityIndividual(id){const p=((coachAgilitySummaryData&&coachAgilitySummaryData.players)||[]).find(x=>x.playerId===id);if(!p)return;const rec=(p.records||[]).filter(r=>r.type===agilityMetric).sort((a,b)=>String(a.date).localeCompare(String(b.date)));document.getElementById('agilityPlayerSummary').innerHTML=`<div class="list-item"><b>${safeText(p.player)}</b> <span class="badge">${safeText(p.category)}</span><br>${safeText(agilityMetric)} / 記録数：${rec.length}件</div>`;drawAgilityChart(rec);document.getElementById('agilityIndividualCard').classList.remove('hidden-panel');document.getElementById('agilityIndividualCard').scrollIntoView({behavior:'smooth',block:'start'});}
+function openAgilityIndividual(id){const p=((coachAgilitySummaryData&&coachAgilitySummaryData.players)||[]).find(x=>x.playerId===id);if(!p)return;const rec=(p.records||[]).filter(r=>r.type===agilityMetric).sort((a,b)=>dateSortValue(a.date)-dateSortValue(b.date));document.getElementById('agilityPlayerSummary').innerHTML=`<div class="list-item"><b>${safeText(p.player)}</b> <span class="badge">${safeText(p.category)}</span><br>${safeText(agilityMetric)} / 記録数：${rec.length}件</div>`;drawAgilityChart(rec);document.getElementById('agilityIndividualCard').classList.remove('hidden-panel');document.getElementById('agilityIndividualCard').scrollIntoView({behavior:'smooth',block:'start'});}
 function closeAgilityIndividual(){document.getElementById('agilityIndividualCard').classList.add('hidden-panel');}
 function drawAgilityChart(records){const c=document.getElementById('coachAgilityCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);if(!records.length){ctx.fillStyle='#111827';ctx.fillText('記録がありません',c.width/2-50,c.height/2);return;}const vals=records.map(r=>Number(r.value||0)),min=Math.min(...vals),max=Math.max(...vals),pad=Math.max(1,(max-min)*.2),lo=min-pad,hi=max+pad,left=55,right=30,top=35,bottom=60,w=c.width-left-right,h=c.height-top-bottom;ctx.strokeStyle='#e5e7eb';for(let i=0;i<=4;i++){const y=top+i*h/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(c.width-right,y);ctx.stroke();}ctx.beginPath();records.forEach((r,i)=>{const x=left+i*w/Math.max(1,records.length-1),y=top+(hi-Number(r.value))*h/Math.max(1,hi-lo);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.strokeStyle='#d91828';ctx.lineWidth=4;ctx.stroke();records.forEach((r,i)=>{const x=left+i*w/Math.max(1,records.length-1),y=top+(hi-Number(r.value))*h/Math.max(1,hi-lo);ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fillStyle='#d91828';ctx.fill();ctx.fillStyle='#111827';ctx.font='11px sans-serif';ctx.fillText(String(r.value),x-10,y-12);ctx.save();ctx.translate(x-4,c.height-14);ctx.rotate(-Math.PI/7);ctx.fillText(coachGrowthDateShort(r.date),0,0);ctx.restore();});document.getElementById('coachAgilityDetail').innerHTML='月ごとの記録推移です。';}
 async function loadCoachGrowthPage(force=false){

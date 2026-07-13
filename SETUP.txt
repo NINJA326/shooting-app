@@ -1,13 +1,9 @@
-【v11.7 アップロード手順】
+【v11.8 アップロード手順】
 
-1. GitHub の shooting-app にZIP内のファイルをすべて上書き
+1. GitHub の shooting-app にZIP内のファイルをすべて上書きアップロード
 2. Commit changes
-3. Google Apps Script に google_apps_script_code.js を全貼り替え
-4. デプロイを管理 → 編集 → 新しいバージョン → デプロイ
-5. コーチアプリを一度開くと「身体測定」「アジリティ測定」シートが自動作成されます
-6. 身体測定：A列＝選手名、B列＝項目、C列以降＝測定月。上段に身長、下段に体重を入力
-7. アジリティ測定：A列＝選手名、B列＝種目、C列以降＝測定月を入力
-8. コーチアプリで「最新データを更新」を押してください
+3. Google Apps Script は今回の並び順修正だけなら再デプロイ不要です
+4. コーチアプリを下記URLで開く
 
 コーチURL:
-https://ninja326.github.io/shooting-app/coach_admin.html?v=11.7
+https://ninja326.github.io/shooting-app/coach_admin.html?v=11.8

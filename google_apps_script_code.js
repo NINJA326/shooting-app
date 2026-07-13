@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v11.7
+ * NINJA SHOOTING AVERAGE v11.8
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
@@ -59,7 +59,7 @@ function doGet(e) {
     else if (action === 'agilitySummary') result = agilitySummary_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.7' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.8' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
