@@ -1,13 +1,11 @@
 /**
- * NINJA SHOOTING AVERAGE v11.9
+ * NINJA SHOOTING AVERAGE v12.0
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
 const SHEET_PLAYERS = 'players';
 const SHEET_LOGS = 'logs';
 const SHEET_SUMMARY = 'summary';
-const SHEET_AGILITY = 'agility_records';
-const SHEET_AGILITY_INPUT = 'アジリティ入力';
 const SHEET_BODY_MATRIX = '身体測定';
 const SHEET_AGILITY_MATRIX = 'アジリティ測定';
 const RANK_MIN_ATTEMPTS = 500;
@@ -57,7 +55,7 @@ function doGet(e) {
     else if (action === 'agilitySummary') result = agilitySummary_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.9' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v12.0' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
@@ -71,10 +69,9 @@ function setupSheets_() {
   ensureSheet_(ss, SHEET_RECORDS, ['送信日時','同期種別','記録ID','日付','選手名','カテゴリー','練習','種目','ポジション','成功数','試投数','成功率','作成日時','更新日時','削除日時']);
   ensureSheet_(ss, SHEET_PLAYERS, ['選手ID','パスワード','選手名','カテゴリー','作成日時','最終更新','メモ']);
   ensureSheet_(ss, SHEET_SUMMARY, ['選手名','カテゴリー','種目','ポジション','成功数合計','試投数合計','成功率']);
-  ensureSheet_(ss, SHEET_AGILITY, ['送信日時','同期種別','記録ID','日付','選手名','カテゴリー','種目','記録','単位','作成日時','削除日時']);
-  ensureSheet_(ss, SHEET_AGILITY_INPUT, ['日付','選手名','カテゴリー','種目','記録','単位','メモ']);
   ensureMatrixSheets_(ss);
   migrateLegacyGrowthSheets_(ss);
+  migrateLegacyAgilitySheets_(ss);
   ensureSheet_(ss, SHEET_LOGS, ['日時','種別','内容']);
 }
 function ensureSheet_(ss, name, header) {
@@ -451,11 +448,114 @@ function migrateLegacyGrowthSheets_(ss) {
 }
 
 function appendAgilityRecords_(records) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_AGILITY);
-  const values = (records||[]).map(r => [new Date(), r.syncAction || 'create', r.id || '', r.date || '', r.player || '', r.category || '', r.type || '', Number(r.value || 0), r.unit || '', r.createdAt || '', r.deletedAt || '']);
-  if (values.length) sheet.getRange(sheet.getLastRow()+1,1,values.length,values[0].length).setValues(values);
-  log_('APPEND_AGILITY', `${values.length} records`);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_AGILITY_MATRIX);
+  syncAgilityMatrixPlayers_(sheet);
+  (records || []).forEach(r => writeAgilityRecordToMatrix_(sheet, r));
+  normalizeAndSortMatrixMonthColumns_(sheet);
+  log_('APPEND_AGILITY_MATRIX', `${(records || []).length} records`);
 }
+
+function findOrCreateAgilityMetricRow_(sheet, player, metric) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    const values = sheet.getRange(2, 1, lastRow - 1, 2).getDisplayValues();
+    for (let i = 0; i < values.length; i++) {
+      if (String(values[i][0] || '').trim() === player && String(values[i][1] || '').trim() === metric) return i + 2;
+    }
+  }
+  const row = sheet.getLastRow() + 1;
+  sheet.getRange(row, 1, 1, 2).setValues([[player, metric]]);
+  return row;
+}
+
+function findOrCreateAgilityMonthColumn_(sheet, dateValue) {
+  const monthKey = monthKeyFromValue_(dateValue);
+  if (!monthKey) return 0;
+  const lastCol = Math.max(sheet.getLastColumn(), 2);
+  if (lastCol >= 3) {
+    const headers = sheet.getRange(1, 3, 1, lastCol - 2).getDisplayValues()[0];
+    for (let i = 0; i < headers.length; i++) {
+      if (monthKeyFromValue_(headers[i]) === monthKey || String(headers[i] || '').trim() === monthKey) return i + 3;
+    }
+  }
+  const col = lastCol + 1;
+  sheet.getRange(1, col).setValue(monthKey);
+  return col;
+}
+
+function writeAgilityRecordToMatrix_(sheet, record) {
+  const player = String(record.player || '').trim();
+  const metric = String(record.type || record.metric || '').trim();
+  const dateValue = record.date || record.measuredAtIso || record.createdAt;
+  if (!player || !metric || !dateValue) return;
+  const col = findOrCreateAgilityMonthColumn_(sheet, dateValue);
+  if (!col) return;
+  const row = findOrCreateAgilityMetricRow_(sheet, player, metric);
+  const action = String(record.syncAction || 'create').toLowerCase();
+  if (action === 'delete') {
+    sheet.getRange(row, col).clearContent();
+    return;
+  }
+  const value = Number(record.value || 0);
+  if (value > 0) sheet.getRange(row, col).setValue(value);
+}
+
+function normalizeAndSortMatrixMonthColumns_(sheet) {
+  const lastCol = sheet.getLastColumn();
+  const lastRow = sheet.getLastRow();
+  if (lastCol < 3 || lastRow < 1) return;
+  const headers = sheet.getRange(1, 3, 1, lastCol - 2).getDisplayValues()[0];
+  const order = headers.map((h, i) => ({ i, h: monthKeyFromValue_(h) || String(h || '').trim(), sort: monthSortValue_(h) }))
+    .filter(x => x.h)
+    .sort((a, b) => a.sort - b.sort || a.i - b.i);
+  if (!order.length) return;
+  const all = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const rewritten = all.map((row, rowIndex) => {
+    const base = [row[0], row[1]];
+    order.forEach(x => base.push(rowIndex === 0 ? x.h : row[x.i + 2]));
+    return base;
+  });
+  sheet.getRange(1, 1, lastRow, lastCol).clearContent();
+  sheet.getRange(1, 1, rewritten.length, rewritten[0].length).setValues(rewritten);
+  if (rewritten[0].length < lastCol) sheet.deleteColumns(rewritten[0].length + 1, lastCol - rewritten[0].length);
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(2);
+}
+
+function migrateLegacyAgilitySheets_(ss) {
+  const matrix = ss.getSheetByName(SHEET_AGILITY_MATRIX);
+  const legacyRecords = ss.getSheetByName('agility_records');
+  if (legacyRecords && legacyRecords.getLastRow() >= 2) {
+    const byId = new Map();
+    legacyRecords.getRange(2, 1, legacyRecords.getLastRow() - 1, 11).getValues().forEach(row => {
+      const action = String(row[1] || '').toLowerCase();
+      const id = String(row[2] || '').trim();
+      if (!id) return;
+      if (action === 'delete') { byId.delete(id); return; }
+      byId.set(id, {
+        date: row[3], player: String(row[4] || '').trim(),
+        type: String(row[6] || '').trim(), value: Number(row[7] || 0),
+        syncAction: 'create'
+      });
+    });
+    byId.forEach(r => writeAgilityRecordToMatrix_(matrix, r));
+  }
+  const legacyInput = ss.getSheetByName('アジリティ入力');
+  if (legacyInput && legacyInput.getLastRow() >= 2) {
+    legacyInput.getRange(2, 1, legacyInput.getLastRow() - 1, 7).getValues().forEach(row => {
+      writeAgilityRecordToMatrix_(matrix, {
+        date: row[0], player: String(row[1] || '').trim(),
+        type: String(row[3] || '').trim(), value: Number(row[4] || 0),
+        syncAction: 'create'
+      });
+    });
+  }
+  normalizeAndSortMatrixMonthColumns_(matrix);
+  if (legacyRecords) ss.deleteSheet(legacyRecords);
+  if (legacyInput) ss.deleteSheet(legacyInput);
+}
+
 function playerCategoryByName_() {
   const map = new Map();
   listPlayers_().players.forEach(p => { if (!map.has(p.name)) map.set(p.name, p.category); });
@@ -497,25 +597,35 @@ function getActiveGrowthRecords_() {
   })).filter(r => r.player && (r.height > 0 || r.weight > 0));
 }
 function getActiveAgilityRecords_() {
-  const ss=SpreadsheetApp.getActiveSpreadsheet(), byId=new Map();
-  const sheet=ss.getSheetByName(SHEET_AGILITY);
-  if(sheet&&sheet.getLastRow()>=2){
-    sheet.getRange(2,1,sheet.getLastRow()-1,11).getValues().forEach(row=>{const syncType=String(row[1]||''),id=String(row[2]||'');if(!id)return;if(syncType==='delete'){byId.delete(id);return;}byId.set(id,{id,date:formatDate_(row[3]),player:String(row[4]||'').trim(),category:String(row[5]||'').trim(),type:String(row[6]||'').trim(),value:Number(row[7]||0),unit:String(row[8]||'').trim(),createdAt:formatDateTime_(row[9])});});
-  }
-  const catMap=playerCategoryByName_(), input=ss.getSheetByName(SHEET_AGILITY_INPUT);
-  if(input&&input.getLastRow()>=2){
-    input.getRange(2,1,input.getLastRow()-1,7).getValues().forEach((row,i)=>{const date=normalizeDateString_(row[0]),player=String(row[1]||'').trim(),type=String(row[3]||'').trim(),value=Number(row[4]||0);if(!date||!player||!type||!value)return;const category=String(row[2]||'').trim()||catMap.get(player)||'',unit=String(row[5]||'').trim();const id=`manual-agility-${i+2}-${date}-${player}-${type}`;byId.set(id,{id,date,player,category,type,value,unit,createdAt:''});});
-  }
-  const matrix=ss.getSheetByName(SHEET_AGILITY_MATRIX);
-  if(matrix&&matrix.getLastRow()>=2&&matrix.getLastColumn()>=3){
-    const values=matrix.getDataRange().getValues(), headers=values[0];
-    const unitMap={'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
-    for(let r=1;r<values.length;r++){
-      const player=String(values[r][0]||'').trim(),type=String(values[r][1]||'').trim();if(!player||!type)continue;
-      for(let c=2;c<headers.length;c++){const date=matrixHeaderDate_(headers[c]),value=Number(values[r][c]||0);if(!date||!value)continue;const category=catMap.get(player)||'',unit=unitMap[type]||'';const id=`matrix-agility-${player}-${type}-${date}`;byId.set(id,{id,date,player,category,type,value,unit,createdAt:''});}
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const matrix = ss.getSheetByName(SHEET_AGILITY_MATRIX);
+  if (!matrix || matrix.getLastRow() < 2 || matrix.getLastColumn() < 3) return [];
+  const catMap = playerCategoryByName_();
+  const values = matrix.getDataRange().getValues();
+  const headers = values[0];
+  const unitMap = {'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
+  const records = [];
+  for (let r = 1; r < values.length; r++) {
+    const player = String(values[r][0] || '').trim();
+    const type = String(values[r][1] || '').trim();
+    if (!player || !type) continue;
+    for (let c = 2; c < headers.length; c++) {
+      const date = matrixHeaderDate_(headers[c]);
+      const value = Number(values[r][c] || 0);
+      if (!date || !value) continue;
+      records.push({
+        id: `agility-matrix-${player}-${type}-${date}`,
+        date,
+        player,
+        category: catMap.get(player) || '',
+        type,
+        value,
+        unit: unitMap[type] || '',
+        createdAt: ''
+      });
     }
   }
-  return Array.from(byId.values()).filter(r=>r.player&&r.type&&r.value>0);
+  return records;
 }
 function growthRecords_(playerId) {
   const player = findPlayer_(playerId); if (!player) return { status:'error', message:'選手が見つかりません。' };

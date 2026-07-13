@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v11.9</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v12.0</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -34,7 +34,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;borde
 canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px solid var(--line);touch-action:manipulation}
 .rank-up-spark{background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 45%,#fff 100%);border:2px solid #f59e0b!important;box-shadow:0 10px 24px rgba(245,158,11,.18)}.rank-up-text{display:inline-block;background:#fef3c7;color:#b45309;border-radius:999px;padding:4px 8px;font-weight:900}
 
-/* v11.9 coach list / comparison tables */
+/* v12.0 coach list / comparison tables */
 .app{max-width:980px}.tabs-inner{max-width:980px;grid-template-columns:repeat(5,1fr)}
 .player-group-title{margin:16px 0 8px;font-size:13px;font-weight:900;color:#374151}
 .player-list-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;color:#111827;border:1px solid var(--line);box-shadow:none;text-align:left;margin-bottom:8px;padding:13px 14px}
@@ -64,7 +64,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v11.9</div>
+  <div class="profile">コーチ管理専用 v12.0</div>
 </header>
 
 <main>
@@ -645,7 +645,7 @@ function drawCoachGrowthChart(records){
 
 
 
-/* v11.9 ADD: コーチ用 アジリティー順位一覧 */
+/* v12.0 ADD: コーチ用 アジリティー順位一覧 */
 let coachAgilityRankingsCache=null;
 let coachAgilityRankingsFetchedAt=null;
 function coachAgilityRankChange(row){
@@ -683,7 +683,7 @@ const __v113_coachShowView=showView;
 showView=function(id,btn){__v113_coachShowView(id,btn); if(id==='coachAgilityView')loadCoachAgilityRankings(false);};
 
 
-/* v11.9 coach UI */
+/* v12.0 coach UI */
 let growthMetric='height', agilityMetric='シャトルラン', coachAgilitySummaryData=null;
 function monthKey(v){const s=normalizeCoachGrowthDate(v);const m=s.match(/^(\d{4})-(\d{2})/);return m?`${m[1]}/${Number(m[2])}`:'';}
 function monthSortValue(v){const m=String(v||'').match(/^(\d{4})[\/-](\d{1,2})/);return m?(Number(m[1])*12+Number(m[2])):Number.MAX_SAFE_INTEGER;}

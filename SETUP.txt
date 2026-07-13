@@ -1,4 +1,4 @@
-【v11.9 アップロード手順】
+【v12.0 アップロード手順】
 
 1. GitHub の shooting-app にZIP内のファイルをすべて上書きアップロード
 2. Commit changes
@@ -9,8 +9,16 @@
 初回実行時：
 - growth_records の既存データを「身体測定」へ移行
 - 成長記録入力 の既存データを「身体測定」へ移行
-- 移行後、growth_records と 成長記録入力 を削除
-- 以後、選手アプリから入力した身長・体重も「身体測定」へ直接保存
+- agility_records の既存データを「アジリティ測定」へ移行
+- アジリティ入力 の既存データを「アジリティ測定」へ移行
+- 移行後、上記4つの重複シートを自動削除
+- 以後、選手アプリから入力した身長・体重は「身体測定」へ直接保存
+- 以後、選手アプリから入力した測定記録は「アジリティ測定」へ直接保存
+
+最終的な記録先：
+- 身長・体重：身体測定
+- アジリティー：アジリティ測定
+- シュート：shooting_records
 
 コーチURL:
-https://ninja326.github.io/shooting-app/coach_admin.html?v=11.9
+https://ninja326.github.io/shooting-app/coach_admin.html?v=12.0
