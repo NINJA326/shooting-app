@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v11.6
+ * NINJA SHOOTING AVERAGE v11.7
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
@@ -10,6 +10,8 @@ const SHEET_GROWTH = 'growth_records';
 const SHEET_AGILITY = 'agility_records';
 const SHEET_GROWTH_INPUT = '成長記録入力';
 const SHEET_AGILITY_INPUT = 'アジリティ入力';
+const SHEET_BODY_MATRIX = '身体測定';
+const SHEET_AGILITY_MATRIX = 'アジリティ測定';
 const RANK_MIN_ATTEMPTS = 500;
 
 function doPost(e) {
@@ -57,7 +59,7 @@ function doGet(e) {
     else if (action === 'agilitySummary') result = agilitySummary_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.6' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.7' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
@@ -75,6 +77,7 @@ function setupSheets_() {
   ensureSheet_(ss, SHEET_AGILITY, ['送信日時','同期種別','記録ID','日付','選手名','カテゴリー','種目','記録','単位','作成日時','削除日時']);
   ensureSheet_(ss, SHEET_GROWTH_INPUT, ['日付','選手名','カテゴリー','身長cm','体重kg','メモ']);
   ensureSheet_(ss, SHEET_AGILITY_INPUT, ['日付','選手名','カテゴリー','種目','記録','単位','メモ']);
+  ensureMatrixSheets_(ss);
   ensureSheet_(ss, SHEET_LOGS, ['日時','種別','内容']);
 }
 function ensureSheet_(ss, name, header) {
@@ -85,6 +88,76 @@ function ensureSheet_(ss, name, header) {
   for (let i=0;i<header.length;i++) if (String(current[i]||'') !== header[i]) need = true;
   if (need) { sheet.getRange(1,1,1,header.length).setValues([header]); sheet.setFrozenRows(1); }
   return sheet;
+}
+
+
+function ensureMatrixSheets_(ss) {
+  const monthHeaders = [];
+  const today = new Date();
+  const year = today.getFullYear();
+  for (let m = 4; m <= 12; m++) monthHeaders.push(`${year}/${m}`);
+  for (let m = 1; m <= 3; m++) monthHeaders.push(`${year + 1}/${m}`);
+
+  let body = ss.getSheetByName(SHEET_BODY_MATRIX);
+  if (!body) {
+    body = ss.insertSheet(SHEET_BODY_MATRIX);
+    body.getRange(1,1,1,2 + monthHeaders.length).setValues([['選手名','項目',...monthHeaders]]);
+    body.setFrozenRows(1); body.setFrozenColumns(2);
+  }
+  syncBodyMatrixPlayers_(body);
+
+  let agility = ss.getSheetByName(SHEET_AGILITY_MATRIX);
+  if (!agility) {
+    agility = ss.insertSheet(SHEET_AGILITY_MATRIX);
+    agility.getRange(1,1,1,2 + monthHeaders.length).setValues([['選手名','種目',...monthHeaders]]);
+    agility.setFrozenRows(1); agility.setFrozenColumns(2);
+  }
+  syncAgilityMatrixPlayers_(agility);
+}
+
+function syncBodyMatrixPlayers_(sheet) {
+  const players = listPlayers_().players;
+  const existing = new Set();
+  if (sheet.getLastRow() >= 2) {
+    sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues().forEach(r => {
+      const name = String(r[0]||'').trim(), metric = String(r[1]||'').trim();
+      if (name && metric) existing.add(`${name}|${metric}`);
+    });
+  }
+  const add = [];
+  players.forEach(p => {
+    ['身長','体重'].forEach(metric => {
+      if (!existing.has(`${p.name}|${metric}`)) add.push([p.name, metric]);
+    });
+  });
+  if (add.length) sheet.getRange(sheet.getLastRow()+1,1,add.length,2).setValues(add);
+}
+
+function syncAgilityMatrixPlayers_(sheet) {
+  const players = listPlayers_().players;
+  const defaults = ['シャトルラン','反復横跳び','L字コーンドリル','垂直跳び'];
+  const existing = new Set();
+  if (sheet.getLastRow() >= 2) {
+    sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues().forEach(r => {
+      const name = String(r[0]||'').trim(), metric = String(r[1]||'').trim();
+      if (name && metric) existing.add(`${name}|${metric}`);
+    });
+  }
+  const add = [];
+  players.forEach(p => defaults.forEach(metric => {
+    if (!existing.has(`${p.name}|${metric}`)) add.push([p.name, metric]);
+  }));
+  if (add.length) sheet.getRange(sheet.getLastRow()+1,1,add.length,2).setValues(add);
+}
+
+function matrixHeaderDate_(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const s = String(value || '').trim();
+  let m = s.match(/^(\d{4})[\/\-.年](\d{1,2})(?:[\/\-.月](\d{1,2}))?/);
+  if (m) return `${m[1]}-${String(Number(m[2])).padStart(2,'0')}-${String(Number(m[3]||1)).padStart(2,'0')}`;
+  m = s.match(/^(\d{1,2})[\/\-.月](\d{1,2})/);
+  if (m) return `${new Date().getFullYear()}-${String(Number(m[1])).padStart(2,'0')}-${String(Number(m[2])).padStart(2,'0')}`;
+  return normalizeDateString_(s);
 }
 
 function coachAddPlayer_(p) {
@@ -281,6 +354,24 @@ function getActiveGrowthRecords_() {
   if(input&&input.getLastRow()>=2){
     input.getRange(2,1,input.getLastRow()-1,6).getValues().forEach((row,i)=>{const player=String(row[1]||'').trim(),date=normalizeDateString_(row[0]),height=Number(row[3]||0),weight=Number(row[4]||0);if(!player||!date||(!height&&!weight))return;const category=String(row[2]||'').trim()||catMap.get(player)||'';const id=`manual-growth-${i+2}-${date}-${player}`;byId.set(id,{id,date,measuredAtIso:date,measuredAtDisplay:date,player,category,height,weight,createdAt:''});});
   }
+  const matrix=ss.getSheetByName(SHEET_BODY_MATRIX);
+  if(matrix&&matrix.getLastRow()>=2&&matrix.getLastColumn()>=3){
+    const values=matrix.getDataRange().getValues(), headers=values[0];
+    const combined=new Map();
+    for(let r=1;r<values.length;r++){
+      const player=String(values[r][0]||'').trim(), metric=String(values[r][1]||'').trim();
+      if(!player||!metric)continue;
+      for(let c=2;c<headers.length;c++){
+        const date=matrixHeaderDate_(headers[c]), value=Number(values[r][c]||0);
+        if(!date||!value)continue;
+        const key=`${player}|${date}`, current=combined.get(key)||{player,date,height:0,weight:0};
+        if(metric.indexOf('身長')>=0)current.height=value;
+        else if(metric.indexOf('体重')>=0)current.weight=value;
+        combined.set(key,current);
+      }
+    }
+    combined.forEach(x=>{const category=catMap.get(x.player)||'';const id=`matrix-growth-${x.player}-${x.date}`;byId.set(id,{id,date:x.date,measuredAtIso:x.date,measuredAtDisplay:x.date,player:x.player,category,height:x.height,weight:x.weight,createdAt:''});});
+  }
   return Array.from(byId.values()).filter(r=>r.player&&(r.height>0||r.weight>0));
 }
 function getActiveAgilityRecords_() {
@@ -292,6 +383,15 @@ function getActiveAgilityRecords_() {
   const catMap=playerCategoryByName_(), input=ss.getSheetByName(SHEET_AGILITY_INPUT);
   if(input&&input.getLastRow()>=2){
     input.getRange(2,1,input.getLastRow()-1,7).getValues().forEach((row,i)=>{const date=normalizeDateString_(row[0]),player=String(row[1]||'').trim(),type=String(row[3]||'').trim(),value=Number(row[4]||0);if(!date||!player||!type||!value)return;const category=String(row[2]||'').trim()||catMap.get(player)||'',unit=String(row[5]||'').trim();const id=`manual-agility-${i+2}-${date}-${player}-${type}`;byId.set(id,{id,date,player,category,type,value,unit,createdAt:''});});
+  }
+  const matrix=ss.getSheetByName(SHEET_AGILITY_MATRIX);
+  if(matrix&&matrix.getLastRow()>=2&&matrix.getLastColumn()>=3){
+    const values=matrix.getDataRange().getValues(), headers=values[0];
+    const unitMap={'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
+    for(let r=1;r<values.length;r++){
+      const player=String(values[r][0]||'').trim(),type=String(values[r][1]||'').trim();if(!player||!type)continue;
+      for(let c=2;c<headers.length;c++){const date=matrixHeaderDate_(headers[c]),value=Number(values[r][c]||0);if(!date||!value)continue;const category=catMap.get(player)||'',unit=unitMap[type]||'';const id=`matrix-agility-${player}-${type}-${date}`;byId.set(id,{id,date,player,category,type,value,unit,createdAt:''});}
+    }
   }
   return Array.from(byId.values()).filter(r=>r.player&&r.type&&r.value>0);
 }

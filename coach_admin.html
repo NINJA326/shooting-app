@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v11.6</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v11.7</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -34,7 +34,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;borde
 canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px solid var(--line);touch-action:manipulation}
 .rank-up-spark{background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 45%,#fff 100%);border:2px solid #f59e0b!important;box-shadow:0 10px 24px rgba(245,158,11,.18)}.rank-up-text{display:inline-block;background:#fef3c7;color:#b45309;border-radius:999px;padding:4px 8px;font-weight:900}
 
-/* v11.6 coach list / comparison tables */
+/* v11.7 coach list / comparison tables */
 .app{max-width:980px}.tabs-inner{max-width:980px;grid-template-columns:repeat(5,1fr)}
 .player-group-title{margin:16px 0 8px;font-size:13px;font-weight:900;color:#374151}
 .player-list-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;color:#111827;border:1px solid var(--line);box-shadow:none;text-align:left;margin-bottom:8px;padding:13px 14px}
@@ -64,7 +64,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v11.6</div>
+  <div class="profile">コーチ管理専用 v11.7</div>
 </header>
 
 <main>
@@ -94,7 +94,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 </section>
 
 <section id="growthCoachView" class="view">
-  <div class="card"><h2>成長記録</h2><p class="small">縦に選手、横に測定月を並べて、身長と体重を比較できます。選手名をタップすると個別詳細を表示します。</p><button class="secondary" onclick="loadCoachGrowthPage(true)">最新データを更新</button><div id="growthCoachStatus" class="small" style="margin-top:8px">成長記録を更新してください。</div><div class="sheet-guide">スプレッドシートの「成長記録入力」シートへ身長・体重を直接入力できます。入力後に「最新データを更新」を押してください。</div></div>
+  <div class="card"><h2>成長記録</h2><p class="small">縦に選手、横に測定月を並べて、身長と体重を比較できます。選手名をタップすると個別詳細を表示します。</p><button class="secondary" onclick="loadCoachGrowthPage(true)">最新データを更新</button><div id="growthCoachStatus" class="small" style="margin-top:8px">成長記録を更新してください。</div><div class="sheet-guide">スプレッドシートの「身体測定」シートへ入力します。A列＝選手名、B列＝項目、C列以降＝測定月です。1選手につき上段「身長」、下段「体重」で入力してください。</div></div>
   <div class="card"><h2>身長・体重 一覧</h2><p class="small">選手ごとに上段が身長、下段が体重です。横へスクロールすると過去の測定月を確認できます。</p><div id="growthComparisonTable" class="compare-wrap"><div class="small" style="padding:14px">データがありません。</div></div></div>
   <div id="growthIndividualCard" class="card hidden-panel"><button class="back-btn" onclick="closeGrowthIndividual()">← 一覧へ戻る</button><h2>身長・体重 個別詳細</h2><select id="growthPlayerSelect" class="hidden" onchange="renderSelectedGrowthPlayer()"></select><div id="growthPlayerSummary" class="small" style="margin-bottom:8px"></div><canvas id="coachGrowthCanvas" width="900" height="340"></canvas><div id="coachGrowthDetail" class="small" style="margin-top:8px"></div></div>
   <div class="card"><h2>カテゴリー平均</h2><div id="growthCategoryAverage" class="small">データがありません。</div></div><div class="card"><h2>男女 全カテゴリー平均</h2><div id="growthGenderAverage" class="small">データがありません。</div></div>
@@ -103,7 +103,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 
 <section id="coachAgilityView" class="view">
-  <div class="card"><h2>アジリティー・測定記録</h2><p class="small">種目を選択すると、縦に選手、横に測定月を並べて記録を比較できます。選手名をタップすると個別の推移を表示します。</p><button class="secondary" onclick="loadCoachAgilityPage(true)">最新データを更新</button><div id="coachAgilityStatus" class="small" style="margin-top:8px">アジリティー記録を更新してください。</div><div class="sheet-guide">スプレッドシートの「アジリティ入力」シートへ直接入力できます。入力した種目名は、この画面へ自動的に追加されます。</div></div>
+  <div class="card"><h2>アジリティー・測定記録</h2><p class="small">種目を選択すると、縦に選手、横に測定月を並べて記録を比較できます。選手名をタップすると個別の推移を表示します。</p><button class="secondary" onclick="loadCoachAgilityPage(true)">最新データを更新</button><div id="coachAgilityStatus" class="small" style="margin-top:8px">アジリティー記録を更新してください。</div><div class="sheet-guide">スプレッドシートの「アジリティ測定」シートへ入力します。A列＝選手名、B列＝種目、C列以降＝測定月です。追加した種目名もアプリへ自動表示されます。</div></div>
   <div class="card"><h2>種目別 一覧</h2><div id="agilityMetricButtons" class="segmented four"></div><div id="agilityComparisonTable" class="compare-wrap"><div class="small" style="padding:14px">データがありません。</div></div></div>
   <div id="agilityIndividualCard" class="card hidden-panel"><button class="back-btn" onclick="closeAgilityIndividual()">← 一覧へ戻る</button><h2>アジリティー 個別詳細</h2><div id="agilityPlayerSummary" class="small"></div><canvas id="coachAgilityCanvas" width="900" height="340"></canvas><div id="coachAgilityDetail" class="small" style="margin-top:8px"></div></div>
 </section>
@@ -645,7 +645,7 @@ function drawCoachGrowthChart(records){
 
 
 
-/* v11.6 ADD: コーチ用 アジリティー順位一覧 */
+/* v11.7 ADD: コーチ用 アジリティー順位一覧 */
 let coachAgilityRankingsCache=null;
 let coachAgilityRankingsFetchedAt=null;
 function coachAgilityRankChange(row){
@@ -683,7 +683,7 @@ const __v113_coachShowView=showView;
 showView=function(id,btn){__v113_coachShowView(id,btn); if(id==='coachAgilityView')loadCoachAgilityRankings(false);};
 
 
-/* v11.6 coach UI */
+/* v11.7 coach UI */
 let growthMetric='height', agilityMetric='シャトルラン', coachAgilitySummaryData=null;
 function monthKey(v){const s=normalizeCoachGrowthDate(v);const m=s.match(/^(\d{4})-(\d{2})/);return m?`${m[1]}/${Number(m[2])}`:'';}
 function renderCoachPlayerList(){
