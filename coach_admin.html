@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v11.5</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v11.6</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -33,19 +33,20 @@ button.secondary{background:var(--dark)}button.ghost{background:#f3f4f6;color:#1
 table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}th{color:#6b7280}
 canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px solid var(--line);touch-action:manipulation}
 .rank-up-spark{background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 45%,#fff 100%);border:2px solid #f59e0b!important;box-shadow:0 10px 24px rgba(245,158,11,.18)}.rank-up-text{display:inline-block;background:#fef3c7;color:#b45309;border-radius:999px;padding:4px 8px;font-weight:900}
-.share-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.share-text{white-space:pre-wrap;background:#f9fafb;border:1px solid var(--line);border-radius:14px;padding:10px;font-size:12px;line-height:1.55;color:#374151;max-height:220px;overflow:auto}
 
-.team-board-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-.team-board-table{overflow:auto;border:1px solid var(--line);border-radius:16px;background:#fff;margin-top:10px}
-.team-board-table table{min-width:920px;width:100%;border-collapse:collapse;font-size:12px}
-.team-board-table th{position:sticky;top:0;background:#f9fafb;z-index:1;white-space:nowrap}
-.team-board-table td,.team-board-table th{padding:8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-.growth-good{color:#166534;font-weight:900;background:#ecfdf5;border-radius:999px;padding:3px 6px;display:inline-block}
-.growth-mid{color:#92400e;font-weight:900;background:#fffbeb;border-radius:999px;padding:3px 6px;display:inline-block}
-.growth-down{color:#991b1b;font-weight:900;background:#fef2f2;border-radius:999px;padding:3px 6px;display:inline-block}
-.growth-flat{color:#6b7280;font-weight:900;background:#f3f4f6;border-radius:999px;padding:3px 6px;display:inline-block}
-.growth-highlight{border-left:10px solid #16a34a;background:linear-gradient(135deg,#ecfdf5 0%,#fff 70%)}
-.missing-chip{display:inline-block;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;margin:2px}
+/* v11.6 coach list / comparison tables */
+.app{max-width:980px}.tabs-inner{max-width:980px;grid-template-columns:repeat(5,1fr)}
+.player-group-title{margin:16px 0 8px;font-size:13px;font-weight:900;color:#374151}
+.player-list-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;color:#111827;border:1px solid var(--line);box-shadow:none;text-align:left;margin-bottom:8px;padding:13px 14px}
+.player-list-btn:after{content:"›";font-size:24px;color:#9ca3af}.back-btn{width:auto;padding:9px 14px;background:#111827;box-shadow:none;margin-bottom:12px}
+.segmented{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}.segmented.four{grid-template-columns:repeat(4,1fr)}
+.segment-btn{background:#fff;color:#111827;border:1px solid var(--line);box-shadow:none;padding:10px 6px;font-size:12px}.segment-btn.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.compare-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff;max-height:62vh}.compare-table{border-collapse:separate;border-spacing:0;min-width:720px;width:max-content;font-size:12px}
+.compare-table th,.compare-table td{min-width:86px;padding:10px 8px;text-align:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);white-space:nowrap}.compare-table thead th{position:sticky;top:0;z-index:3;background:#111827;color:#fff}
+.compare-table .player-cell{position:sticky;left:0;z-index:2;min-width:142px;text-align:left;background:#fff;font-weight:900;cursor:pointer}.compare-table thead .player-cell{z-index:4;background:#111827;color:#fff}
+.compare-table tbody tr:hover td,.compare-table tbody tr:hover .player-cell{background:#fff7ed}.metric-label{font-size:11px;font-weight:900;color:#6b7280;background:#f9fafb}.compare-table tr.metric-weight td{border-bottom:2px solid #cbd5e1}.compare-table .player-cell[rowspan]{vertical-align:middle}.sheet-guide{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;border-radius:14px;padding:10px 12px;font-size:12px;line-height:1.6;margin-top:10px}
+.value-main{font-weight:900;font-size:13px}.empty-value{color:#c7cbd1}.hidden-panel{display:none!important}
+@media(max-width:600px){.segmented.four{grid-template-columns:repeat(2,1fr)}.app{max-width:100%}}
 </style>
 </head>
 <body>
@@ -63,7 +64,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v11.5</div>
+  <div class="profile">コーチ管理専用 v11.6</div>
 </header>
 
 <main>
@@ -74,56 +75,6 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
     <div id="dashboardStatus" class="small" style="margin-top:8px">最新データを更新してください。</div>
   </div>
   <div class="card">
-    <h2>LINE共有</h2>
-    <p class="small">チームの成長まとめやアジリティー順位をコピーして、LINEに貼り付けできます。</p>
-    <div class="share-row">
-      <button onclick="copyCoachGrowthSummary()">成長まとめコピー</button>
-      <button class="secondary" onclick="lineShareCoachGrowthSummary()">LINEで共有</button>
-    </div>
-    <div class="share-row">
-      <button onclick="copyCoachAgilitySummary()">アジリティーコピー</button>
-      <button class="secondary" onclick="lineShareCoachAgilitySummary()">LINEで共有</button>
-    </div>
-    <div id="coachShareStatus" class="small" style="margin-top:8px">コピーした内容をLINEに貼り付けて共有できます。</div>
-    <div id="coachSharePreview" class="share-text" style="display:none;margin-top:8px"></div>
-  </div>
-  <div class="card">
-    <h2>チーム成長一覧</h2>
-    <p class="small">身長・体重・アジリティーを全員比較できます。前回からの変化が大きい選手は色付きで表示します。</p>
-    <button class="secondary" onclick="loadTeamGrowthDashboard(true)">チーム成長一覧を更新</button>
-    <div class="share-row">
-      <button onclick="copyTeamGrowthDashboardSummary()">チーム成長コピー</button>
-      <button class="secondary" onclick="lineShareTeamGrowthDashboardSummary()">LINEで共有</button>
-    </div>
-    <div class="row" style="margin-top:10px">
-      <div>
-        <label>カテゴリー</label>
-        <select id="teamGrowthCategoryFilter" onchange="renderTeamGrowthDashboard()">
-          <option value="all">全カテゴリー</option>
-          <option>男子U13</option><option>男子U14</option><option>男子U15</option>
-          <option>女子U13</option><option>女子U14</option><option>女子U15</option>
-        </select>
-      </div>
-      <div>
-        <label>並び替え</label>
-        <select id="teamGrowthSortSelect" onchange="renderTeamGrowthDashboard()">
-          <option value="heightDiff">身長の伸び順</option>
-          <option value="weightDiff">体重変化順</option>
-          <option value="shuttleDiff">シャトルラン伸び順</option>
-          <option value="sideStepDiff">反復横跳び伸び順</option>
-          <option value="lconeDiff">L字コーン改善順</option>
-          <option value="jumpDiff">垂直跳び伸び順</option>
-          <option value="height">身長順</option>
-          <option value="weight">体重順</option>
-        </select>
-      </div>
-    </div>
-    <div id="teamGrowthStatus" class="small" style="margin-top:8px">チーム成長一覧を更新してください。</div>
-    <div id="teamGrowthHighlights" class="small" style="margin-top:8px"></div>
-    <div id="teamGrowthTable" class="team-board-table"><div class="small" style="padding:10px">まだデータがありません。</div></div>
-  </div>
-
-  <div class="card">
     <h2>チーム概要</h2>
     <div class="kpi">
       <div><b id="kpiPlayers">0</b><span>登録選手</span></div>
@@ -131,93 +82,32 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
       <div><b id="kpiRate">0%</b><span>総合成功率</span></div>
     </div>
   </div>
-  <div class="card">
-    <h2>月別シュート成長グラフ</h2>
-    <p class="small">チーム全体の月ごとの成功率を折れ線で表示します。</p>
-    <canvas id="monthlyGrowthCanvas" width="520" height="280"></canvas>
-    <div id="monthlyGrowthDetail" class="small" style="margin-top:8px"></div>
-  </div>
-
-  <div class="card">
-    <h2>種目別チーム平均</h2>
-    <div id="teamTypeSummary" class="small">データがありません。</div>
-  </div>
 </section>
 
 <section id="playersView" class="view">
-  <div class="card">
-    <h2>選手管理</h2>
-    <p class="small">選手をダウンリストから選ぶと、スプレッドシートの記録からシューティング詳細・得意ポジション・不得意ポジションを表示します。</p>
-    <button class="secondary" onclick="coachLoadPlayers()">選手一覧を更新</button>
-    <div id="coachPlayerStatus" class="small" style="margin-top:8px">選手一覧を更新してください。</div>
-    <label>選手選択</label>
-    <select id="coachPlayerSelect" onchange="coachSelectPlayerDetail()"></select>
+  <div id="coachPlayerListPanel" class="card">
+    <h2>選手管理</h2><p class="small">選手一覧から選択すると、個別のシューティング詳細を確認できます。</p>
+    <button class="secondary" onclick="coachLoadPlayers(false)">選手一覧を更新</button><div id="coachPlayerStatus" class="small" style="margin-top:8px">選手一覧を更新してください。</div>
+    <div id="coachPlayerList" style="margin-top:12px"></div><select id="coachPlayerSelect" class="hidden" onchange="coachSelectPlayerDetail()"></select>
   </div>
-
-  <div class="card">
-    <h2>選手別シューティング詳細</h2>
-    <div id="coachPlayerDetail" class="small">選手を選択してください。</div>
-  </div>
+  <div id="coachPlayerDetailPanel" class="card hidden-panel"><button class="back-btn" onclick="backToCoachPlayerList()">← 選手一覧へ戻る</button><h2>選手個別詳細</h2><div id="coachPlayerDetail" class="small">選手を選択してください。</div></div>
 </section>
 
 <section id="growthCoachView" class="view">
-  <div class="card">
-    <h2>身長・体重 成長記録</h2>
-    <p class="small">選手をプルダウンで選ぶと、一人一人の身長・体重の推移を確認できます。</p>
-    <button class="secondary" onclick="loadGrowthCoachData()">成長記録を更新</button>
-    <div class="share-row">
-      <button onclick="copyCoachGrowthSummary()">成長まとめコピー</button>
-      <button class="secondary" onclick="lineShareCoachGrowthSummary()">LINEで共有</button>
-    </div>
-    <div id="growthCoachStatus" class="small" style="margin-top:8px">成長記録を更新してください。</div>
-    <label>選手選択</label>
-    <select id="growthPlayerSelect" onchange="renderSelectedGrowthPlayer()"></select>
-  </div>
-
-  <div class="card">
-    <h2>選手別 成長グラフ</h2>
-    <p class="small">横軸は西暦入りの測定日で、古い順に表示します。</p>
-    <div id="growthPlayerSummary" class="small" style="margin-bottom:8px">選手を選択してください。</div>
-    <canvas id="coachGrowthCanvas" width="520" height="300"></canvas>
-    <div id="coachGrowthDetail" class="small" style="margin-top:8px"></div>
-  </div>
-
-  <div class="card">
-    <h2>カテゴリー平均</h2>
-    <div id="growthCategoryAverage" class="small">データがありません。</div>
-  </div>
-
-  <div class="card">
-    <h2>男女 全カテゴリー平均</h2>
-    <div id="growthGenderAverage" class="small">データがありません。</div>
-  </div>
+  <div class="card"><h2>成長記録</h2><p class="small">縦に選手、横に測定月を並べて、身長と体重を比較できます。選手名をタップすると個別詳細を表示します。</p><button class="secondary" onclick="loadCoachGrowthPage(true)">最新データを更新</button><div id="growthCoachStatus" class="small" style="margin-top:8px">成長記録を更新してください。</div><div class="sheet-guide">スプレッドシートの「成長記録入力」シートへ身長・体重を直接入力できます。入力後に「最新データを更新」を押してください。</div></div>
+  <div class="card"><h2>身長・体重 一覧</h2><p class="small">選手ごとに上段が身長、下段が体重です。横へスクロールすると過去の測定月を確認できます。</p><div id="growthComparisonTable" class="compare-wrap"><div class="small" style="padding:14px">データがありません。</div></div></div>
+  <div id="growthIndividualCard" class="card hidden-panel"><button class="back-btn" onclick="closeGrowthIndividual()">← 一覧へ戻る</button><h2>身長・体重 個別詳細</h2><select id="growthPlayerSelect" class="hidden" onchange="renderSelectedGrowthPlayer()"></select><div id="growthPlayerSummary" class="small" style="margin-bottom:8px"></div><canvas id="coachGrowthCanvas" width="900" height="340"></canvas><div id="coachGrowthDetail" class="small" style="margin-top:8px"></div></div>
+  <div class="card"><h2>カテゴリー平均</h2><div id="growthCategoryAverage" class="small">データがありません。</div></div><div class="card"><h2>男女 全カテゴリー平均</h2><div id="growthGenderAverage" class="small">データがありません。</div></div>
 </section>
 
 
 
 <section id="coachAgilityView" class="view">
-  <div class="card">
-    <h2>アジリティー順位一覧</h2>
-    <p class="small">種目をダウンリストで選択して、最新順位を表示します。順位が上がった選手は目立つ表示になります。</p>
-    <button class="secondary" onclick="loadCoachAgilityRankings(true)">順位を更新</button>
-    <div class="share-row">
-      <button onclick="copyCoachAgilitySummary()">順位まとめコピー</button>
-      <button class="secondary" onclick="lineShareCoachAgilitySummary()">LINEで共有</button>
-    </div>
-    <div id="coachAgilityStatus" class="small" style="margin-top:8px">順位を更新してください。</div>
-    <label>種目選択</label>
-    <select id="coachAgilityTypeSelect" onchange="renderCoachAgilityRankings()">
-      <option>シャトルラン</option>
-      <option>反復横跳び</option>
-      <option>L字コーンドリル</option>
-      <option>垂直跳び</option>
-    </select>
-  </div>
-  <div class="card">
-    <h2>順位</h2>
-    <div id="coachAgilityRankingList" class="small">まだ順位データがありません。</div>
-  </div>
+  <div class="card"><h2>アジリティー・測定記録</h2><p class="small">種目を選択すると、縦に選手、横に測定月を並べて記録を比較できます。選手名をタップすると個別の推移を表示します。</p><button class="secondary" onclick="loadCoachAgilityPage(true)">最新データを更新</button><div id="coachAgilityStatus" class="small" style="margin-top:8px">アジリティー記録を更新してください。</div><div class="sheet-guide">スプレッドシートの「アジリティ入力」シートへ直接入力できます。入力した種目名は、この画面へ自動的に追加されます。</div></div>
+  <div class="card"><h2>種目別 一覧</h2><div id="agilityMetricButtons" class="segmented four"></div><div id="agilityComparisonTable" class="compare-wrap"><div class="small" style="padding:14px">データがありません。</div></div></div>
+  <div id="agilityIndividualCard" class="card hidden-panel"><button class="back-btn" onclick="closeAgilityIndividual()">← 一覧へ戻る</button><h2>アジリティー 個別詳細</h2><div id="agilityPlayerSummary" class="small"></div><canvas id="coachAgilityCanvas" width="900" height="340"></canvas><div id="coachAgilityDetail" class="small" style="margin-top:8px"></div></div>
 </section>
+
 
 <section id="settingsView" class="view">
   <div class="card">
@@ -283,7 +173,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 /* v8.8 FIX: コーチ用も古いキャッシュを自動削除 */
 (function(){
-  const APP_VERSION = "11.5-coach";
+  const APP_VERSION = "11.6-coach";
   const VERSION_KEY = "ninja_coach_app_version_seen";
   async function clearOldAppCache(){
     try{
@@ -299,7 +189,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
       if(seen !== APP_VERSION){
         localStorage.setItem(VERSION_KEY, APP_VERSION);
         if(!location.search.includes("fresh=1")){
-          location.replace(location.pathname + "?fresh=1&v=11.5-coach");
+          location.replace(location.pathname + "?fresh=1&v=11.4-coach");
         }
       }
     }catch(e){}
@@ -333,7 +223,6 @@ function adminLogin(){
    document.getElementById("loginScreen").classList.add("hidden");
    loadGasUrlToAdmin();
    loadDashboard();
-   loadTeamGrowthDashboard(false);
    setTimeout(()=>coachLoadPlayers(false),300);
  }else{
    alert("パスワードが違います");
@@ -756,7 +645,7 @@ function drawCoachGrowthChart(records){
 
 
 
-/* v11.3 ADD: コーチ用 アジリティー順位一覧 */
+/* v11.6 ADD: コーチ用 アジリティー順位一覧 */
 let coachAgilityRankingsCache=null;
 let coachAgilityRankingsFetchedAt=null;
 function coachAgilityRankChange(row){
@@ -791,309 +680,72 @@ function renderCoachAgilityRankings(){
   box.innerHTML=rows.map(r=>{const cur=Number(r.rank||0), prev=Number(r.previousRank||0), up=prev>cur; const klass=up?' rank-up-spark':''; const crown=cur===1?'🏆 ':cur===2?'🥈 ':cur===3?'🥉 ':'';return `<div class="list-item${klass}"><span class="ranknum">${crown}${cur}位</span> <b>${safeText(r.player)}</b> <span class="badge">${safeText(r.category)}</span><br>記録：<b>${Number(r.value||0)}${safeText(r.unit||'')}</b>　${coachAgilityRankChange(r)}<br><span class="small">今回：${safeText(r.date||'-')} / 前回：${safeText(r.previousDate||'-')}</span></div>`;}).join('');
 }
 const __v113_coachShowView=showView;
-showView=function(id,btn){__v113_coachShowView(id,btn); if(id==='coachAgilityView')loadCoachAgilityRankings(false); if(id==='dashboardView')loadTeamGrowthDashboard(false);};
+showView=function(id,btn){__v113_coachShowView(id,btn); if(id==='coachAgilityView')loadCoachAgilityRankings(false);};
 
 
-/* v11.4 ADD: LINE共有用コピー機能 */
-function coachTodayLabel(){
-  const d=new Date();
-  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+/* v11.6 coach UI */
+let growthMetric='height', agilityMetric='シャトルラン', coachAgilitySummaryData=null;
+function monthKey(v){const s=normalizeCoachGrowthDate(v);const m=s.match(/^(\d{4})-(\d{2})/);return m?`${m[1]}/${Number(m[2])}`:'';}
+function renderCoachPlayerList(){
+ const box=document.getElementById('coachPlayerList'); if(!box)return;
+ if(!coachPlayersCache.length){box.innerHTML='<div class="notice">登録選手がいません。</div>';return;}
+ const groups={}; coachPlayersCache.forEach(p=>(groups[p.category]??=[]).push(p));
+ box.innerHTML=Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ja')).map(cat=>`<div class="player-group-title">${safeText(cat)}</div>`+groups[cat].map(p=>`<button class="player-list-btn" onclick="openCoachPlayer('${jsArg(p.playerId)}')"><span><b>${safeText(p.name)}</b><br><span class="small">${safeText(p.playerId)}</span></span></button>`).join('')).join('');
 }
-function coachSetSharePreview(text,msg){
-  const st=document.getElementById('coachShareStatus');
-  const pv=document.getElementById('coachSharePreview');
-  if(st)st.innerHTML=msg||'コピーしました。LINEに貼り付けて共有できます。';
-  if(pv){pv.style.display='block';pv.textContent=text;}
+function openCoachPlayer(id){selectedCoachPlayerId=id;const sel=document.getElementById('coachPlayerSelect');if(sel)sel.value=id;document.getElementById('coachPlayerListPanel').classList.add('hidden-panel');document.getElementById('coachPlayerDetailPanel').classList.remove('hidden-panel');coachShowPlayerDetail(id);window.scrollTo({top:0,behavior:'smooth'});}
+function backToCoachPlayerList(){document.getElementById('coachPlayerDetailPanel').classList.add('hidden-panel');document.getElementById('coachPlayerListPanel').classList.remove('hidden-panel');}
+const __v114_loadPlayers=coachLoadPlayers;
+coachLoadPlayers=async function(showDetail=false){await __v114_loadPlayers(false);renderCoachPlayerList();if(!showDetail)backToCoachPlayerList();};
+function buildGrowthDoubleTable(players){
+ const months=[...new Set(players.flatMap(p=>(p.records||[]).map(r=>monthKey(r.date||r.measuredAtIso||r.createdAt)).filter(Boolean)))].sort();
+ if(!months.length)return '<div class="small" style="padding:14px">測定記録がありません。</div>';
+ return `<table class="compare-table"><thead><tr><th class="player-cell">選手</th><th>項目</th>${months.map(m=>`<th>${safeText(m)}</th>`).join('')}</tr></thead><tbody>${players.map(p=>{const map={};(p.records||[]).forEach(r=>{const k=monthKey(r.date||r.measuredAtIso||r.createdAt);if(k)map[k]=r;});const player=`<td class="player-cell" rowspan="2" onclick="openGrowthIndividual('${jsArg(p.playerId)}')">${safeText(p.player)}<br><span class="small">${safeText(p.category)}</span></td>`;const h=`<tr>${player}<td class="metric-label">身長</td>${months.map(m=>map[m]&&Number(map[m].height)>0?`<td><span class="value-main">${oneDecimal(map[m].height)}</span>cm</td>`:`<td class="empty-value">―</td>`).join('')}</tr>`;const w=`<tr class="metric-weight"><td class="metric-label">体重</td>${months.map(m=>map[m]&&Number(map[m].weight)>0?`<td><span class="value-main">${oneDecimal(map[m].weight)}</span>kg</td>`:`<td class="empty-value">―</td>`).join('')}</tr>`;return h+w;}).join('')}</tbody></table>`;
 }
-async function copyTextForCoachShare(text){
-  try{
-    if(navigator.clipboard && window.isSecureContext){
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  }catch(e){}
-  try{
-    const ta=document.createElement('textarea');
-    ta.value=text; ta.style.position='fixed'; ta.style.left='-9999px'; ta.style.top='0';
-    document.body.appendChild(ta); ta.focus(); ta.select();
-    const ok=document.execCommand('copy'); ta.remove(); return ok;
-  }catch(e){return false;}
+function renderGrowthComparison(){const box=document.getElementById('growthComparisonTable');if(box&&coachGrowthData)box.innerHTML=buildGrowthDoubleTable(coachGrowthData.players||[]);}
+function openGrowthIndividual(id){const sel=document.getElementById('growthPlayerSelect');if(sel){sel.value=id;renderSelectedGrowthPlayer();}document.getElementById('growthIndividualCard').classList.remove('hidden-panel');document.getElementById('growthIndividualCard').scrollIntoView({behavior:'smooth',block:'start'});}
+function closeGrowthIndividual(){document.getElementById('growthIndividualCard').classList.add('hidden-panel');}
+function buildAgilityTable(){
+ const players=(coachAgilitySummaryData&&coachAgilitySummaryData.players)||[]; const months=[...new Set(players.flatMap(p=>(p.records||[]).filter(r=>r.type===agilityMetric).map(r=>monthKey(r.date)).filter(Boolean)))].sort();
+ if(!months.length)return '<div class="small" style="padding:14px">この種目の記録がありません。</div>'; const unitMap={'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
+ return `<table class="compare-table"><thead><tr><th class="player-cell">選手</th>${months.map(m=>`<th>${safeText(m)}</th>`).join('')}</tr></thead><tbody>${players.map(p=>{const map={};(p.records||[]).filter(r=>r.type===agilityMetric).forEach(r=>{const k=monthKey(r.date);if(k)map[k]=r;});return `<tr><td class="player-cell" onclick="openAgilityIndividual('${jsArg(p.playerId)}')">${safeText(p.player)}<br><span class="small">${safeText(p.category)}</span></td>${months.map(m=>map[m]?`<td><span class="value-main">${Number(map[m].value||0)}</span>${safeText(map[m].unit||unitMap[agilityMetric]||'')}</td>`:`<td class="empty-value">―</td>`).join('')}</tr>`;}).join('')}</tbody></table>`;
 }
-function openLineShare(text){
-  const url='https://line.me/R/msg/text/?'+encodeURIComponent(text);
-  window.open(url,'_blank');
+function renderAgilityMetricButtons(){
+ const host=document.getElementById('agilityMetricButtons');if(!host)return;
+ const types=[...new Set(((coachAgilitySummaryData&&coachAgilitySummaryData.players)||[]).flatMap(p=>(p.records||[]).map(r=>String(r.type||'').trim()).filter(Boolean)))];
+ if(!types.length){host.innerHTML='';return;}
+ if(!types.includes(agilityMetric))agilityMetric=types[0];
+ host.innerHTML=types.map(t=>`<button class="segment-btn ${t===agilityMetric?'active':''}" onclick="setAgilityMetric('${jsArg(t)}',this)">${safeText(t)}</button>`).join('');
 }
-function latestAndPrevious(records){
-  const list=(records||[]).slice().filter(r=>Number(r.height||r.weight||r.value||0)>0).sort((a,b)=>String(a.date||a.measuredAtIso||a.createdAt||'').localeCompare(String(b.date||b.measuredAtIso||b.createdAt||'')));
-  return {latest:list[list.length-1]||null, prev:list[list.length-2]||null, count:list.length};
+function renderAgilityComparison(){renderAgilityMetricButtons();const box=document.getElementById('agilityComparisonTable');if(box)box.innerHTML=buildAgilityTable();}
+function setAgilityMetric(type,btn){agilityMetric=type;document.querySelectorAll('#agilityMetricButtons .segment-btn').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');renderAgilityComparison();closeAgilityIndividual();}
+function openAgilityIndividual(id){const p=((coachAgilitySummaryData&&coachAgilitySummaryData.players)||[]).find(x=>x.playerId===id);if(!p)return;const rec=(p.records||[]).filter(r=>r.type===agilityMetric).sort((a,b)=>String(a.date).localeCompare(String(b.date)));document.getElementById('agilityPlayerSummary').innerHTML=`<div class="list-item"><b>${safeText(p.player)}</b> <span class="badge">${safeText(p.category)}</span><br>${safeText(agilityMetric)} / 記録数：${rec.length}件</div>`;drawAgilityChart(rec);document.getElementById('agilityIndividualCard').classList.remove('hidden-panel');document.getElementById('agilityIndividualCard').scrollIntoView({behavior:'smooth',block:'start'});}
+function closeAgilityIndividual(){document.getElementById('agilityIndividualCard').classList.add('hidden-panel');}
+function drawAgilityChart(records){const c=document.getElementById('coachAgilityCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);if(!records.length){ctx.fillStyle='#111827';ctx.fillText('記録がありません',c.width/2-50,c.height/2);return;}const vals=records.map(r=>Number(r.value||0)),min=Math.min(...vals),max=Math.max(...vals),pad=Math.max(1,(max-min)*.2),lo=min-pad,hi=max+pad,left=55,right=30,top=35,bottom=60,w=c.width-left-right,h=c.height-top-bottom;ctx.strokeStyle='#e5e7eb';for(let i=0;i<=4;i++){const y=top+i*h/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(c.width-right,y);ctx.stroke();}ctx.beginPath();records.forEach((r,i)=>{const x=left+i*w/Math.max(1,records.length-1),y=top+(hi-Number(r.value))*h/Math.max(1,hi-lo);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.strokeStyle='#d91828';ctx.lineWidth=4;ctx.stroke();records.forEach((r,i)=>{const x=left+i*w/Math.max(1,records.length-1),y=top+(hi-Number(r.value))*h/Math.max(1,hi-lo);ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fillStyle='#d91828';ctx.fill();ctx.fillStyle='#111827';ctx.font='11px sans-serif';ctx.fillText(String(r.value),x-10,y-12);ctx.save();ctx.translate(x-4,c.height-14);ctx.rotate(-Math.PI/7);ctx.fillText(coachGrowthDateShort(r.date),0,0);ctx.restore();});document.getElementById('coachAgilityDetail').innerHTML='月ごとの記録推移です。';}
+async function loadCoachGrowthPage(force=false){
+ const st=document.getElementById('growthCoachStatus');if(st)st.innerHTML='成長記録を取得中...';
+ await loadGrowthCoachData();
+ renderGrowthComparison();
+ if(st)st.innerHTML=`更新しました。対象選手：${(coachGrowthData&&coachGrowthData.players||[]).length}人`;
 }
-function signedNumber(v,digits=1){
-  const n=Number(v||0);
-  const sign=n>0?'+':'';
-  return sign+n.toFixed(digits);
+async function loadCoachAgilityPage(force=false){
+ const st=document.getElementById('coachAgilityStatus');if(st)st.innerHTML='アジリティー記録を取得中...';
+ try{const res=await coachJsonp('agilitySummary');coachAgilitySummaryData=(res&&res.status==='ok')?res:{status:'ok',players:[]};}
+ catch(e){coachAgilitySummaryData={status:'ok',players:[]};}
+ renderAgilityComparison();closeAgilityIndividual();
+ if(st)st.innerHTML=`更新しました。対象選手：${(coachAgilitySummaryData.players||[]).length}人`;
 }
-function buildCoachGrowthShareText(data){
-  const players=(data&&data.players)||[];
-  const rows=players.map(p=>{
-    const lp=latestAndPrevious(p.records||[]);
-    const latest=lp.latest;
-    const prev=lp.prev;
-    const height=latest?Number(latest.height||0):Number(p.height||0);
-    const weight=latest?Number(latest.weight||0):Number(p.weight||0);
-    const heightDiff=(latest&&prev)?height-Number(prev.height||0):0;
-    const weightDiff=(latest&&prev)?weight-Number(prev.weight||0):0;
-    return {...p,height,weight,heightDiff,weightDiff,recordsCount:lp.count};
-  });
-  const entered=rows.filter(r=>r.height>0&&r.weight>0);
-  const missing=rows.filter(r=>!(r.height>0&&r.weight>0));
-  const topHeight=entered.slice().sort((a,b)=>b.heightDiff-a.heightDiff).slice(0,5).filter(r=>r.heightDiff!==0);
-  const topWeight=entered.slice().sort((a,b)=>Math.abs(b.weightDiff)-Math.abs(a.weightDiff)).slice(0,5).filter(r=>r.weightDiff!==0);
-  const avgH=entered.length?entered.reduce((s,r)=>s+r.height,0)/entered.length:0;
-  const avgW=entered.length?entered.reduce((s,r)=>s+r.weight,0)/entered.length:0;
-  const lines=[];
-  lines.push(`【NINJA 成長記録まとめ】${coachTodayLabel()}`);
-  lines.push(`入力済み：${entered.length}/${players.length}人`);
-  if(entered.length)lines.push(`平均：身長 ${avgH.toFixed(1)}cm / 体重 ${avgW.toFixed(1)}kg`);
-  lines.push('');
-  lines.push('■ 身長成長 上位');
-  lines.push(topHeight.length?topHeight.map((r,i)=>`${i+1}. ${r.player} ${r.height.toFixed(1)}cm（${signedNumber(r.heightDiff)}cm）`).join('\n'):'記録差分なし');
-  lines.push('');
-  lines.push('■ 体重変化 大きい順');
-  lines.push(topWeight.length?topWeight.map((r,i)=>`${i+1}. ${r.player} ${r.weight.toFixed(1)}kg（${signedNumber(r.weightDiff)}kg）`).join('\n'):'記録差分なし');
-  if(missing.length){
-    lines.push('');
-    lines.push(`■ 未入力：${missing.length}人`);
-    lines.push(missing.slice(0,12).map(r=>r.player).join('、')+(missing.length>12?' ほか':''));
-  }
-  return lines.join('\n');
-}
-async function ensureCoachGrowthData(){
-  if(coachGrowthData && Array.isArray(coachGrowthData.players))return coachGrowthData;
-  const res=await coachJsonp('growthSummary',{});
-  if(!res||res.status!=='ok')throw new Error((res&&res.message)||'成長記録を取得できませんでした。');
-  coachGrowthData=res;
-  return res;
-}
-async function copyCoachGrowthSummary(){
-  try{
-    const data=await ensureCoachGrowthData();
-    const text=buildCoachGrowthShareText(data);
-    await copyTextForCoachShare(text);
-    coachSetSharePreview(text,'成長まとめをコピーしました。LINEに貼り付けできます。');
-    const st=document.getElementById('growthCoachStatus'); if(st)st.innerHTML='成長まとめをコピーしました。';
-  }catch(e){alert('成長まとめを作成できませんでした。Apps Scriptを確認してください。');}
-}
-async function lineShareCoachGrowthSummary(){
-  try{
-    const data=await ensureCoachGrowthData();
-    const text=buildCoachGrowthShareText(data);
-    await copyTextForCoachShare(text);
-    coachSetSharePreview(text,'LINE共有を開きます。開かない場合はコピー内容をLINEに貼り付けてください。');
-    openLineShare(text);
-  }catch(e){alert('成長まとめを作成できませんでした。Apps Scriptを確認してください。');}
-}
-function buildCoachAgilityShareText(data, selectedType){
-  const rankings=(data&&data.rankings)||{};
-  const type=selectedType || (document.getElementById('coachAgilityTypeSelect')?.value) || 'シャトルラン';
-  const rows=Array.isArray(rankings[type])?rankings[type]:[];
-  const lines=[];
-  lines.push(`【NINJA アジリティー順位】${coachTodayLabel()}`);
-  lines.push(`種目：${type}`);
-  lines.push('');
-  if(!rows.length){lines.push('まだ記録がありません。'); return lines.join('\n');}
-  rows.slice(0,10).forEach(r=>{
-    const cur=Number(r.rank||0), prev=Number(r.previousRank||0);
-    let change='';
-    if(prev&&prev>cur)change=` ✨前回${prev}位→今回${cur}位`;
-    else if(prev)change=` 前回${prev}位→今回${cur}位`;
-    else change=' 初回';
-    lines.push(`${cur}位 ${r.player} ${Number(r.value||0)}${r.unit||''}${change}`);
-  });
-  return lines.join('\n');
-}
-async function ensureCoachAgilityData(){
-  if(coachAgilityRankingsCache && coachAgilityRankingsCache.rankings)return coachAgilityRankingsCache;
-  const res=await coachJsonp('agilityRankings',{});
-  if(!res||res.status!=='ok')throw new Error((res&&res.message)||'アジリティー順位を取得できませんでした。');
-  coachAgilityRankingsCache=res;
-  coachAgilityRankingsFetchedAt=Date.now();
-  return res;
-}
-async function copyCoachAgilitySummary(){
-  try{
-    const data=await ensureCoachAgilityData();
-    const text=buildCoachAgilityShareText(data);
-    await copyTextForCoachShare(text);
-    coachSetSharePreview(text,'アジリティー順位をコピーしました。LINEに貼り付けできます。');
-    renderCoachAgilityRankings();
-  }catch(e){alert('アジリティー順位を作成できませんでした。Apps Scriptを確認してください。');}
-}
-async function lineShareCoachAgilitySummary(){
-  try{
-    const data=await ensureCoachAgilityData();
-    const text=buildCoachAgilityShareText(data);
-    await copyTextForCoachShare(text);
-    coachSetSharePreview(text,'LINE共有を開きます。開かない場合はコピー内容をLINEに貼り付けてください。');
-    openLineShare(text);
-  }catch(e){alert('アジリティー順位を作成できませんでした。Apps Scriptを確認してください。');}
-}
-
-
-
-/* v11.5 ADD: チーム成長一覧ダッシュボード */
-let teamGrowthDashboardRows=[];
-let teamGrowthDashboardLoadedAt=null;
-function fmtOne(v,unit=''){
-  const n=Number(v||0);
-  return n?`${n.toFixed(1)}${unit}`:'-';
-}
-function fmtInt(v,unit=''){
-  const n=Number(v||0);
-  return n?`${Math.round(n)}${unit}`:'-';
-}
-function signedBadge(v,digits=1,reverse=false){
-  const n=Number(v||0);
-  if(!n)return `<span class="growth-flat">±0</span>`;
-  const good=reverse?n<0:n>0;
-  const klass=good?(Math.abs(n)>=1?'growth-good':'growth-mid'):'growth-down';
-  const sign=n>0?'+':'';
-  return `<span class="${klass}">${sign}${n.toFixed(digits)}</span>`;
-}
-function signedPlain(v,digits=1){
-  const n=Number(v||0); const sign=n>0?'+':''; return `${sign}${n.toFixed(digits)}`;
-}
-function latestPrevByDate(records){
-  const list=(records||[]).slice().filter(r=>Number(r.height||r.weight||r.value||0)>0).sort((a,b)=>String(a.date||a.measuredAtIso||a.createdAt||'').localeCompare(String(b.date||b.measuredAtIso||b.createdAt||'')));
-  return {latest:list[list.length-1]||null, prev:list[list.length-2]||null, count:list.length};
-}
-function agilityMapFromRankings(data,type){
-  const rows=data&&data.rankings&&Array.isArray(data.rankings[type])?data.rankings[type]:[];
-  const map=new Map();
-  rows.forEach(r=>map.set(`${r.player}|${r.category}`,r));
-  return map;
-}
-async function loadTeamGrowthDashboard(showMessage=false){
-  const st=document.getElementById('teamGrowthStatus');
-  if(!st)return;
-  if(teamGrowthDashboardRows.length && !showMessage){renderTeamGrowthDashboard();return;}
-  try{
-    st.innerHTML='チーム成長一覧を取得中...';
-    const growth=await ensureCoachGrowthData();
-    const agility=await ensureCoachAgilityData();
-    const shuttle=agilityMapFromRankings(agility,'シャトルラン');
-    const side=agilityMapFromRankings(agility,'反復横跳び');
-    const lcone=agilityMapFromRankings(agility,'L字コーンドリル');
-    const jump=agilityMapFromRankings(agility,'垂直跳び');
-    teamGrowthDashboardRows=((growth&&growth.players)||[]).map(p=>{
-      const gp=latestPrevByDate(p.records||[]);
-      const latest=gp.latest, prev=gp.prev;
-      const height=latest?Number(latest.height||0):Number(p.height||0);
-      const weight=latest?Number(latest.weight||0):Number(p.weight||0);
-      const heightDiff=(latest&&prev)?height-Number(prev.height||0):0;
-      const weightDiff=(latest&&prev)?weight-Number(prev.weight||0):0;
-      const key=`${p.player}|${p.category}`;
-      const sh=shuttle.get(key)||{}, si=side.get(key)||{}, lc=lcone.get(key)||{}, ju=jump.get(key)||{};
-      return {
-        player:p.player, playerId:p.playerId, category:p.category,
-        height, weight, heightDiff, weightDiff, growthCount:gp.count,
-        date:(latest&&(latest.date||latest.measuredAtIso||latest.createdAt))||p.date||'',
-        shuttle:Number(sh.value||0), shuttleDiff:Number(sh.value||0)-Number(sh.previousValue||0), shuttleRank:Number(sh.rank||0),
-        sideStep:Number(si.value||0), sideStepDiff:Number(si.value||0)-Number(si.previousValue||0), sideStepRank:Number(si.rank||0),
-        lcone:Number(lc.value||0), lconeDiff:Number(lc.previousValue||0)?Number(lc.previousValue||0)-Number(lc.value||0):0, lconeRank:Number(lc.rank||0),
-        jump:Number(ju.value||0), jumpDiff:Number(ju.value||0)-Number(ju.previousValue||0), jumpRank:Number(ju.rank||0)
-      };
-    });
-    teamGrowthDashboardLoadedAt=Date.now();
-    renderTeamGrowthDashboard();
-  }catch(e){
-    console.error(e);
-    st.innerHTML='チーム成長一覧の取得に失敗しました。Apps Scriptの再デプロイを確認してください。';
-  }
-}
-function renderTeamGrowthDashboard(){
-  const st=document.getElementById('teamGrowthStatus');
-  const hi=document.getElementById('teamGrowthHighlights');
-  const box=document.getElementById('teamGrowthTable');
-  if(!box)return;
-  const category=document.getElementById('teamGrowthCategoryFilter')?.value||'all';
-  const sort=document.getElementById('teamGrowthSortSelect')?.value||'heightDiff';
-  let rows=teamGrowthDashboardRows.slice();
-  if(category!=='all')rows=rows.filter(r=>r.category===category);
-  const sorters={
-    heightDiff:(a,b)=>b.heightDiff-a.heightDiff,
-    weightDiff:(a,b)=>Math.abs(b.weightDiff)-Math.abs(a.weightDiff),
-    shuttleDiff:(a,b)=>b.shuttleDiff-a.shuttleDiff,
-    sideStepDiff:(a,b)=>b.sideStepDiff-a.sideStepDiff,
-    lconeDiff:(a,b)=>b.lconeDiff-a.lconeDiff,
-    jumpDiff:(a,b)=>b.jumpDiff-a.jumpDiff,
-    height:(a,b)=>b.height-a.height,
-    weight:(a,b)=>b.weight-a.weight
-  };
-  rows.sort(sorters[sort]||sorters.heightDiff);
-  const entered=rows.filter(r=>r.height>0&&r.weight>0);
-  const missing=rows.filter(r=>!(r.height>0&&r.weight>0));
-  if(st){const t=teamGrowthDashboardLoadedAt?new Date(teamGrowthDashboardLoadedAt).toLocaleString('ja-JP'):'';st.innerHTML=`表示：${rows.length}人 / 成長記録入力済み：${entered.length}人${t?' / 更新：'+safeText(t):''}`;}
-  const topH=entered.slice().sort((a,b)=>b.heightDiff-a.heightDiff).slice(0,3).filter(r=>r.heightDiff>0);
-  const topAg=rows.slice().sort((a,b)=>(b.shuttleDiff+b.sideStepDiff+b.jumpDiff+b.lconeDiff)-(a.shuttleDiff+a.sideStepDiff+a.jumpDiff+a.lconeDiff)).slice(0,3);
-  if(hi){
-    hi.innerHTML=`<div class="list-item growth-highlight"><b>今日の注目</b><br>`+
-      `身長UP：${topH.length?topH.map((r,i)=>`${i+1}. ${safeText(r.player)} ${signedPlain(r.heightDiff)}cm`).join('　'):'差分なし'}<br>`+
-      `運動能力UP：${topAg.length?topAg.map((r,i)=>`${i+1}. ${safeText(r.player)}`).join('　'):'記録なし'}<br>`+
-      (missing.length?`<div style="margin-top:6px">未入力：${missing.slice(0,12).map(r=>`<span class="missing-chip">${safeText(r.player)}</span>`).join('')}${missing.length>12?' ほか':''}</div>`:'')+
-      `</div>`;
-  }
-  if(!rows.length){box.innerHTML='<div class="small" style="padding:10px">データがありません。</div>';return;}
-  box.innerHTML=`<table><thead><tr>
-    <th>選手</th><th>カテゴリ</th><th>身長</th><th>前回比</th><th>体重</th><th>前回比</th>
-    <th>シャトル</th><th>変化</th><th>反復横跳び</th><th>変化</th><th>L字</th><th>改善</th><th>垂直跳び</th><th>変化</th><th>測定日</th>
-  </tr></thead><tbody>`+rows.map(r=>`<tr>
-    <td><b>${safeText(r.player)}</b></td><td>${safeText(r.category)}</td>
-    <td>${fmtOne(r.height,'cm')}</td><td>${signedBadge(r.heightDiff,1)}</td>
-    <td>${fmtOne(r.weight,'kg')}</td><td>${signedBadge(r.weightDiff,1)}</td>
-    <td>${fmtInt(r.shuttle,'回')}${r.shuttleRank?` <span class="badge">${r.shuttleRank}位</span>`:''}</td><td>${signedBadge(r.shuttleDiff,0)}</td>
-    <td>${fmtInt(r.sideStep,'回')}${r.sideStepRank?` <span class="badge">${r.sideStepRank}位</span>`:''}</td><td>${signedBadge(r.sideStepDiff,0)}</td>
-    <td>${fmtOne(r.lcone,'秒')}${r.lconeRank?` <span class="badge">${r.lconeRank}位</span>`:''}</td><td>${signedBadge(r.lconeDiff,1)}</td>
-    <td>${fmtOne(r.jump,'cm')}${r.jumpRank?` <span class="badge">${r.jumpRank}位</span>`:''}</td><td>${signedBadge(r.jumpDiff,1)}</td>
-    <td>${safeText(coachGrowthDateFull(r.date))}</td>
-  </tr>`).join('')+`</tbody></table>`;
-}
-function buildTeamGrowthDashboardShareText(){
-  const category=document.getElementById('teamGrowthCategoryFilter')?.value||'all';
-  let rows=teamGrowthDashboardRows.slice();
-  if(category!=='all')rows=rows.filter(r=>r.category===category);
-  const entered=rows.filter(r=>r.height>0&&r.weight>0);
-  const missing=rows.filter(r=>!(r.height>0&&r.weight>0));
-  const avgH=entered.length?entered.reduce((s,r)=>s+r.height,0)/entered.length:0;
-  const avgW=entered.length?entered.reduce((s,r)=>s+r.weight,0)/entered.length:0;
-  const topH=entered.slice().sort((a,b)=>b.heightDiff-a.heightDiff).slice(0,5).filter(r=>r.heightDiff>0);
-  const topSh=rows.slice().sort((a,b)=>b.shuttleDiff-a.shuttleDiff).slice(0,5).filter(r=>r.shuttleDiff>0);
-  const topJ=rows.slice().sort((a,b)=>b.jumpDiff-a.jumpDiff).slice(0,5).filter(r=>r.jumpDiff>0);
-  const lines=[];
-  lines.push(`【NINJA チーム成長一覧】${coachTodayLabel()}`);
-  lines.push(category==='all'?'対象：全カテゴリー':`対象：${category}`);
-  lines.push(`入力済み：${entered.length}/${rows.length}人`);
-  if(entered.length)lines.push(`平均：身長${avgH.toFixed(1)}cm / 体重${avgW.toFixed(1)}kg`);
-  lines.push('');
-  lines.push('■ 身長UP');
-  lines.push(topH.length?topH.map((r,i)=>`${i+1}. ${r.player} ${signedPlain(r.heightDiff)}cm`).join('\n'):'差分なし');
-  lines.push('');
-  lines.push('■ シャトルランUP');
-  lines.push(topSh.length?topSh.map((r,i)=>`${i+1}. ${r.player} ${signedPlain(r.shuttleDiff,0)}回`).join('\n'):'差分なし');
-  lines.push('');
-  lines.push('■ 垂直跳びUP');
-  lines.push(topJ.length?topJ.map((r,i)=>`${i+1}. ${r.player} ${signedPlain(r.jumpDiff)}cm`).join('\n'):'差分なし');
-  if(missing.length){lines.push('');lines.push(`■ 成長記録未入力：${missing.length}人`);lines.push(missing.slice(0,15).map(r=>r.player).join('、')+(missing.length>15?' ほか':''));}
-  return lines.join('\n');
-}
-async function copyTeamGrowthDashboardSummary(){
-  try{await loadTeamGrowthDashboard(false); const text=buildTeamGrowthDashboardShareText(); await copyTextForCoachShare(text); coachSetSharePreview(text,'チーム成長一覧をコピーしました。LINEに貼り付けできます。');}
-  catch(e){alert('チーム成長一覧を作成できませんでした。Apps Scriptを確認してください。');}
-}
-async function lineShareTeamGrowthDashboardSummary(){
-  try{await loadTeamGrowthDashboard(false); const text=buildTeamGrowthDashboardShareText(); await copyTextForCoachShare(text); coachSetSharePreview(text,'LINE共有を開きます。開かない場合はコピー内容をLINEに貼り付けてください。'); openLineShare(text);}
-  catch(e){alert('チーム成長一覧を作成できませんでした。Apps Scriptを確認してください。');}
-}
-
+let activeViewRequest=0;
+showView=function(id,btn){
+ const request=++activeViewRequest;
+ document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+ if(btn)btn.classList.add('active');
+ window.scrollTo({top:0,behavior:'auto'});
+ if(id==='playersView')coachLoadPlayers(false);
+ else if(id==='growthCoachView')loadCoachGrowthPage(false).then(()=>{if(request!==activeViewRequest)return;});
+ else if(id==='coachAgilityView')loadCoachAgilityPage(false).then(()=>{if(request!==activeViewRequest)return;});
+ else if(id==='settingsView'){loadGasUrlToAdmin();if(!coachPlayersCache.length)coachLoadPlayersForSettings();else fillSettingsPlayerSelect();}
+};
 function downloadCSV(){
  alert("全データはGoogleスプレッドシートの shooting_records を使用してください。");
 }

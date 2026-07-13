@@ -1,5 +1,5 @@
 /**
- * NINJA SHOOTING AVERAGE v11.3
+ * NINJA SHOOTING AVERAGE v11.6
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
@@ -8,6 +8,8 @@ const SHEET_LOGS = 'logs';
 const SHEET_SUMMARY = 'summary';
 const SHEET_GROWTH = 'growth_records';
 const SHEET_AGILITY = 'agility_records';
+const SHEET_GROWTH_INPUT = '成長記録入力';
+const SHEET_AGILITY_INPUT = 'アジリティ入力';
 const RANK_MIN_ATTEMPTS = 500;
 
 function doPost(e) {
@@ -52,9 +54,10 @@ function doGet(e) {
     else if (action === 'growthSummary') result = growthSummary_();
     else if (action === 'agilityRecords') result = agilityRecords_(p.playerId);
     else if (action === 'agilityRankings') result = agilityRankings_();
+    else if (action === 'agilitySummary') result = agilitySummary_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.3' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.6' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
@@ -70,6 +73,8 @@ function setupSheets_() {
   ensureSheet_(ss, SHEET_SUMMARY, ['選手名','カテゴリー','種目','ポジション','成功数合計','試投数合計','成功率']);
   ensureSheet_(ss, SHEET_GROWTH, ['送信日時','同期種別','記録ID','日付','測定日時表示','測定日時ISO','選手名','カテゴリー','身長cm','体重kg','作成日時','削除日時']);
   ensureSheet_(ss, SHEET_AGILITY, ['送信日時','同期種別','記録ID','日付','選手名','カテゴリー','種目','記録','単位','作成日時','削除日時']);
+  ensureSheet_(ss, SHEET_GROWTH_INPUT, ['日付','選手名','カテゴリー','身長cm','体重kg','メモ']);
+  ensureSheet_(ss, SHEET_AGILITY_INPUT, ['日付','選手名','カテゴリー','種目','記録','単位','メモ']);
   ensureSheet_(ss, SHEET_LOGS, ['日時','種別','内容']);
 }
 function ensureSheet_(ss, name, header) {
@@ -261,19 +266,34 @@ function appendAgilityRecords_(records) {
   if (values.length) sheet.getRange(sheet.getLastRow()+1,1,values.length,values[0].length).setValues(values);
   log_('APPEND_AGILITY', `${values.length} records`);
 }
+function playerCategoryByName_() {
+  const map = new Map();
+  listPlayers_().players.forEach(p => { if (!map.has(p.name)) map.set(p.name, p.category); });
+  return map;
+}
 function getActiveGrowthRecords_() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_GROWTH);
-  const last = sheet.getLastRow(); if (last < 2) return [];
-  const values = sheet.getRange(2,1,last-1,12).getValues(); const byId = new Map();
-  values.forEach(row => { const syncType=String(row[1]||''); const id=String(row[2]||''); if(!id)return; if(syncType==='delete'){byId.delete(id);return;} byId.set(id,{id: id,date:normalizeDateString_(row[3]||row[5]||row[10]),measuredAtDisplay:String(row[4]||''),measuredAtIso:normalizeDateString_(row[5]||row[3]||row[10]),player:String(row[6]||''),category:String(row[7]||''),height:Number(row[8]||0),weight:Number(row[9]||0),createdAt:formatDateTime_(row[10])}); });
-  return Array.from(byId.values()).filter(r=>r.player && r.height>0 && r.weight>0);
+  const ss=SpreadsheetApp.getActiveSpreadsheet(), byId=new Map();
+  const sheet=ss.getSheetByName(SHEET_GROWTH);
+  if(sheet&&sheet.getLastRow()>=2){
+    sheet.getRange(2,1,sheet.getLastRow()-1,12).getValues().forEach(row=>{const syncType=String(row[1]||''),id=String(row[2]||'');if(!id)return;if(syncType==='delete'){byId.delete(id);return;}byId.set(id,{id,date:normalizeDateString_(row[3]||row[5]||row[10]),measuredAtDisplay:String(row[4]||''),measuredAtIso:normalizeDateString_(row[5]||row[3]||row[10]),player:String(row[6]||'').trim(),category:String(row[7]||'').trim(),height:Number(row[8]||0),weight:Number(row[9]||0),createdAt:formatDateTime_(row[10])});});
+  }
+  const catMap=playerCategoryByName_(), input=ss.getSheetByName(SHEET_GROWTH_INPUT);
+  if(input&&input.getLastRow()>=2){
+    input.getRange(2,1,input.getLastRow()-1,6).getValues().forEach((row,i)=>{const player=String(row[1]||'').trim(),date=normalizeDateString_(row[0]),height=Number(row[3]||0),weight=Number(row[4]||0);if(!player||!date||(!height&&!weight))return;const category=String(row[2]||'').trim()||catMap.get(player)||'';const id=`manual-growth-${i+2}-${date}-${player}`;byId.set(id,{id,date,measuredAtIso:date,measuredAtDisplay:date,player,category,height,weight,createdAt:''});});
+  }
+  return Array.from(byId.values()).filter(r=>r.player&&(r.height>0||r.weight>0));
 }
 function getActiveAgilityRecords_() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_AGILITY);
-  const last = sheet.getLastRow(); if (last < 2) return [];
-  const values = sheet.getRange(2,1,last-1,11).getValues(); const byId = new Map();
-  values.forEach(row => { const syncType=String(row[1]||''); const id=String(row[2]||''); if(!id)return; if(syncType==='delete'){byId.delete(id);return;} byId.set(id,{id,date:formatDate_(row[3]),player:String(row[4]||''),category:String(row[5]||''),type:String(row[6]||''),value:Number(row[7]||0),unit:String(row[8]||''),createdAt:formatDateTime_(row[9])}); });
-  return Array.from(byId.values()).filter(r=>r.player && r.type && r.value>0);
+  const ss=SpreadsheetApp.getActiveSpreadsheet(), byId=new Map();
+  const sheet=ss.getSheetByName(SHEET_AGILITY);
+  if(sheet&&sheet.getLastRow()>=2){
+    sheet.getRange(2,1,sheet.getLastRow()-1,11).getValues().forEach(row=>{const syncType=String(row[1]||''),id=String(row[2]||'');if(!id)return;if(syncType==='delete'){byId.delete(id);return;}byId.set(id,{id,date:formatDate_(row[3]),player:String(row[4]||'').trim(),category:String(row[5]||'').trim(),type:String(row[6]||'').trim(),value:Number(row[7]||0),unit:String(row[8]||'').trim(),createdAt:formatDateTime_(row[9])});});
+  }
+  const catMap=playerCategoryByName_(), input=ss.getSheetByName(SHEET_AGILITY_INPUT);
+  if(input&&input.getLastRow()>=2){
+    input.getRange(2,1,input.getLastRow()-1,7).getValues().forEach((row,i)=>{const date=normalizeDateString_(row[0]),player=String(row[1]||'').trim(),type=String(row[3]||'').trim(),value=Number(row[4]||0);if(!date||!player||!type||!value)return;const category=String(row[2]||'').trim()||catMap.get(player)||'',unit=String(row[5]||'').trim();const id=`manual-agility-${i+2}-${date}-${player}-${type}`;byId.set(id,{id,date,player,category,type,value,unit,createdAt:''});});
+  }
+  return Array.from(byId.values()).filter(r=>r.player&&r.type&&r.value>0);
 }
 function growthRecords_(playerId) {
   const player = findPlayer_(playerId); if (!player) return { status:'error', message:'選手が見つかりません。' };
@@ -327,9 +347,23 @@ function agilityRecords_(playerId) {
 }
 
 
+function agilitySummary_() {
+  const players = listPlayers_().players;
+  const records = getActiveAgilityRecords_();
+  return {
+    status:'ok',
+    generatedAt:new Date().toISOString(),
+    players:players.map(p => ({
+      playerId:p.playerId, player:p.name, category:p.category,
+      records:records.filter(r => r.player === p.name && r.category === p.category)
+        .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) || String(a.createdAt||'').localeCompare(String(b.createdAt||'')))
+    }))
+  };
+}
+
 function agilityRankings_() {
   const records = getActiveAgilityRecords_();
-  const types = ['シャトルラン','反復横跳び','L字コーンドリル','垂直跳び'];
+  const types = Array.from(new Set(records.map(r=>String(r.type||'').trim()).filter(Boolean)));
   const unitMap = {'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
   const lowerIsBetter = {'L字コーンドリル': true};
   const result = {};

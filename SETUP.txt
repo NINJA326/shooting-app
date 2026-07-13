@@ -1,10 +1,11 @@
-【v11.5 アップロード手順】
+【v11.6 アップロード手順】
 
-1. GitHub の shooting-app にZIP内のファイルをすべてアップロード
+1. GitHub の shooting-app にZIP内のファイルをすべて上書き
 2. Commit changes
-3. Apps Scriptがv11.3未満なら google_apps_script_code.js を貼り替え
+3. Google Apps Script に google_apps_script_code.js を全貼り替え
 4. デプロイを管理 → 編集 → 新しいバージョン → デプロイ
-5. コーチアプリを開いてホームの「チーム成長一覧」を確認
+5. Apps Scriptを一度実行またはコーチアプリを開くと、スプレッドシートに「成長記録入力」「アジリティ入力」が自動作成されます
+6. 各入力シートへ記録し、コーチアプリの「最新データを更新」を押してください
 
 コーチURL:
-https://ninja326.github.io/shooting-app/coach_admin.html?v=11.5
+https://ninja326.github.io/shooting-app/coach_admin.html?v=11.6
