@@ -1,9 +1,16 @@
-【v11.8 アップロード手順】
+【v11.9 アップロード手順】
 
 1. GitHub の shooting-app にZIP内のファイルをすべて上書きアップロード
 2. Commit changes
-3. Google Apps Script は今回の並び順修正だけなら再デプロイ不要です
-4. コーチアプリを下記URLで開く
+3. Google Apps Script に google_apps_script_code.js の中身を全部貼り替え
+4. デプロイを管理 → 編集 → 新しいバージョン → デプロイ
+5. コーチアプリまたは選手アプリを一度開く
+
+初回実行時：
+- growth_records の既存データを「身体測定」へ移行
+- 成長記録入力 の既存データを「身体測定」へ移行
+- 移行後、growth_records と 成長記録入力 を削除
+- 以後、選手アプリから入力した身長・体重も「身体測定」へ直接保存
 
 コーチURL:
-https://ninja326.github.io/shooting-app/coach_admin.html?v=11.8
+https://ninja326.github.io/shooting-app/coach_admin.html?v=11.9
