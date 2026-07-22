@@ -1,12 +1,29 @@
-const CACHE_VERSION = 'ninja-shooting-v12.0';
-self.addEventListener('install', event => { self.skipWaiting(); });
-self.addEventListener('activate', event => {
-  event.waitUntil((async()=>{
-    const keys = await caches.keys();
-    await Promise.all(keys.filter(k=>k.startsWith('ninja-shooting-')).map(k=>caches.delete(k)));
-    await self.clients.claim();
-  })());
+const CACHE_NAME = 'ninja-shooting-v64';
+const FILES = ['./', './index.html', './coach_admin.html', './liff.html', './manifest.json'];
+
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(FILES)));
+  self.skipWaiting();
 });
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
+    )
+  );
+  self.clients.claim();
+});
+
 self.addEventListener('fetch', event => {
-  event.respondWith(fetch(event.request, {cache:'no-store'}));
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
+  );
 });

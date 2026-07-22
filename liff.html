@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>NINJA SHOOTING INPUT</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+:root{--bg:#08120d;--card:#12231a;--line:#244232;--green:#21c56d;--text:#f5fff8;--muted:#a9c4b3;--danger:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+.wrap{max-width:520px;margin:auto;padding:18px}.head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.logo{width:48px;height:48px;border-radius:14px;background:var(--green);display:grid;place-items:center;font-size:26px}
+h1{font-size:20px;margin:0}.sub,.small{color:var(--muted);font-size:13px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+.step{font-size:12px;color:var(--green);font-weight:700}.title{font-size:18px;font-weight:800;margin:5px 0 14px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.grid.three{grid-template-columns:repeat(3,1fr)}
+button{border:1px solid var(--line);background:#183225;color:var(--text);border-radius:14px;min-height:54px;padding:10px;font-size:16px;font-weight:700;cursor:pointer}
+button.active,button.primary{background:var(--green);color:#04150b;border-color:var(--green)}button.primary,button.secondary{width:100%;margin-top:12px}
+button:disabled{opacity:.55}.hidden{display:none!important}input{width:100%;background:#0b1811;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:17px}
+label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}.notice{padding:12px;border-radius:12px;background:#183225;color:var(--muted);margin-bottom:12px;white-space:pre-wrap}
+.error{background:#3a1717;color:#ffd5d5}.back{background:transparent;min-height:40px;font-size:14px}.loader{padding:48px;text-align:center;color:var(--muted)}
+.summary{line-height:1.9}.profile{display:flex;gap:10px;align-items:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><div class="logo">🏀</div><div><h1>NINJA SHOOTING INPUT</h1><div class="sub">LINE連携シュート記録</div></div></div>
+  <div id="loading" class="card loader">LINE認証を確認しています…</div>
+  <div id="message" class="notice hidden"></div>
+
+  <section id="linkCard" class="card hidden">
+    <div class="step">初回のみ</div><div class="title">選手とLINEを連携</div>
+    <label>選手ID</label><input id="playerId" autocomplete="username" placeholder="選手ID">
+    <label>パスワード</label><input id="password" type="password" autocomplete="current-password" placeholder="パスワード">
+    <button id="linkBtn" class="primary" onclick="linkPlayer()">LINEと連携する</button>
+  </section>
+
+  <section id="app" class="hidden">
+    <div class="card profile"><div><strong id="playerName"></strong><div id="playerMeta" class="small"></div></div></div>
+
+    <section id="step1" class="card">
+      <div class="step">STEP 1</div><div class="title">種目を選択</div>
+      <div class="grid">
+        <button onclick="chooseType('2P',this)">2P</button><button onclick="chooseType('3P',this)">3P</button>
+        <button onclick="chooseType('FT',this)">FT</button><button onclick="chooseType('マイカン',this)">マイカン</button>
+      </div>
+    </section>
+
+    <section id="step2" class="card hidden">
+      <button class="back" onclick="goStep(1)">← 種目を戻す</button>
+      <div class="step">STEP 2</div><div class="title">ポジションを選択</div><div id="positions" class="grid"></div>
+    </section>
+
+    <section id="step3" class="card hidden">
+      <button class="back" onclick="goStep(2)">← ポジションを戻す</button>
+      <div class="step">STEP 3</div><div class="title">総投数を選択</div>
+      <div class="grid three">
+        <button onclick="chooseAttempts(10)">10</button><button onclick="chooseAttempts(25)">25</button><button onclick="chooseAttempts(50)">50</button>
+        <button onclick="chooseAttempts(75)">75</button><button onclick="chooseAttempts(100)">100</button><button onclick="showCustom()">その他</button>
+      </div>
+      <div id="customBox" class="hidden"><label>総投数</label><input id="customAttempts" type="number" min="1" max="5000"><button class="primary" onclick="useCustom()">決定</button></div>
+    </section>
+
+    <section id="step4" class="card hidden">
+      <button class="back" onclick="goStep(3)">← 総投数を戻す</button>
+      <div class="step">STEP 4</div><div class="title">成功数を入力</div>
+      <input id="made" type="number" min="0" inputmode="numeric" placeholder="成功数"><button class="primary" onclick="confirmRecord()">確認する</button>
+    </section>
+
+    <section id="step5" class="card hidden">
+      <button class="back" onclick="goStep(4)">← 成功数を戻す</button>
+      <div class="step">STEP 5</div><div class="title">入力内容の確認</div>
+      <div id="summary" class="summary"></div>
+      <button id="saveBtn" class="primary" onclick="saveRecord()">この内容で登録</button>
+      <button class="secondary" onclick="resetForm()">キャンセル</button>
+    </section>
+
+    <section id="done" class="card hidden">
+      <div class="step">登録完了</div><div class="title">記録しました</div><div id="doneText" class="summary"></div>
+      <button class="primary" onclick="resetForm()">続けて入力</button><button class="secondary" onclick="closeLiff()">閉じる</button>
+    </section>
+  </section>
+</div>
+
+<script>
+const LIFF_ID = "2010789200-nkOimDyA";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyrsLUPSq5UTAbi95GkKUh_Rhug1MdABZzVJ2Mb6rDRQjHhrPYKU2IrFHpSVCO4j5eRzg/exec";
+let idToken = '';
+let session = null;
+let form = {type:'',position:'',attempts:0,made:0};
+const POSITIONS = {
+  '2P':['左0°','左45°','正面','右45°','右0°','リング下'],
+  '3P':['左コーナー','左45°','正面','右45°','右コーナー'],
+  'FT':['フリースロー'],
+  'マイカン':['右マイカン','左マイカン','交互']
+};
+
+window.addEventListener('load', init);
+
+async function init() {
+  try {
+    if (!window.liff) throw new Error('LIFF SDKを読み込めませんでした。通信環境を確認してください。');
+    await withTimeout(liff.init({liffId: LIFF_ID}), 15000, 'LINE認証の初期化がタイムアウトしました。');
+    if (!liff.isLoggedIn()) {
+      liff.login({redirectUri: location.href.split('#')[0]});
+      return;
+    }
+    idToken = liff.getIDToken();
+    if (!idToken) throw new Error('LINE認証情報を取得できませんでした。');
+    const res = await jsonp({action:'lineSession', idToken});
+    hide('loading');
+    if (!res || res.status === 'error') throw new Error(res && res.message || '認証に失敗しました。');
+    if (res.status === 'unlinked') { show('linkCard'); return; }
+    session = res;
+    startApp();
+  } catch (err) {
+    hide('loading');
+    showMessage(err && err.message || String(err), true);
+  }
+}
+
+function jsonp(params, timeoutMs=20000) {
+  return new Promise((resolve, reject) => {
+    const callback = '__ninjaJsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => cleanup(new Error('サーバー通信がタイムアウトしました。')), timeoutMs);
+
+    function cleanup(error, data) {
+      clearTimeout(timer);
+      try { delete window[callback]; } catch (_) {}
+      if (script.parentNode) script.parentNode.removeChild(script);
+      error ? reject(error) : resolve(data);
+    }
+
+    window[callback] = data => cleanup(null, data);
+    const query = new URLSearchParams({...params, callback}).toString();
+    script.src = GAS_URL + '?' + query;
+    script.onerror = () => cleanup(new Error('Apps Scriptへ接続できませんでした。'));
+    document.head.appendChild(script);
+  });
+}
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+  ]);
+}
+
+function startApp() {
+  hide('linkCard'); show('app');
+  text('playerName', session.player.name);
+  text('playerMeta', session.player.category + ' / ' + session.player.playerId);
+}
+
+async function linkPlayer() {
+  const playerId = document.getElementById('playerId').value.trim();
+  const password = document.getElementById('password').value;
+  if (!playerId || !password) { showMessage('選手IDとパスワードを入力してください。', true); return; }
+  const btn = document.getElementById('linkBtn');
+  btn.disabled = true; btn.textContent = '連携中…';
+  try {
+    const res = await jsonp({action:'lineLink', idToken, playerId, password});
+    if (!res || res.status !== 'ok') throw new Error(res && res.message || '連携できませんでした。');
+    session = {player:res.player};
+    hide('message'); startApp();
+  } catch (err) {
+    showMessage(err && err.message || String(err), true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'LINEと連携する';
+  }
+}
+
+function chooseType(type, btn) {
+  form.type = type; form.position = '';
+  activate(btn);
+  const box = document.getElementById('positions'); box.innerHTML = '';
+  POSITIONS[type].forEach(position => {
+    const b = document.createElement('button');
+    b.textContent = position;
+    b.onclick = () => { form.position = position; goStep(3); };
+    box.appendChild(b);
+  });
+  goStep(2);
+}
+function chooseAttempts(n) { form.attempts = n; goStep(4); setTimeout(() => document.getElementById('made').focus(), 100); }
+function showCustom() { show('customBox'); document.getElementById('customAttempts').focus(); }
+function useCustom() {
+  const n = Number(document.getElementById('customAttempts').value);
+  if (!Number.isInteger(n) || n < 1 || n > 5000) { showMessage('総投数は1〜5000で入力してください。', true); return; }
+  hide('message'); chooseAttempts(n);
+}
+function confirmRecord() {
+  const made = Number(document.getElementById('made').value);
+  if (!Number.isInteger(made) || made < 0 || made > form.attempts) { showMessage('成功数は0以上、総投数以下で入力してください。', true); return; }
+  form.made = made; hide('message');
+  document.getElementById('summary').innerHTML =
+    `種目：<b>${escapeHtml(form.type)}</b><br>` +
+    `ポジション：<b>${escapeHtml(form.position)}</b><br>` +
+    `総投数：<b>${form.attempts}</b><br>` +
+    `成功数：<b>${form.made}</b><br>` +
+    `成功率：<b>${Math.round(form.made/form.attempts*100)}%</b>`;
+  goStep(5);
+}
+async function saveRecord() {
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = '登録中…';
+  try {
+    const res = await jsonp({
+      action:'lineSave', idToken,
+      type:form.type, position:form.position,
+      attempts:String(form.attempts), made:String(form.made),
+      practice:'自主練', date:new Date().toISOString()
+    });
+    if (!res || res.status !== 'ok') throw new Error(res && res.message || '登録に失敗しました。');
+    [1,2,3,4,5].forEach(n => hide('step'+n));
+    show('done'); text('doneText', res.message);
+  } catch (err) {
+    showMessage(err && err.message || String(err), true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'この内容で登録';
+  }
+}
+function resetForm() {
+  form = {type:'',position:'',attempts:0,made:0};
+  document.getElementById('made').value = '';
+  document.getElementById('customAttempts').value = '';
+  hide('done'); hide('customBox'); hide('message'); goStep(1);
+}
+function goStep(n) { [1,2,3,4,5].forEach(i => i===n ? show('step'+i) : hide('step'+i)); scrollTo(0,0); }
+function activate(btn) { btn.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('active')); btn.classList.add('active'); }
+function closeLiff() { if (liff.isInClient()) liff.closeWindow(); else window.close(); }
+function showMessage(message, error=false) { const el=document.getElementById('message'); el.textContent=message; el.className='notice'+(error?' error':''); show('message'); }
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function text(id, value) { document.getElementById(id).textContent=value||''; }
+function escapeHtml(value) { return String(value).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+</script>
+</body>
+</html>
