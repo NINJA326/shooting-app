@@ -1,13 +1,13 @@
 /**
- * NINJA SHOOTING AVERAGE v12.0
+ * NINJA SHOOTING AVERAGE v11.4
  * 選手用・コーチ用・成長記録・アジリティー記録対応 Apps Script
  */
 const SHEET_RECORDS = 'shooting_records';
 const SHEET_PLAYERS = 'players';
 const SHEET_LOGS = 'logs';
 const SHEET_SUMMARY = 'summary';
-const SHEET_BODY_MATRIX = '身体測定';
-const SHEET_AGILITY_MATRIX = 'アジリティ測定';
+const SHEET_GROWTH = 'growth_records';
+const SHEET_AGILITY = 'agility_records';
 const RANK_MIN_ATTEMPTS = 500;
 
 function doPost(e) {
@@ -52,10 +52,9 @@ function doGet(e) {
     else if (action === 'growthSummary') result = growthSummary_();
     else if (action === 'agilityRecords') result = agilityRecords_(p.playerId);
     else if (action === 'agilityRankings') result = agilityRankings_();
-    else if (action === 'agilitySummary') result = agilitySummary_();
     else if (action === 'updatePlayerCategory') result = updatePlayerCategory_(p);
     else if (action === 'dashboard') result = dashboard_();
-    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v12.0' }; }
+    else { updateSummary_(); result = { status: 'ok', app: 'NINJA SHOOTING AVERAGE v11.4' }; }
   } catch (err) {
     log_('GET_ERROR', String(err));
     result = { status:'error', message:String(err) };
@@ -69,9 +68,8 @@ function setupSheets_() {
   ensureSheet_(ss, SHEET_RECORDS, ['送信日時','同期種別','記録ID','日付','選手名','カテゴリー','練習','種目','ポジション','成功数','試投数','成功率','作成日時','更新日時','削除日時']);
   ensureSheet_(ss, SHEET_PLAYERS, ['選手ID','パスワード','選手名','カテゴリー','作成日時','最終更新','メモ']);
   ensureSheet_(ss, SHEET_SUMMARY, ['選手名','カテゴリー','種目','ポジション','成功数合計','試投数合計','成功率']);
-  ensureMatrixSheets_(ss);
-  migrateLegacyGrowthSheets_(ss);
-  migrateLegacyAgilitySheets_(ss);
+  ensureSheet_(ss, SHEET_GROWTH, ['送信日時','同期種別','記録ID','日付','測定日時表示','測定日時ISO','選手名','カテゴリー','身長cm','体重kg','作成日時','削除日時']);
+  ensureSheet_(ss, SHEET_AGILITY, ['送信日時','同期種別','記録ID','日付','選手名','カテゴリー','種目','記録','単位','作成日時','削除日時']);
   ensureSheet_(ss, SHEET_LOGS, ['日時','種別','内容']);
 }
 function ensureSheet_(ss, name, header) {
@@ -82,76 +80,6 @@ function ensureSheet_(ss, name, header) {
   for (let i=0;i<header.length;i++) if (String(current[i]||'') !== header[i]) need = true;
   if (need) { sheet.getRange(1,1,1,header.length).setValues([header]); sheet.setFrozenRows(1); }
   return sheet;
-}
-
-
-function ensureMatrixSheets_(ss) {
-  const monthHeaders = [];
-  const today = new Date();
-  const year = today.getFullYear();
-  for (let m = 4; m <= 12; m++) monthHeaders.push(`${year}/${m}`);
-  for (let m = 1; m <= 3; m++) monthHeaders.push(`${year + 1}/${m}`);
-
-  let body = ss.getSheetByName(SHEET_BODY_MATRIX);
-  if (!body) {
-    body = ss.insertSheet(SHEET_BODY_MATRIX);
-    body.getRange(1,1,1,2 + monthHeaders.length).setValues([['選手名','項目',...monthHeaders]]);
-    body.setFrozenRows(1); body.setFrozenColumns(2);
-  }
-  syncBodyMatrixPlayers_(body);
-
-  let agility = ss.getSheetByName(SHEET_AGILITY_MATRIX);
-  if (!agility) {
-    agility = ss.insertSheet(SHEET_AGILITY_MATRIX);
-    agility.getRange(1,1,1,2 + monthHeaders.length).setValues([['選手名','種目',...monthHeaders]]);
-    agility.setFrozenRows(1); agility.setFrozenColumns(2);
-  }
-  syncAgilityMatrixPlayers_(agility);
-}
-
-function syncBodyMatrixPlayers_(sheet) {
-  const players = listPlayers_().players;
-  const existing = new Set();
-  if (sheet.getLastRow() >= 2) {
-    sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues().forEach(r => {
-      const name = String(r[0]||'').trim(), metric = String(r[1]||'').trim();
-      if (name && metric) existing.add(`${name}|${metric}`);
-    });
-  }
-  const add = [];
-  players.forEach(p => {
-    ['身長','体重'].forEach(metric => {
-      if (!existing.has(`${p.name}|${metric}`)) add.push([p.name, metric]);
-    });
-  });
-  if (add.length) sheet.getRange(sheet.getLastRow()+1,1,add.length,2).setValues(add);
-}
-
-function syncAgilityMatrixPlayers_(sheet) {
-  const players = listPlayers_().players;
-  const defaults = ['シャトルラン','反復横跳び','L字コーンドリル','垂直跳び'];
-  const existing = new Set();
-  if (sheet.getLastRow() >= 2) {
-    sheet.getRange(2,1,sheet.getLastRow()-1,2).getDisplayValues().forEach(r => {
-      const name = String(r[0]||'').trim(), metric = String(r[1]||'').trim();
-      if (name && metric) existing.add(`${name}|${metric}`);
-    });
-  }
-  const add = [];
-  players.forEach(p => defaults.forEach(metric => {
-    if (!existing.has(`${p.name}|${metric}`)) add.push([p.name, metric]);
-  }));
-  if (add.length) sheet.getRange(sheet.getLastRow()+1,1,add.length,2).setValues(add);
-}
-
-function matrixHeaderDate_(value) {
-  if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  const s = String(value || '').trim();
-  let m = s.match(/^(\d{4})[\/\-.年](\d{1,2})(?:[\/\-.月](\d{1,2}))?/);
-  if (m) return `${m[1]}-${String(Number(m[2])).padStart(2,'0')}-${String(Number(m[3]||1)).padStart(2,'0')}`;
-  m = s.match(/^(\d{1,2})[\/\-.月](\d{1,2})/);
-  if (m) return `${new Date().getFullYear()}-${String(Number(m[1])).padStart(2,'0')}-${String(Number(m[2])).padStart(2,'0')}`;
-  return normalizeDateString_(s);
 }
 
 function coachAddPlayer_(p) {
@@ -322,310 +250,30 @@ function updateSummary_() {
 }
 
 function appendGrowthRecords_(records) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_BODY_MATRIX);
-  syncBodyMatrixPlayers_(sheet);
-  (records || []).forEach(r => writeGrowthRecordToBodyMatrix_(sheet, r));
-  normalizeAndSortBodyMonthColumns_(sheet);
-  log_('APPEND_GROWTH_BODY_MATRIX', `${(records || []).length} records`);
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_GROWTH);
+  const values = (records||[]).map(r => [new Date(), r.syncAction || 'create', r.id || '', r.date || '', r.measuredAtDisplay || '', r.measuredAtIso || r.createdAt || '', r.player || '', r.category || '', Number(r.height || 0), Number(r.weight || 0), r.createdAt || '', r.deletedAt || '']);
+  if (values.length) sheet.getRange(sheet.getLastRow()+1,1,values.length,values[0].length).setValues(values);
+  log_('APPEND_GROWTH', `${values.length} records`);
 }
-
-function monthKeyFromValue_(value) {
-  const date = normalizeDateString_(value);
-  if (!date) return '';
-  const m = date.match(/^(\d{4})-(\d{2})/);
-  return m ? `${m[1]}/${Number(m[2])}` : '';
-}
-
-function monthSortValue_(value) {
-  const key = monthKeyFromValue_(value) || String(value || '').trim();
-  const m = key.match(/^(\d{4})\/(\d{1,2})$/);
-  return m ? Number(m[1]) * 100 + Number(m[2]) : 999999;
-}
-
-function findOrCreateBodyMetricRow_(sheet, player, metric) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow >= 2) {
-    const values = sheet.getRange(2, 1, lastRow - 1, 2).getDisplayValues();
-    for (let i = 0; i < values.length; i++) {
-      if (String(values[i][0] || '').trim() === player && String(values[i][1] || '').trim() === metric) return i + 2;
-    }
-  }
-  const row = sheet.getLastRow() + 1;
-  sheet.getRange(row, 1, 1, 2).setValues([[player, metric]]);
-  return row;
-}
-
-function findOrCreateBodyMonthColumn_(sheet, dateValue) {
-  const monthKey = monthKeyFromValue_(dateValue);
-  if (!monthKey) return 0;
-  const lastCol = Math.max(sheet.getLastColumn(), 2);
-  if (lastCol >= 3) {
-    const headers = sheet.getRange(1, 3, 1, lastCol - 2).getDisplayValues()[0];
-    for (let i = 0; i < headers.length; i++) {
-      if (monthKeyFromValue_(headers[i]) === monthKey || String(headers[i] || '').trim() === monthKey) return i + 3;
-    }
-  }
-  const col = lastCol + 1;
-  sheet.getRange(1, col).setValue(monthKey);
-  return col;
-}
-
-function writeGrowthRecordToBodyMatrix_(sheet, record) {
-  const player = String(record.player || '').trim();
-  const dateValue = record.date || record.measuredAtIso || record.createdAt;
-  if (!player || !dateValue) return;
-  const col = findOrCreateBodyMonthColumn_(sheet, dateValue);
-  if (!col) return;
-  const heightRow = findOrCreateBodyMetricRow_(sheet, player, '身長');
-  const weightRow = findOrCreateBodyMetricRow_(sheet, player, '体重');
-  const action = String(record.syncAction || 'create').toLowerCase();
-  if (action === 'delete') {
-    sheet.getRange(heightRow, col).clearContent();
-    sheet.getRange(weightRow, col).clearContent();
-    return;
-  }
-  const height = Number(record.height || 0);
-  const weight = Number(record.weight || 0);
-  if (height > 0) sheet.getRange(heightRow, col).setValue(height);
-  if (weight > 0) sheet.getRange(weightRow, col).setValue(weight);
-}
-
-function normalizeAndSortBodyMonthColumns_(sheet) {
-  const lastCol = sheet.getLastColumn();
-  const lastRow = sheet.getLastRow();
-  if (lastCol < 3 || lastRow < 1) return;
-  const headers = sheet.getRange(1, 3, 1, lastCol - 2).getDisplayValues()[0];
-  const order = headers.map((h, i) => ({ i, h: monthKeyFromValue_(h) || String(h || '').trim(), sort: monthSortValue_(h) }))
-    .filter(x => x.h)
-    .sort((a, b) => a.sort - b.sort || a.i - b.i);
-  if (!order.length) return;
-  const all = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-  const rewritten = all.map((row, rowIndex) => {
-    const base = [row[0], row[1]];
-    order.forEach(x => base.push(rowIndex === 0 ? x.h : row[x.i + 2]));
-    return base;
-  });
-  sheet.getRange(1, 1, lastRow, lastCol).clearContent();
-  sheet.getRange(1, 1, rewritten.length, rewritten[0].length).setValues(rewritten);
-  if (rewritten[0].length < lastCol) sheet.deleteColumns(rewritten[0].length + 1, lastCol - rewritten[0].length);
-  sheet.setFrozenRows(1);
-  sheet.setFrozenColumns(2);
-}
-
-function migrateLegacyGrowthSheets_(ss) {
-  const body = ss.getSheetByName(SHEET_BODY_MATRIX);
-  const legacyRecords = ss.getSheetByName('growth_records');
-  if (legacyRecords && legacyRecords.getLastRow() >= 2) {
-    const byId = new Map();
-    legacyRecords.getRange(2, 1, legacyRecords.getLastRow() - 1, 12).getValues().forEach(row => {
-      const action = String(row[1] || '');
-      const id = String(row[2] || '');
-      if (!id) return;
-      if (action === 'delete') { byId.delete(id); return; }
-      byId.set(id, {
-        player: String(row[6] || '').trim(),
-        date: row[3] || row[5] || row[10],
-        height: Number(row[8] || 0),
-        weight: Number(row[9] || 0),
-        syncAction: 'create'
-      });
-    });
-    byId.forEach(r => writeGrowthRecordToBodyMatrix_(body, r));
-  }
-  const legacyInput = ss.getSheetByName('成長記録入力');
-  if (legacyInput && legacyInput.getLastRow() >= 2) {
-    legacyInput.getRange(2, 1, legacyInput.getLastRow() - 1, 6).getValues().forEach(row => {
-      writeGrowthRecordToBodyMatrix_(body, {
-        date: row[0], player: String(row[1] || '').trim(),
-        height: Number(row[3] || 0), weight: Number(row[4] || 0), syncAction: 'create'
-      });
-    });
-  }
-  normalizeAndSortBodyMonthColumns_(body);
-  if (legacyRecords) ss.deleteSheet(legacyRecords);
-  if (legacyInput) ss.deleteSheet(legacyInput);
-}
-
 function appendAgilityRecords_(records) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_AGILITY_MATRIX);
-  syncAgilityMatrixPlayers_(sheet);
-  (records || []).forEach(r => writeAgilityRecordToMatrix_(sheet, r));
-  normalizeAndSortMatrixMonthColumns_(sheet);
-  log_('APPEND_AGILITY_MATRIX', `${(records || []).length} records`);
-}
-
-function findOrCreateAgilityMetricRow_(sheet, player, metric) {
-  const lastRow = sheet.getLastRow();
-  if (lastRow >= 2) {
-    const values = sheet.getRange(2, 1, lastRow - 1, 2).getDisplayValues();
-    for (let i = 0; i < values.length; i++) {
-      if (String(values[i][0] || '').trim() === player && String(values[i][1] || '').trim() === metric) return i + 2;
-    }
-  }
-  const row = sheet.getLastRow() + 1;
-  sheet.getRange(row, 1, 1, 2).setValues([[player, metric]]);
-  return row;
-}
-
-function findOrCreateAgilityMonthColumn_(sheet, dateValue) {
-  const monthKey = monthKeyFromValue_(dateValue);
-  if (!monthKey) return 0;
-  const lastCol = Math.max(sheet.getLastColumn(), 2);
-  if (lastCol >= 3) {
-    const headers = sheet.getRange(1, 3, 1, lastCol - 2).getDisplayValues()[0];
-    for (let i = 0; i < headers.length; i++) {
-      if (monthKeyFromValue_(headers[i]) === monthKey || String(headers[i] || '').trim() === monthKey) return i + 3;
-    }
-  }
-  const col = lastCol + 1;
-  sheet.getRange(1, col).setValue(monthKey);
-  return col;
-}
-
-function writeAgilityRecordToMatrix_(sheet, record) {
-  const player = String(record.player || '').trim();
-  const metric = String(record.type || record.metric || '').trim();
-  const dateValue = record.date || record.measuredAtIso || record.createdAt;
-  if (!player || !metric || !dateValue) return;
-  const col = findOrCreateAgilityMonthColumn_(sheet, dateValue);
-  if (!col) return;
-  const row = findOrCreateAgilityMetricRow_(sheet, player, metric);
-  const action = String(record.syncAction || 'create').toLowerCase();
-  if (action === 'delete') {
-    sheet.getRange(row, col).clearContent();
-    return;
-  }
-  const value = Number(record.value || 0);
-  if (value > 0) sheet.getRange(row, col).setValue(value);
-}
-
-function normalizeAndSortMatrixMonthColumns_(sheet) {
-  const lastCol = sheet.getLastColumn();
-  const lastRow = sheet.getLastRow();
-  if (lastCol < 3 || lastRow < 1) return;
-  const headers = sheet.getRange(1, 3, 1, lastCol - 2).getDisplayValues()[0];
-  const order = headers.map((h, i) => ({ i, h: monthKeyFromValue_(h) || String(h || '').trim(), sort: monthSortValue_(h) }))
-    .filter(x => x.h)
-    .sort((a, b) => a.sort - b.sort || a.i - b.i);
-  if (!order.length) return;
-  const all = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-  const rewritten = all.map((row, rowIndex) => {
-    const base = [row[0], row[1]];
-    order.forEach(x => base.push(rowIndex === 0 ? x.h : row[x.i + 2]));
-    return base;
-  });
-  sheet.getRange(1, 1, lastRow, lastCol).clearContent();
-  sheet.getRange(1, 1, rewritten.length, rewritten[0].length).setValues(rewritten);
-  if (rewritten[0].length < lastCol) sheet.deleteColumns(rewritten[0].length + 1, lastCol - rewritten[0].length);
-  sheet.setFrozenRows(1);
-  sheet.setFrozenColumns(2);
-}
-
-function migrateLegacyAgilitySheets_(ss) {
-  const matrix = ss.getSheetByName(SHEET_AGILITY_MATRIX);
-  const legacyRecords = ss.getSheetByName('agility_records');
-  if (legacyRecords && legacyRecords.getLastRow() >= 2) {
-    const byId = new Map();
-    legacyRecords.getRange(2, 1, legacyRecords.getLastRow() - 1, 11).getValues().forEach(row => {
-      const action = String(row[1] || '').toLowerCase();
-      const id = String(row[2] || '').trim();
-      if (!id) return;
-      if (action === 'delete') { byId.delete(id); return; }
-      byId.set(id, {
-        date: row[3], player: String(row[4] || '').trim(),
-        type: String(row[6] || '').trim(), value: Number(row[7] || 0),
-        syncAction: 'create'
-      });
-    });
-    byId.forEach(r => writeAgilityRecordToMatrix_(matrix, r));
-  }
-  const legacyInput = ss.getSheetByName('アジリティ入力');
-  if (legacyInput && legacyInput.getLastRow() >= 2) {
-    legacyInput.getRange(2, 1, legacyInput.getLastRow() - 1, 7).getValues().forEach(row => {
-      writeAgilityRecordToMatrix_(matrix, {
-        date: row[0], player: String(row[1] || '').trim(),
-        type: String(row[3] || '').trim(), value: Number(row[4] || 0),
-        syncAction: 'create'
-      });
-    });
-  }
-  normalizeAndSortMatrixMonthColumns_(matrix);
-  if (legacyRecords) ss.deleteSheet(legacyRecords);
-  if (legacyInput) ss.deleteSheet(legacyInput);
-}
-
-function playerCategoryByName_() {
-  const map = new Map();
-  listPlayers_().players.forEach(p => { if (!map.has(p.name)) map.set(p.name, p.category); });
-  return map;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_AGILITY);
+  const values = (records||[]).map(r => [new Date(), r.syncAction || 'create', r.id || '', r.date || '', r.player || '', r.category || '', r.type || '', Number(r.value || 0), r.unit || '', r.createdAt || '', r.deletedAt || '']);
+  if (values.length) sheet.getRange(sheet.getLastRow()+1,1,values.length,values[0].length).setValues(values);
+  log_('APPEND_AGILITY', `${values.length} records`);
 }
 function getActiveGrowthRecords_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const matrix = ss.getSheetByName(SHEET_BODY_MATRIX);
-  if (!matrix || matrix.getLastRow() < 2 || matrix.getLastColumn() < 3) return [];
-  const catMap = playerCategoryByName_();
-  const values = matrix.getDataRange().getValues();
-  const headers = values[0];
-  const combined = new Map();
-  for (let r = 1; r < values.length; r++) {
-    const player = String(values[r][0] || '').trim();
-    const metric = String(values[r][1] || '').trim();
-    if (!player || !metric) continue;
-    for (let c = 2; c < headers.length; c++) {
-      const date = matrixHeaderDate_(headers[c]);
-      const value = Number(values[r][c] || 0);
-      if (!date || !value) continue;
-      const key = `${player}|${date}`;
-      const current = combined.get(key) || { player, date, height: 0, weight: 0 };
-      if (metric.indexOf('身長') >= 0) current.height = value;
-      else if (metric.indexOf('体重') >= 0) current.weight = value;
-      combined.set(key, current);
-    }
-  }
-  return Array.from(combined.values()).map(x => ({
-    id: `body-matrix-${x.player}-${x.date}`,
-    date: x.date,
-    measuredAtIso: x.date,
-    measuredAtDisplay: x.date,
-    player: x.player,
-    category: catMap.get(x.player) || '',
-    height: x.height,
-    weight: x.weight,
-    createdAt: ''
-  })).filter(r => r.player && (r.height > 0 || r.weight > 0));
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_GROWTH);
+  const last = sheet.getLastRow(); if (last < 2) return [];
+  const values = sheet.getRange(2,1,last-1,12).getValues(); const byId = new Map();
+  values.forEach(row => { const syncType=String(row[1]||''); const id=String(row[2]||''); if(!id)return; if(syncType==='delete'){byId.delete(id);return;} byId.set(id,{id: id,date:normalizeDateString_(row[3]||row[5]||row[10]),measuredAtDisplay:String(row[4]||''),measuredAtIso:normalizeDateString_(row[5]||row[3]||row[10]),player:String(row[6]||''),category:String(row[7]||''),height:Number(row[8]||0),weight:Number(row[9]||0),createdAt:formatDateTime_(row[10])}); });
+  return Array.from(byId.values()).filter(r=>r.player && r.height>0 && r.weight>0);
 }
 function getActiveAgilityRecords_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const matrix = ss.getSheetByName(SHEET_AGILITY_MATRIX);
-  if (!matrix || matrix.getLastRow() < 2 || matrix.getLastColumn() < 3) return [];
-  const catMap = playerCategoryByName_();
-  const values = matrix.getDataRange().getValues();
-  const headers = values[0];
-  const unitMap = {'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
-  const records = [];
-  for (let r = 1; r < values.length; r++) {
-    const player = String(values[r][0] || '').trim();
-    const type = String(values[r][1] || '').trim();
-    if (!player || !type) continue;
-    for (let c = 2; c < headers.length; c++) {
-      const date = matrixHeaderDate_(headers[c]);
-      const value = Number(values[r][c] || 0);
-      if (!date || !value) continue;
-      records.push({
-        id: `agility-matrix-${player}-${type}-${date}`,
-        date,
-        player,
-        category: catMap.get(player) || '',
-        type,
-        value,
-        unit: unitMap[type] || '',
-        createdAt: ''
-      });
-    }
-  }
-  return records;
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_AGILITY);
+  const last = sheet.getLastRow(); if (last < 2) return [];
+  const values = sheet.getRange(2,1,last-1,11).getValues(); const byId = new Map();
+  values.forEach(row => { const syncType=String(row[1]||''); const id=String(row[2]||''); if(!id)return; if(syncType==='delete'){byId.delete(id);return;} byId.set(id,{id,date:formatDate_(row[3]),player:String(row[4]||''),category:String(row[5]||''),type:String(row[6]||''),value:Number(row[7]||0),unit:String(row[8]||''),createdAt:formatDateTime_(row[9])}); });
+  return Array.from(byId.values()).filter(r=>r.player && r.type && r.value>0);
 }
 function growthRecords_(playerId) {
   const player = findPlayer_(playerId); if (!player) return { status:'error', message:'選手が見つかりません。' };
@@ -679,25 +327,11 @@ function agilityRecords_(playerId) {
 }
 
 
-function agilitySummary_() {
-  const players = listPlayers_().players;
-  const records = getActiveAgilityRecords_();
-  return {
-    status:'ok',
-    generatedAt:new Date().toISOString(),
-    players:players.map(p => ({
-      playerId:p.playerId, player:p.name, category:p.category,
-      records:records.filter(r => r.player === p.name && r.category === p.category)
-        .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) || String(a.createdAt||'').localeCompare(String(b.createdAt||'')))
-    }))
-  };
-}
-
 function agilityRankings_() {
   const records = getActiveAgilityRecords_();
-  const types = Array.from(new Set(records.map(r=>String(r.type||'').trim()).filter(Boolean)));
-  const unitMap = {'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm'};
-  const lowerIsBetter = {'L字コーンドリル': true};
+  const types = ['シャトルラン','反復横跳び','L字コーンドリル','垂直跳び','120回ハンドリング'];
+  const unitMap = {'シャトルラン':'回','反復横跳び':'回','L字コーンドリル':'秒','垂直跳び':'cm','120回ハンドリング':'秒'};
+  const lowerIsBetter = {'L字コーンドリル': true, '120回ハンドリング': true};
   const result = {};
   types.forEach(type => {
     const typeRecords = records.filter(r => r.type === type && Number(r.value || 0) > 0);

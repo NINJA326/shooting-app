@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>NINJA SHOOTING AVERAGE 管理専用 v5.7</title>
+<title>NINJA SHOOTING AVERAGE 管理専用 v11.4</title>
 <meta name="theme-color" content="#111827">
 <link rel="manifest" href="manifest.json">
 <style>
@@ -26,12 +26,13 @@ button.secondary{background:var(--dark)}button.ghost{background:#f3f4f6;color:#1
 .small{font-size:12px;color:var(--muted);line-height:1.5}.success{padding:10px 12px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;color:#166534;font-size:13px;line-height:1.5}.notice{padding:10px 12px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;line-height:1.5}
 .list-item{border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:8px;background:#fff}.badge{display:inline-block;background:#f3f4f6;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;color:#374151}
 .stat-made{color:#d91828;font-weight:900}.stat-attempt{color:#111827;font-weight:900}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:7px 8px env(safe-area-inset-bottom)}.tabs-inner{max-width:560px;width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.tab{background:#fff;color:#6b7280;border:none;box-shadow:none;padding:8px 2px;border-radius:12px;font-size:11px;font-weight:900}.tab.active{background:#fee2e2;color:var(--brand)}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding:7px 8px env(safe-area-inset-bottom)}.tabs-inner{max-width:560px;width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.tab{background:#fff;color:#6b7280;border:none;box-shadow:none;padding:8px 2px;border-radius:12px;font-size:11px;font-weight:900}.tab.active{background:#fee2e2;color:var(--brand)}
 .view{display:none}.view.active{display:block}
 .login-screen{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}.login-card{max-width:440px;width:100%}
 .hidden{display:none!important}
 table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}th{color:#6b7280}
 canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px solid var(--line);touch-action:manipulation}
+.rank-up-spark{background:linear-gradient(135deg,#fff7ed 0%,#fef3c7 45%,#fff 100%);border:2px solid #f59e0b!important;box-shadow:0 10px 24px rgba(245,158,11,.18)}.rank-up-text{display:inline-block;background:#fef3c7;color:#b45309;border-radius:999px;padding:4px 8px;font-weight:900}
 </style>
 </head>
 <body>
@@ -49,7 +50,7 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <div class="app">
 <header>
   <div class="brand-title">NINJA SHOOTING AVERAGE</div>
-  <div class="profile">コーチ管理専用 v5.7</div>
+  <div class="profile">コーチ管理専用 v11.4</div>
 </header>
 
 <main>
@@ -82,6 +83,74 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 
 <section id="playersView" class="view">
   <div class="card">
+    <h2>選手管理</h2>
+    <p class="small">選手をダウンリストから選ぶと、スプレッドシートの記録からシューティング詳細・得意ポジション・不得意ポジションを表示します。</p>
+    <button class="secondary" onclick="coachLoadPlayers()">選手一覧を更新</button>
+    <div id="coachPlayerStatus" class="small" style="margin-top:8px">選手一覧を更新してください。</div>
+    <label>選手選択</label>
+    <select id="coachPlayerSelect" onchange="coachSelectPlayerDetail()"></select>
+  </div>
+
+  <div class="card">
+    <h2>選手別シューティング詳細</h2>
+    <div id="coachPlayerDetail" class="small">選手を選択してください。</div>
+  </div>
+</section>
+
+<section id="growthCoachView" class="view">
+  <div class="card">
+    <h2>身長・体重 成長記録</h2>
+    <p class="small">選手をプルダウンで選ぶと、一人一人の身長・体重の推移を確認できます。</p>
+    <button class="secondary" onclick="loadGrowthCoachData()">成長記録を更新</button>
+    <div id="growthCoachStatus" class="small" style="margin-top:8px">成長記録を更新してください。</div>
+    <label>選手選択</label>
+    <select id="growthPlayerSelect" onchange="renderSelectedGrowthPlayer()"></select>
+  </div>
+
+  <div class="card">
+    <h2>選手別 成長グラフ</h2>
+    <p class="small">横軸は西暦入りの測定日で、古い順に表示します。</p>
+    <div id="growthPlayerSummary" class="small" style="margin-bottom:8px">選手を選択してください。</div>
+    <canvas id="coachGrowthCanvas" width="520" height="300"></canvas>
+    <div id="coachGrowthDetail" class="small" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>カテゴリー平均</h2>
+    <div id="growthCategoryAverage" class="small">データがありません。</div>
+  </div>
+
+  <div class="card">
+    <h2>男女 全カテゴリー平均</h2>
+    <div id="growthGenderAverage" class="small">データがありません。</div>
+  </div>
+</section>
+
+
+
+<section id="coachAgilityView" class="view">
+  <div class="card">
+    <h2>アジリティー順位一覧</h2>
+    <p class="small">種目をダウンリストで選択して、最新順位を表示します。順位が上がった選手は目立つ表示になります。</p>
+    <button class="secondary" onclick="loadCoachAgilityRankings(true)">順位を更新</button>
+    <div id="coachAgilityStatus" class="small" style="margin-top:8px">順位を更新してください。</div>
+    <label>種目選択</label>
+    <select id="coachAgilityTypeSelect" onchange="renderCoachAgilityRankings()">
+      <option>シャトルラン</option>
+      <option>反復横跳び</option>
+      <option>L字コーンドリル</option>
+      <option>垂直跳び</option>
+      <option>120回ハンドリング</option>
+    </select>
+  </div>
+  <div class="card">
+    <h2>順位</h2>
+    <div id="coachAgilityRankingList" class="small">まだ順位データがありません。</div>
+  </div>
+</section>
+
+<section id="settingsView" class="view">
+  <div class="card">
     <h2>選手追加</h2>
     <p class="small">選手IDと初回パスワードはコーチが作成します。</p>
     <label>選手ID</label>
@@ -100,21 +169,21 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
   </div>
 
   <div class="card">
-    <h2>登録選手一覧</h2>
-    <button class="secondary" onclick="coachLoadPlayers()">選手一覧を更新</button>
-    <div id="coachPlayerStatus" class="small" style="margin-top:8px">選手一覧を更新してください。</div>
-    <div id="coachPlayerList" style="margin-top:10px"></div>
+    <h2>カテゴリー変更</h2>
+    <p class="small">選手を選んでカテゴリーを変更します。変更後は選手管理の詳細も自動で更新します。</p>
+    <button class="secondary" onclick="coachLoadPlayersForSettings()">選手一覧を更新</button>
+    <div id="settingsPlayerStatus" class="small" style="margin-top:8px">選手一覧を更新してください。</div>
+    <label>選手選択</label>
+    <select id="settingsPlayerSelect" onchange="syncSettingsCategorySelect()"></select>
+    <label>変更後カテゴリー</label>
+    <select id="settingsCategorySelect">
+      <option>男子U13</option><option>男子U14</option><option>男子U15</option>
+      <option>女子U13</option><option>女子U14</option><option>女子U15</option>
+    </select>
+    <button class="secondary" style="margin-top:10px" onclick="coachUpdatePlayerCategoryFromSettings()">カテゴリーを変更</button>
+    <div id="categoryUpdateMessage" class="small" style="margin-top:8px"></div>
   </div>
-</section>
 
-<section id="detailView" class="view">
-  <div class="card">
-    <h2>選手詳細</h2>
-    <div id="coachPlayerDetail" class="small">選手一覧から選手を選択してください。</div>
-  </div>
-</section>
-
-<section id="settingsView" class="view">
   <div class="card">
     <h2>スプレッドシート連携</h2>
     <label>Apps Script WebアプリURL</label>
@@ -134,12 +203,41 @@ canvas{width:100%;height:260px;background:#fff;border-radius:16px;border:1px sol
 <nav class="tabs"><div class="tabs-inner">
   <button class="tab active" onclick="showView('dashboardView',this)">ホーム</button>
   <button class="tab" onclick="showView('playersView',this)">選手管理</button>
-  <button class="tab" onclick="showView('detailView',this)">詳細</button>
+  <button class="tab" onclick="showView('growthCoachView',this)">成長記録</button>
+  <button class="tab" onclick="showView('coachAgilityView',this)">アジリティー</button>
   <button class="tab" onclick="showView('settingsView',this)">設定</button>
 </div></nav>
 </div>
 
 <script>
+
+/* v8.8 FIX: コーチ用も古いキャッシュを自動削除 */
+(function(){
+  const APP_VERSION = "11.3-coach";
+  const VERSION_KEY = "ninja_coach_app_version_seen";
+  async function clearOldAppCache(){
+    try{
+      if("serviceWorker" in navigator){
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(reg => reg.unregister()));
+      }
+      if(window.caches){
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(k => k.startsWith("ninja-shooting-")).map(k => caches.delete(k)));
+      }
+      const seen = localStorage.getItem(VERSION_KEY);
+      if(seen !== APP_VERSION){
+        localStorage.setItem(VERSION_KEY, APP_VERSION);
+        if(!location.search.includes("fresh=1")){
+          location.replace(location.pathname + "?fresh=1&v=11.3-coach");
+        }
+      }
+    }catch(e){}
+  }
+  clearOldAppCache();
+})();
+
+
 const DEFAULT_GAS_URL="https://script.google.com/macros/s/AKfycbyrsLUPSq5UTAbi95GkKUh_Rhug1MdABZzVJ2Mb6rDRQjHhrPYKU2IrFHpSVCO4j5eRzg/exec";
 const LS_GAS_URL="ninja_gas_url_v1";
 let dashboardData=null;
@@ -165,6 +263,7 @@ function adminLogin(){
    document.getElementById("loginScreen").classList.add("hidden");
    loadGasUrlToAdmin();
    loadDashboard();
+   setTimeout(()=>coachLoadPlayers(false),300);
  }else{
    alert("パスワードが違います");
  }
@@ -174,8 +273,9 @@ function showView(id,btn){
  document.getElementById(id).classList.add("active");
  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
  btn.classList.add("active");
- if(id==="playersView")coachLoadPlayers();
- if(id==="settingsView")loadGasUrlToAdmin();
+ if(id==="playersView")coachLoadPlayers(true);
+ if(id==="growthCoachView")loadGrowthCoachData();
+ if(id==="settingsView"){loadGasUrlToAdmin(); if(!coachPlayersCache.length)coachLoadPlayersForSettings(); else fillSettingsPlayerSelect();}
 }
 function coachJsonp(action, params={}){
  return new Promise((resolve,reject)=>{
@@ -218,31 +318,80 @@ async function coachAddPlayer(){
    coachLoadPlayers();
  }catch(e){msg.innerHTML="追加に失敗しました。Apps Scriptを確認してください。"}
 }
-async function coachLoadPlayers(){
+let coachPlayersCache=[];
+
+async function coachLoadPlayers(showDetail=true){
  const status=document.getElementById("coachPlayerStatus");
- const list=document.getElementById("coachPlayerList");
- if(!status||!list)return;
- status.innerHTML="選手一覧を取得中...";
- list.innerHTML="";
+ const sel=document.getElementById("coachPlayerSelect");
+ if(status)status.innerHTML="選手一覧を取得中...";
+ if(sel)sel.innerHTML="";
  try{
-   const res=await coachJsonp("listPlayers");
-   if(res.status!=="ok"){status.innerHTML=res.message||"取得できませんでした。";return}
-   const players=res.players||[];
-   status.innerHTML=`登録選手：${players.length}人`;
-   list.innerHTML=players.length?players.map(p=>`
-     <div class="list-item" style="cursor:pointer" onclick="coachShowPlayerDetail('${jsArg(p.playerId)}')">
-       <b>${safeText(p.name)}</b> <span class="badge">${safeText(p.category)}</span><br>
-       <span class="small">ID：${safeText(p.playerId)} / 作成：${safeText(p.createdAt||"-")}</span>
-     </div>
-   `).join(""):"<div class='small'>登録選手がいません。</div>";
- }catch(e){status.innerHTML="選手一覧の取得に失敗しました。";}
+   let res=await coachJsonp("listPlayers");
+   if(!res || res.status!=="ok") res=await coachJsonp("players");
+   if(!res || res.status!=="ok"){
+     if(status)status.innerHTML=(res&&res.message?res.message:"取得できませんでした。Apps Scriptを最新版に貼り替えて再デプロイしてください。");
+     return;
+   }
+   coachPlayersCache=Array.isArray(res.players)?res.players:[];
+   if(status)status.innerHTML=`登録選手：${coachPlayersCache.length}人`;
+   if(sel){
+     sel.innerHTML=coachPlayersCache.length
+       ? coachPlayersCache.map(p=>`<option value="${safeText(p.playerId)}">${safeText(p.category)} / ${safeText(p.name)}</option>`).join("")
+       : `<option value="">登録選手がいません</option>`;
+   }
+   fillSettingsPlayerSelect();
+   if(coachPlayersCache.length){
+     const current=selectedCoachPlayerId || coachPlayersCache[0].playerId;
+     if(sel)sel.value=current;
+     coachShowPlayerDetail(current);
+   }else{
+     const detail=document.getElementById("coachPlayerDetail");
+     if(detail)detail.innerHTML=`<div class="notice">登録選手がいません。設定タブの「選手追加」から登録してください。</div>`;
+   }
+ }catch(e){
+   console.error(e);
+   if(status)status.innerHTML="選手一覧の取得に失敗しました。Apps ScriptのURL・アクセス権限・再デプロイを確認してください。";
+   if(showDetail){
+     const detail=document.getElementById("coachPlayerDetail");
+     if(detail)detail.innerHTML=`<div class="notice">原因候補：① Apps Scriptを貼り替えていない ② デプロイを更新していない ③ WebアプリURLが古い ④ アクセス権限が「全員」になっていない</div>`;
+   }
+ }
 }
-async 
 
-async 
+function coachSelectPlayerDetail(){
+ const sel=document.getElementById("coachPlayerSelect");
+ if(sel && sel.value) coachShowPlayerDetail(sel.value);
+}
 
+async function coachLoadPlayersForSettings(){
+ const st=document.getElementById("settingsPlayerStatus");
+ if(st)st.innerHTML="選手一覧を取得中...";
+ await coachLoadPlayers(false);
+ fillSettingsPlayerSelect();
+ if(st)st.innerHTML=`選手一覧を更新しました。${coachPlayersCache.length}人`;
+}
+
+function fillSettingsPlayerSelect(){
+ const sel=document.getElementById("settingsPlayerSelect");
+ if(!sel)return;
+ const old=sel.value;
+ sel.innerHTML=coachPlayersCache.length
+   ? coachPlayersCache.map(p=>`<option value="${safeText(p.playerId)}" data-category="${safeText(p.category)}">${safeText(p.category)} / ${safeText(p.name)}</option>`).join("")
+   : `<option value="">登録選手がいません</option>`;
+ if(old && coachPlayersCache.some(p=>p.playerId===old)) sel.value=old;
+ else if(selectedCoachPlayerId && coachPlayersCache.some(p=>p.playerId===selectedCoachPlayerId)) sel.value=selectedCoachPlayerId;
+ syncSettingsCategorySelect();
+}
+
+function syncSettingsCategorySelect(){
+ const playerId=document.getElementById("settingsPlayerSelect")?.value;
+ const player=coachPlayersCache.find(p=>p.playerId===playerId);
+ const cat=document.getElementById("settingsCategorySelect");
+ if(player && cat)cat.value=player.category;
+}
 
 let selectedCoachPlayerId=null;
+
 
 function drawMonthlyGrowth(monthly){
  const c=document.getElementById("monthlyGrowthCanvas");
@@ -291,31 +440,22 @@ function drawMonthlyGrowth(monthly){
 
 async function coachShowPlayerDetail(playerId){
  selectedCoachPlayerId=playerId;
- document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
- document.getElementById("detailView").classList.add("active");
- document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
- document.querySelectorAll(".tab")[2].classList.add("active");
-
  const detail=document.getElementById("coachPlayerDetail");
- detail.innerHTML="詳細を取得中...";
+ if(!detail)return;
+ detail.innerHTML="スプレッドシートから詳細を取得中...";
  try{
    const res=await coachJsonp("playerDetail",{playerId});
-   if(res.status!=="ok"){detail.innerHTML=res.message||"詳細を取得できませんでした。";return}
+   if(res.status!=="ok"){detail.innerHTML=(res.message||"詳細を取得できませんでした。")+"<br>Apps Scriptを最新版に貼り替えて再デプロイしてください。";return}
    const p=res.player,total=res.total||{},byType=res.byType||[],byPosition=res.byPosition||[],recent=res.recent||[];
+   const positions=byPosition.slice().filter(x=>Number(x.attempts||0)>0);
+   const bestPositions=positions.slice().sort((a,b)=>Number(b.rate||0)-Number(a.rate||0)||Number(b.attempts||0)-Number(a.attempts||0)).slice(0,5);
+   const weakPositions=positions.slice().sort((a,b)=>Number(a.rate||0)-Number(b.rate||0)||Number(b.attempts||0)-Number(a.attempts||0)).slice(0,5);
+   const bestHtml=bestPositions.length?bestPositions.map((x,i)=>`<div class="list-item" style="border-left:10px solid ${i===0?'#16a34a':'#2563eb'}"><b>${i+1}. ${safeText(x.type)} / ${safeText(x.position)}</b><br>成功率：<b>${x.rate}%</b>　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"<div class='small'>記録がありません。</div>";
+   const weakHtml=weakPositions.length?weakPositions.map((x,i)=>`<div class="list-item" style="border-left:10px solid #f59e0b"><b>${i+1}. ${safeText(x.type)} / ${safeText(x.position)}</b><br>成功率：<b>${x.rate}%</b>　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span><div class="small">重点練習候補</div></div>`).join(""):"<div class='small'>記録がありません。</div>";
    detail.innerHTML=`
      <div class="list-item">
        <b style="font-size:18px">${safeText(p.name)}</b> <span class="badge">${safeText(p.category)}</span><br>
        <span class="small">ID：${safeText(p.playerId)}</span>
-     </div>
-
-     <div class="card" style="box-shadow:none;margin:0 0 10px;padding:12px">
-       <h2>カテゴリー変更</h2>
-       <p class="small">学年更新やカテゴリー変更時に使用します。</p>
-       <select id="detailCategorySelect">
-         ${["男子U13","男子U14","男子U15","女子U13","女子U14","女子U15"].map(cat=>`<option ${cat===p.category?'selected':''}>${cat}</option>`).join("")}
-       </select>
-       <button class="secondary" style="margin-top:8px" onclick="coachUpdatePlayerCategory()">カテゴリーを変更</button>
-       <div id="categoryUpdateMessage" class="small" style="margin-top:8px"></div>
      </div>
 
      <div class="kpi" style="margin-bottom:10px">
@@ -324,30 +464,45 @@ async function coachShowPlayerDetail(playerId){
        <div><b>${total.records||0}</b><span>記録数</span></div>
      </div>
 
+     <h2>得意ポジション</h2>
+     <p class="small">スプレッドシートの shooting_records から取得した成功率が高い順です。</p>
+     ${bestHtml}
+
+     <h2>不得意ポジション</h2>
+     <p class="small">成功率が低い順に表示します。練習で重点的に確認する候補です。</p>
+     ${weakHtml}
+
      <h2>種目別</h2>
      ${byType.length?byType.map(x=>`<div class="list-item"><b>${safeText(x.type)}</b>　${x.rate}%　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"<div class='small'>記録がありません。</div>"}
 
-     <h2>ポジション別 上位</h2>
-     ${byPosition.length?byPosition.slice(0,10).map(x=>`<div class="list-item"><b>${safeText(x.type)} / ${safeText(x.position)}</b><br>${x.rate}%　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"<div class='small'>記録がありません。</div>"}
-
+     <h2>ポジション別 全一覧</h2>
+     ${byPosition.length?byPosition.map(x=>`<div class="list-item"><b>${safeText(x.type)} / ${safeText(x.position)}</b><br>${x.rate}%　<span class="stat-made">${x.made}</span>/<span class="stat-attempt">${x.attempts}</span></div>`).join(""):"<div class='small'>記録がありません。</div>"}
      <h2>直近記録</h2>
      ${recent.length?recent.map(r=>`<div class="list-item"><b>${safeText(r.date)}</b> <span class="badge">${safeText(r.type)}</span> <span class="badge">${safeText(r.position)}</span><br>${r.rate}%　<span class="stat-made">${r.made}</span>/<span class="stat-attempt">${r.attempts}</span><div class="small">${safeText(r.practice||"-")}</div></div>`).join(""):"<div class='small'>記録がありません。</div>"}
    `;
+   if(document.getElementById("playersView") && !document.getElementById("playersView").classList.contains("active")){
+     document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+     document.getElementById("playersView").classList.add("active");
+   }
  }catch(e){detail.innerHTML="詳細の取得に失敗しました。";}
 }
 
-async function coachUpdatePlayerCategory(){
+async function coachUpdatePlayerCategoryFromSettings(){
  const msg=document.getElementById("categoryUpdateMessage");
- const category=document.getElementById("detailCategorySelect").value;
- if(!selectedCoachPlayerId){msg.innerHTML="選手が選択されていません。";return}
- msg.innerHTML="変更中...";
+ const playerId=document.getElementById("settingsPlayerSelect")?.value;
+ const category=document.getElementById("settingsCategorySelect")?.value;
+ if(!playerId){if(msg)msg.innerHTML="選手が選択されていません。";return}
+ if(msg)msg.innerHTML="変更中...";
  try{
-   const res=await coachJsonp("updatePlayerCategory",{playerId:selectedCoachPlayerId,category});
-   if(res.status!=="ok"){msg.innerHTML=res.message||"変更できませんでした。";return}
-   msg.innerHTML='<span class="success">カテゴリーを変更しました。</span>';
-   await coachLoadPlayers();
-   await coachShowPlayerDetail(selectedCoachPlayerId);
- }catch(e){msg.innerHTML="変更に失敗しました。Apps Scriptを確認してください。";}
+   const res=await coachJsonp("updatePlayerCategory",{playerId,category});
+   if(res.status!=="ok"){if(msg)msg.innerHTML=res.message||"変更できませんでした。";return}
+   if(msg)msg.innerHTML='<span class="success">カテゴリーを変更しました。</span>';
+   selectedCoachPlayerId=playerId;
+   await coachLoadPlayers(false);
+   const playerSel=document.getElementById("coachPlayerSelect");
+   if(playerSel)playerSel.value=playerId;
+   await coachShowPlayerDetail(playerId);
+ }catch(e){if(msg)msg.innerHTML="変更に失敗しました。Apps Scriptを確認してください。";}
 }
 
 async function loadDashboard(){
@@ -367,6 +522,205 @@ async function loadDashboard(){
    st.innerHTML="更新しました。";
  }catch(e){st.innerHTML="取得に失敗しました。Apps Scriptを確認してください。";}
 }
+
+
+/* v10.8 ADD/FIX: コーチ用 成長記録（日付正規化・西暦表示） */
+let coachGrowthData=null;
+let coachGrowthPoints=[];
+
+function oneDecimal(v){return Number(v||0).toFixed(1);}
+function avgCard(label,item){
+  return `<div class="list-item"><b>${safeText(label)}</b><br>人数：${item.count||0}人<br>平均身長：<b>${oneDecimal(item.height)}cm</b><br>平均体重：<b>${oneDecimal(item.weight)}kg</b></div>`;
+}
+function normalizeCoachGrowthDate(value){
+  const s=String(value||"").trim();
+  if(!s)return "";
+  let m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(m)return `${m[1]}-${String(Number(m[2])).padStart(2,"0")}-${String(Number(m[3])).padStart(2,"0")}`;
+  m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+  if(m)return `${m[3]}-${String(Number(m[1])).padStart(2,"0")}-${String(Number(m[2])).padStart(2,"0")}`;
+  const d=new Date(s);
+  if(!isNaN(d.getTime())){
+    const y=d.getFullYear();
+    const mo=String(d.getMonth()+1).padStart(2,"0");
+    const da=String(d.getDate()).padStart(2,"0");
+    return `${y}-${mo}-${da}`;
+  }
+  return s;
+}
+function coachGrowthSortKey(r){
+  return normalizeCoachGrowthDate(r.date || r.measuredAtIso || r.createdAt) || String(r.measuredAtIso||r.createdAt||"");
+}
+function coachGrowthDateFull(value){
+  const iso=normalizeCoachGrowthDate(value);
+  const m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m?`${m[1]}.${Number(m[2])}.${Number(m[3])}`:String(value||"-");
+}
+function coachGrowthDateShort(value){
+  const iso=normalizeCoachGrowthDate(value);
+  const m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m?`${m[1]}/${Number(m[2])}/${Number(m[3])}`:String(value||"");
+}
+
+async function loadGrowthCoachData(){
+ const st=document.getElementById("growthCoachStatus");
+ const sel=document.getElementById("growthPlayerSelect");
+ if(st)st.innerHTML="成長記録を取得中...";
+ try{
+   const res=await coachJsonp("growthSummary");
+   if(res.status!=="ok"){
+     if(st)st.innerHTML=res.message||"成長記録を取得できませんでした。Apps Scriptを最新版に更新してください。";
+     return;
+   }
+   coachGrowthData=res;
+   const players=(res.players||[]).slice().sort((a,b)=>String(a.category).localeCompare(String(b.category),'ja')||String(a.player).localeCompare(String(b.player),'ja'));
+   if(sel){
+     sel.innerHTML=players.length?players.map(p=>`<option value="${safeText(p.playerId)}">${safeText(p.category)} / ${safeText(p.player)}</option>`).join(""):"<option>登録選手がいません</option>";
+   }
+   renderGrowthAverages();
+   renderSelectedGrowthPlayer();
+   if(st)st.innerHTML=`更新しました。対象選手：${players.length}人`;
+ }catch(e){
+   if(st)st.innerHTML="成長記録の取得に失敗しました。Apps ScriptのURL・再デプロイを確認してください。";
+ }
+}
+
+function renderGrowthAverages(){
+ if(!coachGrowthData)return;
+ const cat=document.getElementById("growthCategoryAverage");
+ const gen=document.getElementById("growthGenderAverage");
+ if(cat)cat.innerHTML=(coachGrowthData.categoryAverages||[]).map(x=>avgCard(x.category,x)).join("")||"データがありません。";
+ if(gen)gen.innerHTML=(coachGrowthData.genderAverages||[]).map(x=>avgCard(x.gender,x)).join("")||"データがありません。";
+}
+
+function renderSelectedGrowthPlayer(){
+ const sel=document.getElementById("growthPlayerSelect");
+ const summary=document.getElementById("growthPlayerSummary");
+ const detail=document.getElementById("coachGrowthDetail");
+ if(!coachGrowthData||!sel)return;
+ const player=(coachGrowthData.players||[]).find(p=>p.playerId===sel.value) || (coachGrowthData.players||[])[0];
+ if(!player){
+   if(summary)summary.innerHTML="選手データがありません。";
+   drawCoachGrowthChart(null);
+   return;
+ }
+ const records=(player.records||[]).slice()
+   .map(r=>({...r,date:normalizeCoachGrowthDate(r.date||r.measuredAtIso||r.createdAt)}))
+   .sort((a,b)=>coachGrowthSortKey(a).localeCompare(coachGrowthSortKey(b)));
+ const latest=records.length?records[records.length-1]:null;
+ if(summary){
+   summary.innerHTML=`<div class="list-item"><b>${safeText(player.player)}</b> <span class="badge">${safeText(player.category)}</span><br>最新：身長 <b>${oneDecimal(latest?latest.height:player.height)}cm</b> / 体重 <b>${oneDecimal(latest?latest.weight:player.weight)}kg</b><br>測定日：${safeText(coachGrowthDateFull(latest?latest.date:player.date))} / 記録数：${records.length}件</div>`;
+ }
+ if(detail)detail.innerHTML="グラフの点を押すと詳細が表示されます。";
+ drawCoachGrowthChart(records);
+}
+
+function drawCoachGrowthChart(records){
+ const c=document.getElementById("coachGrowthCanvas");
+ if(!c)return;
+ const ctx=c.getContext("2d");
+ ctx.clearRect(0,0,c.width,c.height);
+ coachGrowthPoints=[];
+ if(!records||!records.length){
+   ctx.fillStyle="#111827";ctx.font="14px sans-serif";ctx.fillText("成長記録がありません",c.width/2-70,c.height/2);return;
+ }
+ records=records.slice().map(r=>({...r,date:normalizeCoachGrowthDate(r.date||r.measuredAtIso||r.createdAt)})).sort((a,b)=>coachGrowthSortKey(a).localeCompare(coachGrowthSortKey(b)));
+ const left=48,right=28,top=28,bottom=58,w=c.width-left-right,h=c.height-top-bottom;
+ const heights=records.map(r=>Number(r.height||0)).filter(Boolean);
+ const weights=records.map(r=>Number(r.weight||0)).filter(Boolean);
+ const values=heights.concat(weights);
+ const min=Math.max(0,Math.floor((Math.min(...values)-5)/10)*10);
+ const max=Math.ceil((Math.max(...values)+5)/10)*10;
+ ctx.strokeStyle="#e5e7eb";ctx.lineWidth=1;ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";
+ for(let i=0;i<=4;i++){
+   const y=top+i*h/4;
+   const v=Math.round(max-(max-min)*i/4);
+   ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(c.width-right,y);ctx.stroke();
+   ctx.fillText(String(v),12,y+4);
+ }
+ const makePoints=(key,label)=>records.map((r,i)=>{
+   const x=left+i*(w/Math.max(1,records.length-1));
+   const v=Number(r[key]||0);
+   const y=top+(max-v)*h/Math.max(1,(max-min));
+   return {...r,x,y,value:v,key,label};
+ });
+ const hPts=makePoints('height','身長');
+ const wPts=makePoints('weight','体重');
+ function drawLine(points,color){
+   ctx.beginPath();
+   points.forEach((p,i)=>{if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});
+   ctx.strokeStyle=color;ctx.lineWidth=4;ctx.stroke();
+   points.forEach(p=>{
+     ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+     coachGrowthPoints.push(p);
+     ctx.fillStyle=color;ctx.font="10px sans-serif";ctx.fillText(oneDecimal(p.value),p.x-12,p.y-10);
+   });
+ }
+ drawLine(hPts,"#d91828");
+ drawLine(wPts,"#111827");
+ ctx.fillStyle="#d91828";ctx.fillRect(left,8,14,5);ctx.fillStyle="#111827";ctx.font="12px sans-serif";ctx.fillText("身長cm",left+20,13);
+ ctx.fillStyle="#111827";ctx.fillRect(left+90,8,14,5);ctx.fillText("体重kg",left+110,13);
+
+ records.forEach((r,i)=>{
+   const x=left+i*(w/Math.max(1,records.length-1));
+   ctx.fillStyle="#6b7280";ctx.font="10px sans-serif";
+   ctx.save();
+   ctx.translate(x-4,c.height-12);
+   ctx.rotate(-Math.PI/7);
+   ctx.fillText(coachGrowthDateShort(r.date||r.measuredAtIso||r.createdAt),0,0);
+   ctx.restore();
+ });
+ c.onclick=function(ev){
+   const rect=c.getBoundingClientRect();
+   const x=(ev.clientX-rect.left)*(c.width/rect.width);
+   const y=(ev.clientY-rect.top)*(c.height/rect.height);
+   let near=null,dist=9999;
+   coachGrowthPoints.forEach(p=>{const d=Math.hypot(p.x-x,p.y-y);if(d<dist){dist=d;near=p;}});
+   if(near&&dist<35){
+     const box=document.getElementById("coachGrowthDetail");
+     if(box)box.innerHTML=`<div class="list-item"><b>${safeText(coachGrowthDateFull(near.date||near.measuredAtIso||near.createdAt))}</b><br>${safeText(near.label)}：<b>${oneDecimal(near.value)}${near.key==='height'?'cm':'kg'}</b><br>身長：${oneDecimal(near.height)}cm / 体重：${oneDecimal(near.weight)}kg</div>`;
+   }
+ };
+}
+
+
+
+/* v11.3 ADD: コーチ用 アジリティー順位一覧 */
+let coachAgilityRankingsCache=null;
+let coachAgilityRankingsFetchedAt=null;
+function coachAgilityRankChange(row){
+  const cur=Number(row.rank||0), prev=Number(row.previousRank||0);
+  if(!cur)return '-';
+  if(!prev)return `<span class="rank-up-text">初回 → 今回${cur}位 ✨</span>`;
+  if(prev>cur)return `<span class="rank-up-text">前回${prev}位 → 今回${cur}位 ✨</span>`;
+  return `<span style="color:#6b7280;font-weight:900">前回${prev}位 → 今回${cur}位</span>`;
+}
+async function loadCoachAgilityRankings(showMessage=false){
+  const st=document.getElementById('coachAgilityStatus');
+  try{
+    if(st)st.innerHTML='順位を取得中...';
+    const res=await coachJsonp('agilityRankings',{});
+    if(!res||res.status!=='ok'){if(st)st.innerHTML=(res&&res.message)||'順位を取得できませんでした。Apps Scriptを最新版に貼り替えて再デプロイしてください。';return;}
+    coachAgilityRankingsCache=res;
+    coachAgilityRankingsFetchedAt=Date.now();
+    renderCoachAgilityRankings();
+  }catch(e){if(st)st.innerHTML='順位の取得に失敗しました。Apps Script URL・再デプロイを確認してください。';}
+}
+function renderCoachAgilityRankings(){
+  const box=document.getElementById('coachAgilityRankingList');
+  const st=document.getElementById('coachAgilityStatus');
+  const sel=document.getElementById('coachAgilityTypeSelect');
+  if(!box||!sel)return;
+  const type=sel.value||'シャトルラン';
+  const rankings=coachAgilityRankingsCache&&coachAgilityRankingsCache.rankings?coachAgilityRankingsCache.rankings:null;
+  if(!rankings){box.innerHTML='順位を更新してください。';return;}
+  if(st){const t=coachAgilityRankingsFetchedAt?new Date(coachAgilityRankingsFetchedAt).toLocaleString('ja-JP'):'';st.innerHTML=t?`順位更新済み：${safeText(t)}`:'順位更新済み';}
+  const rows=Array.isArray(rankings[type])?rankings[type]:[];
+  if(!rows.length){box.innerHTML=`<div class="list-item"><b>${safeText(type)}</b><br>まだ記録がありません。</div>`;return;}
+  box.innerHTML=rows.map(r=>{const cur=Number(r.rank||0), prev=Number(r.previousRank||0), up=prev>cur; const klass=up?' rank-up-spark':''; const crown=cur===1?'🏆 ':cur===2?'🥈 ':cur===3?'🥉 ':'';return `<div class="list-item${klass}"><span class="ranknum">${crown}${cur}位</span> <b>${safeText(r.player)}</b> <span class="badge">${safeText(r.category)}</span><br>記録：<b>${Number(r.value||0)}${safeText(r.unit||'')}</b>　${coachAgilityRankChange(r)}<br><span class="small">今回：${safeText(r.date||'-')} / 前回：${safeText(r.previousDate||'-')}</span></div>`;}).join('');
+}
+const __v113_coachShowView=showView;
+showView=function(id,btn){__v113_coachShowView(id,btn); if(id==='coachAgilityView')loadCoachAgilityRankings(false);};
 
 function downloadCSV(){
  alert("全データはGoogleスプレッドシートの shooting_records を使用してください。");

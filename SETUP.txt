@@ -1,24 +1,22 @@
-【v12.0 アップロード手順】
+【v11.4 LINEリッチメニュー成果表示 アップロード手順】
 
-1. GitHub の shooting-app にZIP内のファイルをすべて上書きアップロード
+1. GitHub の shooting-app リポジトリ直下へ、このフォルダ内のファイルをすべて上書きアップロード
 2. Commit changes
 3. Google Apps Script に google_apps_script_code.js の中身を全部貼り替え
 4. デプロイを管理 → 編集 → 新しいバージョン → デプロイ
-5. コーチアプリまたは選手アプリを一度開く
+5. LINEリッチメニューの各ボタンへ下記URLを設定
 
-初回実行時：
-- growth_records の既存データを「身体測定」へ移行
-- 成長記録入力 の既存データを「身体測定」へ移行
-- agility_records の既存データを「アジリティ測定」へ移行
-- アジリティ入力 の既存データを「アジリティ測定」へ移行
-- 移行後、上記4つの重複シートを自動削除
-- 以後、選手アプリから入力した身長・体重は「身体測定」へ直接保存
-- 以後、選手アプリから入力した測定記録は「アジリティ測定」へ直接保存
+シュートアベレージ
+https://ninja326.github.io/shooting-app/index.html?view=shooting&v=11.4
 
-最終的な記録先：
-- 身長・体重：身体測定
-- アジリティー：アジリティ測定
-- シュート：shooting_records
+身長・体重
+https://ninja326.github.io/shooting-app/index.html?view=growth&v=11.4
 
-コーチURL:
-https://ninja326.github.io/shooting-app/coach_admin.html?v=12.0
+アジリティ
+https://ninja326.github.io/shooting-app/index.html?view=agility&v=11.4
+
+【動作】
+・ログイン済み：押した成果画面へ直接移動
+・未ログイン：ログイン後に押した成果画面へ自動移動
+・既存の入力、グラフ、ランキング、コーチアプリは維持
+・アジリティに「120回ハンドリング（秒）」を追加
