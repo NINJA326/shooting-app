@@ -1,22 +1,17 @@
-【v11.4 LINEリッチメニュー成果表示 アップロード手順】
+NINJA SHOOTING LINE 成長記録対応 v11.5
 
-1. GitHub の shooting-app リポジトリ直下へ、このフォルダ内のファイルをすべて上書きアップロード
-2. Commit changes
-3. Google Apps Script に google_apps_script_code.js の中身を全部貼り替え
-4. デプロイを管理 → 編集 → 新しいバージョン → デプロイ
-5. LINEリッチメニューの各ボタンへ下記URLを設定
+【変更内容】
+・1〜3番のLINE入力機能は変更なし
+・4番「成長記録」から本人の記録確認メニューを表示
+・シュート／身長・体重／アジリティの記録へ移動可能
+・4番から開いた場合、身長・体重とアジリティの入力欄は非表示
+・Apps Scriptの変更・再デプロイは不要
 
-シュートアベレージ
-https://ninja326.github.io/shooting-app/index.html?view=shooting&v=11.4
+【GitHub Pages】
+ZIPを解凍し、index.html、manifest.json、sw.jsを既存リポジトリへ上書きしてください。
 
-身長・体重
-https://ninja326.github.io/shooting-app/index.html?view=growth&v=11.4
+【4番に設定するURL】
+https://ninja326.github.io/shooting-app/index.html?view=growth&v=11.5
 
-アジリティ
-https://ninja326.github.io/shooting-app/index.html?view=agility&v=11.4
-
-【動作】
-・ログイン済み：押した成果画面へ直接移動
-・未ログイン：ログイン後に押した成果画面へ自動移動
-・既存の入力、グラフ、ランキング、コーチアプリは維持
-・アジリティに「120回ハンドリング（秒）」を追加
+【重要】
+LINE公式の1〜3番に設定済みの入力アクションは変更しないでください。
