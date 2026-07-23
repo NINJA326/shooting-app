@@ -105,7 +105,7 @@
 <script>
   /* 必ずこの2か所だけ設定 */
   const LIFF_ID = "2010789200-zVWWxqSQ";
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwQ-vrkGPdBZnhV2wjZI0aXxb3jAn6qH4_rS6TJ-85EwzIS5SY96-pR2t42kN-e0NhrQRw/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwQ-vrkGPdBZnhV2wjZI0aXxb3jAn6qH4_rS6TJ-85EwzIS5Y96-pR2t42kN-e0NhrQRw/exec";
 
   let idToken = "";
   let bundle = null;
@@ -118,16 +118,12 @@
         throw new Error("LIFF SDKを読み込めませんでした。");
       }
 
-      if (!GAS_URL || GAS_URL.indexOf("PASTE_NEW_GAS_WEB_APP_URL_HERE") !== -1) {
-        throw new Error("growth.html の GAS_URL を新しいWebアプリURLに変更してください。");
-      }
-
       setLoading("LINE認証を初期化しています…");
       await liff.init({ liffId: LIFF_ID });
 
       if (!liff.isLoggedIn()) {
         setLoading("LINEログイン画面へ移動します…");
-        liff.login({ redirectUri: location.href.split("#")[0] });
+        liff.login({ redirectUri: location.origin + location.pathname });
         return;
       }
 
@@ -137,11 +133,18 @@
         throw new Error("LINE認証情報を取得できませんでした。LIFFのScopeにopenidを設定してください。");
       }
 
+      setLoading("Apps Scriptとの接続を確認しています…");
+      const ping = await jsonp({ action: "ping" }, 20000);
+
+      if (!ping || ping.status !== "ok") {
+        throw new Error("Apps Scriptの接続確認に失敗しました。");
+      }
+
       setLoading("本人情報を確認しています…");
       const session = await jsonp({
         action: "session",
         idToken: idToken
-      });
+      }, 30000);
 
       if (!session || session.status !== "ok") {
         throw new Error(session && session.message ? session.message : "本人情報を確認できませんでした。");
@@ -449,42 +452,63 @@
   }
 
   function jsonp(params, timeoutMs) {
-    timeoutMs = timeoutMs || 25000;
+    timeoutMs = timeoutMs || 30000;
 
     return new Promise(function(resolve, reject) {
-      const callback = "__ninja_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      const callback = "ninjaCallback" + Date.now() + Math.floor(Math.random() * 1000000);
       const script = document.createElement("script");
-      let settled = false;
+      let finished = false;
 
       const timer = setTimeout(function() {
-        finish(new Error("Apps Scriptとの通信がタイムアウトしました。"));
+        cleanup();
+        reject(new Error(
+          params.action === "ping"
+            ? "Apps Scriptの接続確認がタイムアウトしました。"
+            : "Apps Scriptからの応答がタイムアウトしました。"
+        ));
       }, timeoutMs);
 
-      function finish(error, data) {
-        if (settled) return;
-        settled = true;
+      function cleanup() {
+        if (finished) return;
+        finished = true;
         clearTimeout(timer);
 
         try {
           delete window[callback];
-        } catch (_) {}
+        } catch (_) {
+          window[callback] = undefined;
+        }
 
-        if (script.parentNode) script.remove();
-        error ? reject(error) : resolve(data);
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
       }
 
       window[callback] = function(data) {
-        finish(null, data);
+        if (finished) return;
+        cleanup();
+        resolve(data);
       };
 
-      const query = new URLSearchParams(Object.assign({}, params, {
-        callback: callback,
-        t: Date.now()
-      }));
+      const query = new URLSearchParams();
+      Object.keys(params).forEach(function(key) {
+        query.set(key, String(params[key]));
+      });
+      query.set("callback", callback);
+      query.set("_", String(Date.now()));
 
+      script.async = true;
+      script.referrerPolicy = "no-referrer";
       script.src = GAS_URL + "?" + query.toString();
+
       script.onerror = function() {
-        finish(new Error("Apps Scriptへ接続できませんでした。"));
+        if (finished) return;
+        cleanup();
+        reject(new Error(
+          params.action === "ping"
+            ? "Apps Scriptの公開URLへ接続できませんでした。"
+            : "Apps Scriptへ接続できませんでした。"
+        ));
       };
 
       document.head.appendChild(script);
