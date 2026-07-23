@@ -1,0 +1,45 @@
+NINJA 成長記録Webアプリ 反映手順
+
+【1】Apps Script
+1. growth_auth_additions.gs の全文をコード.gsの一番下へ追加
+2. 既存 doGet(e) の action 判定へ次の3行を追加
+
+else if (action === 'growthLogin') result = growthLogin_(p);
+else if (action === 'growthDashboard') result = growthDashboard_(p);
+else if (action === 'growthLogout') result = growthLogout_(p);
+
+追加位置例：
+else if (action === 'loginPlayer') result = loginPlayer_(p);
+else if (action === 'growthLogin') result = growthLogin_(p);
+else if (action === 'growthDashboard') result = growthDashboard_(p);
+else if (action === 'growthLogout') result = growthLogout_(p);
+else if (action === 'changePassword') result = changePassword_(p);
+
+3. 保存
+4. デプロイ→デプロイを管理→現在のWebアプリを編集
+5. 新バージョンでデプロイ
+6. WebアプリURLは変更しない
+
+【2】GitHub
+1. shooting-app リポジトリを開く
+2. 現在の growth.html をこのZIP内の growth.html で上書き
+3. Commit changes
+4. 1～3分待つ
+
+公開URL：
+https://ninja326.github.io/shooting-app/growth.html
+
+【3】LINEリッチメニュー
+成長記録ボタンのリンク先：
+https://ninja326.github.io/shooting-app/growth.html
+
+LIFF URLは使用しない。
+
+【重要】
+・現在のLINE Webhook URLは変更しない
+・Cloudflare Workerは不要
+・既存の doPost(e) は変更しない
+・シュート、身長体重、アジリティ入力機能は変更しない
+・初回だけ選手IDとパスワードを入力
+・パスワードはブラウザ保存しない
+・30日間有効のランダムなセッショントークンのみ保存
