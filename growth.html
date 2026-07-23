@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>NINJA PLAYER DATA</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root{
+      --bg:#07120d;--panel:#102219;--panel2:#152d21;--line:#28513b;
+      --text:#f5fff8;--muted:#a9c5b3;--green:#27d77d;--green2:#75efaa;
+      --red:#ff7676
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#06100b,#0a1811);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+    .wrap{max-width:760px;margin:auto;padding:14px}
+    .header,.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:17px;margin-bottom:14px}
+    .header{background:linear-gradient(135deg,#153725,#0d2418)}
+    .brand{font-size:12px;letter-spacing:1.8px;color:var(--green2);font-weight:900}
+    .name{font-size:25px;font-weight:900;margin:7px 0 3px}
+    .muted,.small{font-size:12px;color:var(--muted)}
+    .hidden{display:none!important}
+    .loading{text-align:center;padding:54px 16px}
+    .spinner{width:38px;height:38px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--green);margin:0 auto 14px;animation:spin .85s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .notice{border-radius:15px;padding:14px;margin-bottom:14px;background:#173425;color:#d7ffea;white-space:pre-wrap}
+    .notice.error{background:#39191d;color:#ffd7dc;border:1px solid #78333a}
+    .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+    .tabs button{border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:13px;padding:12px 5px;font-weight:900}
+    .tabs button.active{background:var(--green);border-color:var(--green);color:#052010}
+    .view{display:none}.view.active{display:block}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .stat,.item{background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:13px}
+    .stat b{display:block;font-size:23px;margin-top:5px}
+    .title{font-size:17px;font-weight:900;margin:0 0 12px}
+    .list{display:grid;gap:9px}
+    .item{line-height:1.65}
+    .value{color:var(--green2);font-weight:900}
+    canvas{display:block;width:100%;height:auto;background:#091710;border:1px solid var(--line);border-radius:14px}
+    .refresh{width:100%;border:1px solid var(--line);background:#183a29;color:var(--text);border-radius:14px;padding:13px;font-weight:900}
+    @media(max-width:600px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="header">
+    <div class="brand">NINJA PLAYER DATA</div>
+    <div id="profile" class="hidden">
+      <div id="playerName" class="name"></div>
+      <div id="playerMeta" class="muted"></div>
+    </div>
+  </header>
+
+  <div id="loading" class="card loading">
+    <div class="spinner"></div>
+    <div id="loadingText">LINE認証を初期化しています…</div>
+  </div>
+
+  <div id="message" class="notice hidden"></div>
+
+  <main id="app" class="hidden">
+    <nav class="tabs">
+      <button id="tabShooting" class="active" onclick="showView('shooting')">シュート</button>
+      <button id="tabBody" onclick="showView('body')">身長・体重</button>
+      <button id="tabAgility" onclick="showView('agility')">アジリティ</button>
+    </nav>
+
+    <section id="shootingView" class="view active">
+      <div class="card">
+        <h2 class="title">シュート総合</h2>
+        <div class="grid">
+          <div class="stat"><span class="muted">成功数</span><b id="shootMade">0</b></div>
+          <div class="stat"><span class="muted">試投数</span><b id="shootAttempts">0</b></div>
+          <div class="stat"><span class="muted">成功率</span><b id="shootRate">0%</b></div>
+        </div>
+      </div>
+      <div class="card"><h2 class="title">月別成功率</h2><canvas id="shootChart" width="700" height="300"></canvas></div>
+      <div class="card"><h2 class="title">種目別</h2><div id="shootTypes" class="list"></div></div>
+      <div class="card"><h2 class="title">ポジション別</h2><div id="shootPositions" class="list"></div></div>
+    </section>
+
+    <section id="bodyView" class="view">
+      <div class="card">
+        <h2 class="title">最新の身体測定</h2>
+        <div class="grid">
+          <div class="stat"><span class="muted">身長</span><b id="latestHeight">－</b><div id="heightChange" class="small"></div></div>
+          <div class="stat"><span class="muted">体重</span><b id="latestWeight">－</b><div id="weightChange" class="small"></div></div>
+          <div class="stat"><span class="muted">最新記録月</span><b id="latestBodyMonth" style="font-size:17px">－</b></div>
+        </div>
+      </div>
+      <div class="card"><h2 class="title">成長グラフ</h2><canvas id="bodyChart" width="700" height="320"></canvas></div>
+      <div class="card"><h2 class="title">記録一覧</h2><div id="bodyList" class="list"></div></div>
+    </section>
+
+    <section id="agilityView" class="view">
+      <div class="card"><h2 class="title">最新記録</h2><div id="agilityLatest" class="list"></div></div>
+      <div class="card"><h2 class="title">記録推移</h2><canvas id="agilityChart" width="700" height="340"></canvas></div>
+      <div class="card"><h2 class="title">記録一覧</h2><div id="agilityList" class="list"></div></div>
+    </section>
+
+    <button class="refresh" onclick="loadBundle()">最新情報に更新</button>
+  </main>
+</div>
+
+<script>
+  /* 必ずこの2か所だけ設定 */
+  const LIFF_ID = "2010789200-zVWWxqSQ";
+  const GAS_URL = "PASTE_NEW_GAS_WEB_APP_URL_HERE";
+
+  let idToken = "";
+  let bundle = null;
+
+  window.addEventListener("load", init);
+
+  async function init() {
+    try {
+      if (!window.liff) {
+        throw new Error("LIFF SDKを読み込めませんでした。");
+      }
+
+      if (!GAS_URL || GAS_URL.indexOf("PASTE_NEW_GAS_WEB_APP_URL_HERE") !== -1) {
+        throw new Error("growth.html の GAS_URL を新しいWebアプリURLに変更してください。");
+      }
+
+      setLoading("LINE認証を初期化しています…");
+      await liff.init({ liffId: LIFF_ID });
+
+      if (!liff.isLoggedIn()) {
+        setLoading("LINEログイン画面へ移動します…");
+        liff.login({ redirectUri: location.href.split("#")[0] });
+        return;
+      }
+
+      idToken = liff.getIDToken();
+
+      if (!idToken) {
+        throw new Error("LINE認証情報を取得できませんでした。LIFFのScopeにopenidを設定してください。");
+      }
+
+      setLoading("本人情報を確認しています…");
+      const session = await jsonp({
+        action: "session",
+        idToken: idToken
+      });
+
+      if (!session || session.status !== "ok") {
+        throw new Error(session && session.message ? session.message : "本人情報を確認できませんでした。");
+      }
+
+      text("playerName", session.player.name);
+      text("playerMeta", session.player.category + " / " + session.player.playerId);
+      show("profile");
+
+      await loadBundle();
+
+    } catch (error) {
+      showError(error);
+    }
+  }
+
+  async function loadBundle() {
+    try {
+      show("loading");
+      hide("app");
+      hide("message");
+      setLoading("成長記録を取得しています…");
+
+      const result = await jsonp({
+        action: "bundle",
+        idToken: idToken
+      });
+
+      if (!result || result.status !== "ok") {
+        throw new Error(result && result.message ? result.message : "成長記録を取得できませんでした。");
+      }
+
+      bundle = result;
+      renderAll();
+      hide("loading");
+      show("app");
+
+    } catch (error) {
+      showError(error);
+    }
+  }
+
+  function renderAll() {
+    renderShooting();
+    renderBody();
+    renderAgility();
+
+    setTimeout(function() {
+      drawShooting();
+      drawBody();
+      drawAgility();
+    }, 50);
+  }
+
+  function renderShooting() {
+    const s = bundle.shooting || {};
+    const total = s.total || {};
+
+    text("shootMade", String(total.made || 0));
+    text("shootAttempts", String(total.attempts || 0));
+    text("shootRate", String(total.rate || 0) + "%");
+
+    const types = s.byType || [];
+    document.getElementById("shootTypes").innerHTML = types.length
+      ? types.map(function(x) {
+          return '<div class="item"><b>' + esc(x.type) + '</b><br><span class="value">' +
+            x.rate + '%</span>　' + x.made + ' / ' + x.attempts + '</div>';
+        }).join("")
+      : '<div class="item">まだ記録がありません。</div>';
+
+    const positions = (s.byPosition || []).filter(function(x) {
+      return Number(x.attempts) > 0;
+    });
+
+    document.getElementById("shootPositions").innerHTML = positions.length
+      ? positions.map(function(x) {
+          return '<div class="item"><b>' + esc(x.type) + ' / ' + esc(x.position) +
+            '</b><br><span class="value">' + x.rate + '%</span>　' +
+            x.made + ' / ' + x.attempts + '</div>';
+        }).join("")
+      : '<div class="item">まだ記録がありません。</div>';
+  }
+
+  function renderBody() {
+    const b = bundle.body || {};
+    const latest = b.latest;
+
+    text("latestHeight", latest && latest.height !== null ? fmt(latest.height) + "cm" : "－");
+    text("latestWeight", latest && latest.weight !== null ? fmt(latest.weight) + "kg" : "－");
+    text("latestBodyMonth", latest ? latest.month : "－");
+    text("heightChange", changeText(b.change && b.change.height, "cm"));
+    text("weightChange", changeText(b.change && b.change.weight, "kg"));
+
+    const rows = (b.records || []).slice().reverse();
+
+    document.getElementById("bodyList").innerHTML = rows.length
+      ? rows.map(function(r) {
+          return '<div class="item"><b>' + esc(r.month) + '</b><br>身長：<span class="value">' +
+            (r.height === null ? "－" : fmt(r.height) + "cm") +
+            '</span>　体重：<span class="value">' +
+            (r.weight === null ? "－" : fmt(r.weight) + "kg") +
+            '</span></div>';
+        }).join("")
+      : '<div class="item">まだ記録がありません。</div>';
+  }
+
+  function renderAgility() {
+    const a = bundle.agility || {};
+    const latest = a.latest || [];
+    const rows = (a.records || []).slice().reverse();
+
+    document.getElementById("agilityLatest").innerHTML = latest.length
+      ? latest.map(function(r) {
+          return '<div class="item"><b>' + esc(r.type) + '</b><br><span class="value">' +
+            fmt(r.value) + esc(r.unit || "") + '</span>　<span class="muted">' +
+            esc(r.month) + '</span></div>';
+        }).join("")
+      : '<div class="item">まだ記録がありません。</div>';
+
+    document.getElementById("agilityList").innerHTML = rows.length
+      ? rows.map(function(r) {
+          return '<div class="item"><b>' + esc(r.type) + '</b>　<span class="value">' +
+            fmt(r.value) + esc(r.unit || "") + '</span><br><span class="muted">' +
+            esc(r.month) + '</span></div>';
+        }).join("")
+      : '<div class="item">まだ記録がありません。</div>';
+  }
+
+  function showView(name) {
+    document.querySelectorAll(".view").forEach(function(v) {
+      v.classList.remove("active");
+    });
+
+    document.querySelectorAll(".tabs button").forEach(function(b) {
+      b.classList.remove("active");
+    });
+
+    document.getElementById(name + "View").classList.add("active");
+    document.getElementById("tab" + name.charAt(0).toUpperCase() + name.slice(1)).classList.add("active");
+
+    setTimeout(function() {
+      if (name === "shooting") drawShooting();
+      if (name === "body") drawBody();
+      if (name === "agility") drawAgility();
+    }, 30);
+  }
+
+  function drawShooting() {
+    const rows = (bundle.shooting && bundle.shooting.monthly) || [];
+
+    drawLines("shootChart", [{
+      label: "成功率",
+      points: rows.map(function(r) {
+        return { label: r.month, value: Number(r.rate) };
+      }),
+      min: 0,
+      max: 100
+    }]);
+  }
+
+  function drawBody() {
+    const rows = (bundle.body && bundle.body.records) || [];
+
+    drawLines("bodyChart", [
+      {
+        label: "身長",
+        points: rows.filter(function(r) {
+          return r.height !== null;
+        }).map(function(r) {
+          return { label: r.month, value: Number(r.height) };
+        })
+      },
+      {
+        label: "体重",
+        points: rows.filter(function(r) {
+          return r.weight !== null;
+        }).map(function(r) {
+          return { label: r.month, value: Number(r.weight) };
+        })
+      }
+    ]);
+  }
+
+  function drawAgility() {
+    const rows = (bundle.agility && bundle.agility.records) || [];
+    const groups = {};
+
+    rows.forEach(function(r) {
+      if (!groups[r.type]) groups[r.type] = [];
+      groups[r.type].push(r);
+    });
+
+    drawLines("agilityChart", Object.keys(groups).map(function(type) {
+      return {
+        label: type,
+        points: groups[type].map(function(r) {
+          return { label: r.month, value: Number(r.value) };
+        })
+      };
+    }));
+  }
+
+  function drawLines(canvasId, series) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const active = series.filter(function(s) {
+      return s.points && s.points.length;
+    });
+
+    const all = active.reduce(function(values, s) {
+      return values.concat(s.points.map(function(p) {
+        return p.value;
+      }));
+    }, []).filter(Number.isFinite);
+
+    if (!all.length) {
+      ctx.fillStyle = "#a9c5b3";
+      ctx.font = "20px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("記録がありません", canvas.width / 2, canvas.height / 2);
+      ctx.textAlign = "left";
+      return;
+    }
+
+    const left = 55;
+    const right = 20;
+    const top = 42;
+    const bottom = 48;
+    const w = canvas.width - left - right;
+    const h = canvas.height - top - bottom;
+
+    let min = Math.min.apply(null, all);
+    let max = Math.max.apply(null, all);
+
+    if (active.some(function(s) { return s.min === 0; })) min = 0;
+    if (active.some(function(s) { return s.max === 100; })) max = 100;
+    if (min === max) { min -= 1; max += 1; }
+
+    const pad = (max - min) * 0.1;
+    if (!active.some(function(s) { return s.min === 0; })) min -= pad;
+    if (!active.some(function(s) { return s.max === 100; })) max += pad;
+
+    ctx.strokeStyle = "#28513b";
+    ctx.fillStyle = "#a9c5b3";
+    ctx.font = "12px sans-serif";
+
+    for (let i = 0; i <= 4; i++) {
+      const y = top + i * h / 4;
+      ctx.beginPath();
+      ctx.moveTo(left, y);
+      ctx.lineTo(canvas.width - right, y);
+      ctx.stroke();
+      ctx.fillText(fmt(max - (max - min) * i / 4), 5, y + 4);
+    }
+
+    const colors = ["#27d77d", "#4da3ff", "#ff7676", "#ffd45c", "#ad7cff", "#44d8e8"];
+
+    active.forEach(function(s, si) {
+      const color = colors[si % colors.length];
+      const pts = s.points.map(function(p, i) {
+        return {
+          x: left + i * (w / Math.max(1, s.points.length - 1)),
+          y: top + (max - p.value) * h / (max - min),
+          label: p.label,
+          value: p.value
+        };
+      });
+
+      ctx.beginPath();
+      pts.forEach(function(p, i) {
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      });
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      pts.forEach(function(p) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
+
+      ctx.fillStyle = color;
+      ctx.fillRect(left + (si % 3) * 190, 10, 15, 5);
+      ctx.fillStyle = "#f5fff8";
+      ctx.fillText(s.label, left + 22 + (si % 3) * 190, 17);
+    });
+
+    const labels = active[0].points;
+    ctx.fillStyle = "#a9c5b3";
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "center";
+
+    labels.forEach(function(p, i) {
+      if (labels.length > 6 && i % Math.ceil(labels.length / 6) !== 0 && i !== labels.length - 1) return;
+      const x = left + i * (w / Math.max(1, labels.length - 1));
+      ctx.fillText(String(p.label).replace(/^\d{4}\//, ""), x, canvas.height - 16);
+    });
+
+    ctx.textAlign = "left";
+  }
+
+  function jsonp(params, timeoutMs) {
+    timeoutMs = timeoutMs || 25000;
+
+    return new Promise(function(resolve, reject) {
+      const callback = "__ninja_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      const script = document.createElement("script");
+      let settled = false;
+
+      const timer = setTimeout(function() {
+        finish(new Error("Apps Scriptとの通信がタイムアウトしました。"));
+      }, timeoutMs);
+
+      function finish(error, data) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+
+        try {
+          delete window[callback];
+        } catch (_) {}
+
+        if (script.parentNode) script.remove();
+        error ? reject(error) : resolve(data);
+      }
+
+      window[callback] = function(data) {
+        finish(null, data);
+      };
+
+      const query = new URLSearchParams(Object.assign({}, params, {
+        callback: callback,
+        t: Date.now()
+      }));
+
+      script.src = GAS_URL + "?" + query.toString();
+      script.onerror = function() {
+        finish(new Error("Apps Scriptへ接続できませんでした。"));
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  function setLoading(value) {
+    text("loadingText", value);
+  }
+
+  function showError(error) {
+    hide("loading");
+    hide("app");
+
+    const box = document.getElementById("message");
+    box.textContent = error && error.message ? error.message : String(error);
+    box.className = "notice error";
+    show("message");
+  }
+
+  function changeText(value, unit) {
+    if (value === null || value === undefined) return "比較できる記録がありません";
+    return "初回から " + (value > 0 ? "+" : "") + fmt(value) + unit;
+  }
+
+  function show(id) {
+    document.getElementById(id).classList.remove("hidden");
+  }
+
+  function hide(id) {
+    document.getElementById(id).classList.add("hidden");
+  }
+
+  function text(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value == null ? "" : value;
+  }
+
+  function fmt(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? String(Math.round(number * 10) / 10) : "－";
+  }
+
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function(c) {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[c];
+    });
+  }
+</script>
+</body>
+</html>
