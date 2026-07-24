@@ -194,7 +194,8 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
         <div class="section-lead">初回・前回・最新を比較して成長を確認できます。</div>
         <div id="bodyComparison" class="list"></div>
       </div>
-      <div class="card"><h2 class="title">成長グラフ</h2><canvas id="bodyChart" width="660" height="320"></canvas></div>
+      <div class="card"><h2 class="title">身長の成長グラフ</h2><canvas id="heightChart" width="660" height="300"></canvas></div>
+      <div class="card"><h2 class="title">体重の成長グラフ</h2><canvas id="weightChart" width="660" height="300"></canvas></div>
       <div class="card"><h2 class="title">記録一覧</h2><div id="bodyList" class="list"></div></div>
     </section>
 
@@ -204,7 +205,11 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
         <div class="section-lead">初回・前回・最新・ベストを種目ごとに表示します。</div>
         <div id="agilityComparison" class="list"></div>
       </div>
-      <div class="card"><h2 class="title">記録推移</h2><canvas id="agilityChart" width="660" height="340"></canvas></div>
+      <div class="card">
+        <h2 class="title">種目別記録推移</h2>
+        <div class="section-lead">5種目をそれぞれ別のグラフで確認できます。</div>
+        <div id="agilityCharts" class="list"></div>
+      </div>
       <div class="card"><h2 class="title">記録一覧</h2><div id="agilityList" class="list"></div></div>
     </section>
 
@@ -259,7 +264,7 @@ function renderAll(){
   renderShootingComparison();
   renderBody();
   renderAgility();
-  setTimeout(function(){drawShooting();drawBody();drawAgility()},50);
+  setTimeout(function(){drawShooting();drawBody();drawAgilityCharts()},50);
 }
 
 function monthRows(){
@@ -430,7 +435,12 @@ function statHtml(label,value,unit,sub){
 
 function renderAgility(){
   const rows=((bundle.agility||{}).records||[]).slice(),groups={};
-  rows.forEach(function(r){if(!groups[r.type])groups[r.type]=[];groups[r.type].push(r)});
+  rows.forEach(function(r){
+    const type=normalizeAgilityType(r.type);
+    const normalized=Object.assign({},r,{type:type});
+    if(!groups[type])groups[type]=[];
+    groups[type].push(normalized);
+  });
   const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング"];
   const types=Object.keys(groups).sort(function(a,b){
     const ai=order.indexOf(a),bi=order.indexOf(b);if(ai<0&&bi<0)return a.localeCompare(b,"ja");if(ai<0)return 1;if(bi<0)return-1;return ai-bi;
@@ -468,23 +478,91 @@ function showView(name){
   document.querySelectorAll(".tabs button").forEach(function(b){b.classList.remove("active")});
   document.getElementById(name+"View").classList.add("active");
   document.getElementById("tab"+name.charAt(0).toUpperCase()+name.slice(1)).classList.add("active");
-  setTimeout(function(){if(name==="shooting")drawShooting();if(name==="body")drawBody();if(name==="agility")drawAgility()},30);
+  setTimeout(function(){
+    if(name==="shooting")drawShooting();
+    if(name==="body")drawBody();
+    if(name==="agility")drawAgilityCharts();
+  },30);
 }
 function drawShooting(){
   drawLines("shootChart",[{label:"成功率",points:monthRows().map(function(r){return{label:r.month,value:Number(r.rate)}}),min:0,max:100}]);
 }
 function drawBody(){
   const rows=((bundle.body||{}).records||[]);
-  drawLines("bodyChart",[
-    {label:"身長",points:rows.filter(function(r){return r.height!==null}).map(function(r){return{label:r.month,value:Number(r.height)}})},
-    {label:"体重",points:rows.filter(function(r){return r.weight!==null}).map(function(r){return{label:r.month,value:Number(r.weight)}})}
-  ]);
+  const heightPoints=rows.filter(function(r){
+    return r.height!==null&&r.height!==undefined&&Number.isFinite(Number(r.height));
+  }).map(function(r){return{label:r.month,value:Number(r.height)}});
+
+  const weightPoints=rows.filter(function(r){
+    return r.weight!==null&&r.weight!==undefined&&Number.isFinite(Number(r.weight));
+  }).map(function(r){return{label:r.month,value:Number(r.weight)}});
+
+  drawLines("heightChart",[{label:"身長 cm",points:heightPoints}]);
+  drawLines("weightChart",[{label:"体重 kg",points:weightPoints}]);
 }
-function drawAgility(){
-  const rows=((bundle.agility||{}).records||[]),groups={};
-  rows.forEach(function(r){if(!groups[r.type])groups[r.type]=[];groups[r.type].push(r)});
-  drawLines("agilityChart",Object.keys(groups).map(function(t){return{label:t,points:groups[t].map(function(r){return{label:r.month,value:Number(r.value)}})}}));
+
+function normalizeAgilityType(type){
+  const value=String(type||"").normalize("NFKC").replace(/\s+/g,"");
+  if(value.includes("シャトル"))return "20mシャトルラン";
+  if(value.includes("反復横"))return "反復横跳び";
+  if(value.includes("L字")||value.includes("l字"))return "L字コーン";
+  if(value.includes("垂直"))return "垂直跳び";
+  if(value.includes("120")&&value.includes("ハンドリング"))return "120回ハンドリング";
+  return String(type||"未設定");
 }
+
+function agilityTypeOrder(type){
+  const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング"];
+  const index=order.indexOf(type);
+  return index<0?999:index;
+}
+
+function drawAgilityCharts(){
+  const holder=document.getElementById("agilityCharts");
+  if(!holder)return;
+
+  const rows=((bundle.agility||{}).records||[]);
+  const groups={};
+
+  rows.forEach(function(r){
+    const type=normalizeAgilityType(r.type);
+    if(!groups[type])groups[type]=[];
+    groups[type].push({
+      label:r.month,
+      value:Number(r.value),
+      unit:r.unit||""
+    });
+  });
+
+  const types=Object.keys(groups).sort(function(a,b){
+    return agilityTypeOrder(a)-agilityTypeOrder(b)||a.localeCompare(b,"ja");
+  });
+
+  if(!types.length){
+    holder.innerHTML='<div class="empty">アジリティ記録がありません。</div>';
+    return;
+  }
+
+  holder.innerHTML=types.map(function(type,index){
+    const unit=(groups[type][0]&&groups[type][0].unit)||"";
+    return '<div class="item"><b>'+esc(type)+'</b>'+
+      '<div class="small" style="margin:3px 0 9px">'+esc(unit)+'</div>'+
+      '<canvas id="agilityChart_'+index+'" width="660" height="260"></canvas></div>';
+  }).join("");
+
+  types.forEach(function(type,index){
+    const points=groups[type].filter(function(p){
+      return Number.isFinite(p.value);
+    }).sort(function(a,b){
+      return String(a.label).localeCompare(String(b.label));
+    }).map(function(p){
+      return{label:p.label,value:p.value};
+    });
+    const unit=(groups[type][0]&&groups[type][0].unit)||"";
+    drawLines("agilityChart_"+index,[{label:type+(unit?" "+unit:""),points:points}]);
+  });
+}
+
 function drawLines(canvasId,series){
   const canvas=document.getElementById(canvasId),ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height);
   const active=series.filter(function(s){return s.points&&s.points.length});
