@@ -624,13 +624,6 @@ function statHtml(label,value,unit,sub){
 }
 
 
-function isLowerBetter(type){
-  const value=String(type||"").normalize("NFKC");
-  return value.indexOf("L字")>=0 ||
-    value.indexOf("l字")>=0 ||
-    value.indexOf("ハンドリング")>=0;
-}
-
 function normalizeAgilityType(type){
   const value=String(type||"").normalize("NFKC").replace(/\s+/g,"");
   if(value.includes("シャトル"))return "20mシャトルラン";
@@ -739,7 +732,11 @@ function buildAgilityCard(type,records){
   const first=valid[0];
   const latest=valid[valid.length-1];
   const previous=valid.length>=2?valid[valid.length-2]:null;
-  const lower=isLowerBetter(type);
+  const normalizedType=String(type||"").normalize("NFKC");
+  const lower=
+    normalizedType.indexOf("L字")>=0 ||
+    normalizedType.indexOf("l字")>=0 ||
+    normalizedType.indexOf("ハンドリング")>=0;
   const best=valid.reduce(function(a,b){
     return lower
       ? Number(b.value)<Number(a.value)?b:a
