@@ -179,7 +179,7 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
 <body>
 <div class="wrap">
   <header class="header">
-    <div class="brand">NINJA PLAYER DATA</div>
+    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260724-2005</span></div>
     <div id="profile" class="hidden">
       <div id="playerName" class="name"></div>
       <div id="playerMeta" class="muted"></div>
@@ -353,6 +353,70 @@ function renderAll(){
   setupAgilitySelector();
   renderSelectedAgility();
   setTimeout(function(){drawShooting();drawBody();renderSelectedAgility()},50);
+}
+
+
+function showView(name){
+  ["shooting","body","agility"].forEach(function(viewName){
+    const view=document.getElementById(viewName+"View");
+    const tab=document.getElementById(
+      viewName==="shooting"?"tabShooting":
+      viewName==="body"?"tabBody":"tabAgility"
+    );
+    if(view)view.classList.toggle("active",viewName===name);
+    if(tab)tab.classList.toggle("active",viewName===name);
+  });
+
+  window.setTimeout(function(){
+    if(name==="shooting")drawShooting();
+    if(name==="body")drawBody();
+    if(name==="agility")renderSelectedAgility();
+  },30);
+}
+
+function drawShooting(){
+  const rows=monthRows();
+  const points=rows.map(function(r){
+    return {
+      label:r.month,
+      value:Number(r.rate||0)
+    };
+  });
+
+  drawLines("shootChart",[
+    {
+      label:"成功率 %",
+      points:points,
+      min:0,
+      max:100
+    }
+  ]);
+}
+
+function drawBody(){
+  const rows=((bundle&&bundle.body&&bundle.body.records)||[]).slice().sort(function(a,b){
+    return String(a.month||"").localeCompare(String(b.month||""));
+  });
+
+  const heightPoints=rows
+    .filter(function(r){return Number.isFinite(Number(r.height))})
+    .map(function(r){
+      return {label:r.month,value:Number(r.height)};
+    });
+
+  const weightPoints=rows
+    .filter(function(r){return Number.isFinite(Number(r.weight))})
+    .map(function(r){
+      return {label:r.month,value:Number(r.weight)};
+    });
+
+  drawLines("heightChart",[
+    {label:"身長 cm",points:heightPoints}
+  ]);
+
+  drawLines("weightChart",[
+    {label:"体重 kg",points:weightPoints}
+  ]);
 }
 
 function monthRows(){
