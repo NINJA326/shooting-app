@@ -1,0 +1,3436 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Apps Script 完成版 一括コピー</title>
+<style>
+body{margin:0;background:#071426;color:#f5f9ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:10;background:#10223b;border-bottom:1px solid #29496d;padding:14px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+button{border:0;border-radius:12px;background:#42a5f5;color:#06182a;font-weight:900;padding:12px 18px;cursor:pointer}
+pre{margin:14px;padding:18px;background:#10223b;border:1px solid #29496d;border-radius:14px;white-space:pre;overflow:auto;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+small{color:#a7bad2}
+</style></head><body>
+<header><div><b>NINJA LINE BOT／成長記録 月比較対応 完成版</b><br><small>Apps Scriptの現在のコードを全削除して、全文を貼り付けます。</small></div>
+<button onclick="navigator.clipboard.writeText(document.getElementById('code').innerText).then(()=>{this.textContent='コピーしました'})">GSを一括コピー</button></header>
+<pre id="code">const CONFIG = {
+  APP_NAME: &#x27;NINJA AIRS LINE BOT&#x27;,
+  PLAYERS_SHEET: &#x27;players&#x27;,
+  RECORDS_SHEET: &#x27;shooting_records&#x27;,
+  BODY_SHEET: &#x27;身体測定&#x27;,
+  AGILITY_SHEET: &#x27;アジリティ&#x27;,
+  SUMMARY_SHEET: &#x27;summary&#x27;,
+  TIMEZONE: &#x27;Asia/Tokyo&#x27;,
+  SESSION_SECONDS: 21600
+};
+
+const STATE = {
+  LOGIN_ID: &#x27;LOGIN_ID&#x27;,
+  LOGIN_PASSWORD: &#x27;LOGIN_PASSWORD&#x27;,
+  MENU: &#x27;MENU&#x27;,
+
+  BODY_HEIGHT: &#x27;BODY_HEIGHT&#x27;,
+  BODY_WEIGHT: &#x27;BODY_WEIGHT&#x27;,
+  BODY_CONFIRM: &#x27;BODY_CONFIRM&#x27;,
+
+  AGILITY_EVENT: &#x27;AGILITY_EVENT&#x27;,
+  AGILITY_VALUE: &#x27;AGILITY_VALUE&#x27;,
+  AGILITY_CONFIRM: &#x27;AGILITY_CONFIRM&#x27;,
+
+  PRACTICE: &#x27;PRACTICE&#x27;,
+  SHOT_TYPE: &#x27;SHOT_TYPE&#x27;,
+  POSITION: &#x27;POSITION&#x27;,
+  ATTEMPTS: &#x27;ATTEMPTS&#x27;,
+  MADE: &#x27;MADE&#x27;,
+  CONFIRM: &#x27;CONFIRM&#x27;
+};
+
+const AGILITY_EVENTS = {
+  &#x27;20mシャトルラン&#x27;: {
+    unit: &#x27;回&#x27;,
+    min: 1,
+    max: 300,
+    decimals: 0,
+    example: &#x27;120&#x27;
+  },
+  &#x27;反復横跳び&#x27;: {
+    unit: &#x27;回&#x27;,
+    min: 1,
+    max: 200,
+    decimals: 0,
+    example: &#x27;54&#x27;
+  },
+  &#x27;L字コーン&#x27;: {
+    unit: &#x27;秒&#x27;,
+    min: 1,
+    max: 60,
+    decimals: 2,
+    example: &#x27;9.83&#x27;
+  },
+  &#x27;垂直跳び&#x27;: {
+    unit: &#x27;cm&#x27;,
+    min: 1,
+    max: 150,
+    decimals: 1,
+    example: &#x27;37&#x27;
+  },
+  &#x27;120回ハンドリング&#x27;: {
+    unit: &#x27;秒&#x27;,
+    min: 1,
+    max: 300,
+    decimals: 2,
+    example: &#x27;28.54&#x27;
+  }
+};
+
+/* =========================================================
+ * 初期設定
+ * ======================================================= */
+
+function setup() {
+  const ss = getSpreadsheet_();
+
+  const players = ss.getSheetByName(CONFIG.PLAYERS_SHEET);
+  const records = ss.getSheetByName(CONFIG.RECORDS_SHEET);
+  const body = ss.getSheetByName(CONFIG.BODY_SHEET);
+  const summary = ss.getSheetByName(CONFIG.SUMMARY_SHEET);
+
+  if (!players) {
+    throw new Error(&#x27;players シートが見つかりません。&#x27;);
+  }
+
+  if (!records) {
+    throw new Error(&#x27;shooting_records シートが見つかりません。&#x27;);
+  }
+
+  if (!body) {
+    throw new Error(&#x27;身体測定 シートが見つかりません。&#x27;);
+  }
+
+  if (!summary) {
+    throw new Error(&#x27;summary シートが見つかりません。&#x27;);
+  }
+
+  validateHeaders_(players, [
+    &#x27;選手ID&#x27;,
+    &#x27;パスワード&#x27;,
+    &#x27;選手名&#x27;,
+    &#x27;カテゴリー&#x27;
+  ]);
+
+  validateHeaders_(records, [
+    &#x27;送信日時&#x27;,
+    &#x27;同期種別&#x27;,
+    &#x27;記録ID&#x27;,
+    &#x27;日付&#x27;,
+    &#x27;選手名&#x27;,
+    &#x27;カテゴリー&#x27;,
+    &#x27;練習&#x27;,
+    &#x27;種目&#x27;,
+    &#x27;ポジション&#x27;,
+    &#x27;成功数&#x27;,
+    &#x27;試投数&#x27;,
+    &#x27;成功率&#x27;,
+    &#x27;作成日時&#x27;,
+    &#x27;更新日時&#x27;,
+    &#x27;削除日時&#x27;
+  ]);
+
+  validateHeaders_(body, [
+    &#x27;選手名&#x27;,
+    &#x27;項目&#x27;
+  ]);
+
+  ensureAgilitySheet_();
+
+  Logger.log(&#x27;setup完了：&#x27; + ss.getName());
+}
+
+/* =========================================================
+ * Webhook
+ * ======================================================= */
+
+function doGet(e) {
+  const params = e &amp;&amp; e.parameter ? e.parameter : {};
+  const page = normalizeText_(params.page);
+  const action = normalizeText_(params.action);
+  const callback = normalizeText_(params.callback);
+
+  if (page === &#x27;growth&#x27;) {
+    return HtmlService
+      .createHtmlOutputFromFile(&#x27;growth&#x27;)
+      .setTitle(&#x27;NINJA PLAYER DATA&#x27;)
+      .addMetaTag(
+        &#x27;viewport&#x27;,
+        &#x27;width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no&#x27;
+      )
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  if (action) {
+    const result = handleGrowthApi_(action, params);
+
+    if (callback) {
+      return ContentService
+        .createTextOutput(
+          callback + &#x27;(&#x27; + JSON.stringify(result) + &#x27;)&#x27;
+        )
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  return ContentService
+    .createTextOutput(
+      JSON.stringify({
+        status: &#x27;ok&#x27;,
+        app: CONFIG.APP_NAME
+      })
+    )
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return textResponse_(&#x27;no body&#x27;);
+    }
+
+    const body = JSON.parse(e.postData.contents);
+
+    (body.events || []).forEach(function(event) {
+      if (
+        event.type === &#x27;message&#x27; &amp;&amp;
+        event.message &amp;&amp;
+        event.message.type === &#x27;text&#x27;
+      ) {
+        handleTextMessage_(event);
+      }
+    });
+
+    return textResponse_(&#x27;ok&#x27;);
+
+  } catch (error) {
+    console.error(error.stack || error);
+    return textResponse_(&#x27;error&#x27;);
+  }
+}
+
+/* =========================================================
+ * メッセージ振り分け
+ * ======================================================= */
+
+function handleTextMessage_(event) {
+  const userId = event.source &amp;&amp; event.source.userId;
+  const replyToken = event.replyToken;
+  const text = normalizeText_(event.message.text);
+
+  if (!userId || !replyToken) {
+    return;
+  }
+
+  if (text === &#x27;最初から&#x27; || text === &#x27;リセット&#x27;) {
+    clearSession_(userId);
+
+    const player = getLinkedPlayer_(userId);
+
+    if (player) {
+      saveSession_(userId, {
+        state: STATE.MENU,
+        player: player
+      });
+
+      replyMenu_(replyToken, player);
+
+    } else {
+      startLogin_(replyToken, userId);
+    }
+
+    return;
+  }
+
+  if (text === &#x27;キャンセル&#x27;) {
+    const player = getLinkedPlayer_(userId);
+
+    clearSession_(userId);
+
+    if (player) {
+      saveSession_(userId, {
+        state: STATE.MENU,
+        player: player
+      });
+
+      replyMenu_(replyToken, player);
+
+    } else {
+      startLogin_(replyToken, userId);
+    }
+
+    return;
+  }
+
+  if (text === &#x27;ログアウト&#x27;) {
+    unlinkPlayer_(userId);
+    clearSession_(userId);
+
+    saveSession_(userId, {
+      state: STATE.LOGIN_ID
+    });
+
+    replyText_(
+      replyToken,
+      &#x27;ログアウトしました。\n選手IDを入力してください。&#x27;
+    );
+
+    return;
+  }
+
+  let session = getSession_(userId);
+  const linkedPlayer = getLinkedPlayer_(userId);
+
+  if (!linkedPlayer &amp;&amp; (!session || !session.state)) {
+    startLogin_(replyToken, userId);
+    return;
+  }
+
+  if (!session || !session.state) {
+    session = {
+      state: STATE.MENU,
+      player: linkedPlayer
+    };
+
+    saveSession_(userId, session);
+  }
+
+  if (
+    linkedPlayer &amp;&amp;
+    (
+      text === &#x27;シューティング&#x27; ||
+      text === &#x27;シューティング入力&#x27; ||
+      text === &#x27;シュート&#x27;
+    )
+  ) {
+    startShootingInput_(replyToken, userId, linkedPlayer);
+    return;
+  }
+
+  if (
+    linkedPlayer &amp;&amp;
+    (
+      text === &#x27;身長・体重&#x27; ||
+      text === &#x27;身長体重&#x27; ||
+      text === &#x27;身体測定&#x27;
+    )
+  ) {
+    startBodyInput_(replyToken, userId, linkedPlayer);
+    return;
+  }
+
+  if (
+    linkedPlayer &amp;&amp;
+    (
+      text === &#x27;アジリティ&#x27; ||
+      text === &#x27;アジリティ入力&#x27;
+    )
+  ) {
+    startAgilityInput_(replyToken, userId, linkedPlayer);
+    return;
+  }
+
+  if (linkedPlayer &amp;&amp; text === &#x27;準備中&#x27;) {
+    replyText_(replyToken, &#x27;この機能は現在準備中です。&#x27;);
+    return;
+  }
+
+  switch (session.state) {
+    case STATE.LOGIN_ID:
+      handleLoginId_(replyToken, userId, text);
+      break;
+
+    case STATE.LOGIN_PASSWORD:
+      handleLoginPassword_(replyToken, userId, text, session);
+      break;
+
+    case STATE.MENU:
+      handleMenu_(replyToken, userId, text, session);
+      break;
+
+    case STATE.BODY_HEIGHT:
+      handleBodyHeight_(replyToken, userId, text, session);
+      break;
+
+    case STATE.BODY_WEIGHT:
+      handleBodyWeight_(replyToken, userId, text, session);
+      break;
+
+    case STATE.BODY_CONFIRM:
+      handleBodyConfirm_(replyToken, userId, text, session);
+      break;
+
+    case STATE.AGILITY_EVENT:
+      handleAgilityEvent_(replyToken, userId, text, session);
+      break;
+
+    case STATE.AGILITY_VALUE:
+      handleAgilityValue_(replyToken, userId, text, session);
+      break;
+
+    case STATE.AGILITY_CONFIRM:
+      handleAgilityConfirm_(replyToken, userId, text, session);
+      break;
+
+    case STATE.PRACTICE:
+      handlePractice_(replyToken, userId, text, session);
+      break;
+
+    case STATE.SHOT_TYPE:
+      handleShotType_(replyToken, userId, text, session);
+      break;
+
+    case STATE.POSITION:
+      handlePosition_(replyToken, userId, text, session);
+      break;
+
+    case STATE.ATTEMPTS:
+      handleAttempts_(replyToken, userId, text, session);
+      break;
+
+    case STATE.MADE:
+      handleMade_(replyToken, userId, text, session);
+      break;
+
+    case STATE.CONFIRM:
+      handleConfirm_(replyToken, userId, text, session);
+      break;
+
+    default:
+      clearSession_(userId);
+
+      if (linkedPlayer) {
+        saveSession_(userId, {
+          state: STATE.MENU,
+          player: linkedPlayer
+        });
+
+        replyMenu_(replyToken, linkedPlayer);
+
+      } else {
+        startLogin_(replyToken, userId);
+      }
+  }
+}
+
+/* =========================================================
+ * ログイン
+ * ======================================================= */
+
+function startLogin_(replyToken, userId) {
+  saveSession_(userId, {
+    state: STATE.LOGIN_ID
+  });
+
+  replyText_(
+    replyToken,
+    &#x27;初回ログインを行います。\n&#x27; +
+    &#x27;playersシートに登録されている「選手ID」を入力してください。&#x27;
+  );
+}
+
+function handleLoginId_(replyToken, userId, text) {
+  const player = findPlayerById_(text);
+
+  if (!player) {
+    replyText_(
+      replyToken,
+      &#x27;選手IDが見つかりません。\n&#x27; +
+      &#x27;入力内容を確認して、もう一度入力してください。&#x27;
+    );
+
+    return;
+  }
+
+  saveSession_(userId, {
+    state: STATE.LOGIN_PASSWORD,
+    pendingPlayerId: player.playerId
+  });
+
+  replyText_(replyToken, &#x27;パスワードを入力してください。&#x27;);
+}
+
+function handleLoginPassword_(replyToken, userId, text, session) {
+  const player = findPlayerById_(session.pendingPlayerId);
+
+  if (!player) {
+    clearSession_(userId);
+    startLogin_(replyToken, userId);
+    return;
+  }
+
+  if (String(player.password) !== String(text)) {
+    replyText_(
+      replyToken,
+      &#x27;パスワードが違います。\n&#x27; +
+      &#x27;もう一度入力してください。\n\n&#x27; +
+      &#x27;選手IDからやり直す場合は「最初から」と送信してください。&#x27;
+    );
+
+    return;
+  }
+
+  linkPlayer_(userId, player.playerId);
+
+  const linked = {
+    playerId: player.playerId,
+    playerName: player.playerName,
+    category: player.category
+  };
+
+  saveSession_(userId, {
+    state: STATE.MENU,
+    player: linked
+  });
+
+  replyQuick_(
+    replyToken,
+    &#x27;ログインできました。\n&#x27; +
+    linked.playerName + &#x27;さん\n&#x27; +
+    &#x27;カテゴリー：&#x27; + linked.category +
+    &#x27;\n\n入力する項目を選んでください。&#x27;,
+    [
+      &#x27;シューティング&#x27;,
+      &#x27;身長・体重&#x27;,
+      &#x27;アジリティ&#x27;,
+      &#x27;ログアウト&#x27;
+    ]
+  );
+}
+
+/* =========================================================
+ * メニュー
+ * ======================================================= */
+
+function handleMenu_(replyToken, userId, text, session) {
+  const player = session.player || getLinkedPlayer_(userId);
+
+  if (
+    text === &#x27;シューティング&#x27; ||
+    text === &#x27;シューティング入力&#x27; ||
+    text === &#x27;シュート&#x27;
+  ) {
+    startShootingInput_(replyToken, userId, player);
+    return;
+  }
+
+  if (
+    text === &#x27;身長・体重&#x27; ||
+    text === &#x27;身長体重&#x27; ||
+    text === &#x27;身体測定&#x27;
+  ) {
+    startBodyInput_(replyToken, userId, player);
+    return;
+  }
+
+  if (
+    text === &#x27;アジリティ&#x27; ||
+    text === &#x27;アジリティ入力&#x27;
+  ) {
+    startAgilityInput_(replyToken, userId, player);
+    return;
+  }
+
+  replyMenu_(replyToken, player);
+}
+
+function replyMenu_(replyToken, player) {
+  if (!player) {
+    replyText_(
+      replyToken,
+      &#x27;ログイン情報を確認できませんでした。\n&#x27; +
+      &#x27;「最初から」と送信してください。&#x27;
+    );
+
+    return;
+  }
+
+  replyQuick_(
+    replyToken,
+    player.playerName + &#x27;さん\n入力する項目を選んでください。&#x27;,
+    [
+      &#x27;シューティング&#x27;,
+      &#x27;身長・体重&#x27;,
+      &#x27;アジリティ&#x27;,
+      &#x27;ログアウト&#x27;
+    ]
+  );
+}
+
+/* =========================================================
+ * アジリティ
+ * ======================================================= */
+
+function startAgilityInput_(replyToken, userId, player) {
+  if (!player) {
+    startLogin_(replyToken, userId);
+    return;
+  }
+
+  saveSession_(userId, {
+    state: STATE.AGILITY_EVENT,
+    player: player,
+    agilityRecord: {}
+  });
+
+  replyQuick_(
+    replyToken,
+    &#x27;測定種目を選択してください。&#x27;,
+    [
+      &#x27;20mシャトルラン&#x27;,
+      &#x27;反復横跳び&#x27;,
+      &#x27;L字コーン&#x27;,
+      &#x27;垂直跳び&#x27;,
+      &#x27;120回ハンドリング&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function handleAgilityEvent_(replyToken, userId, text, session) {
+  const eventConfig = AGILITY_EVENTS[text];
+
+  if (!eventConfig) {
+    replyQuick_(
+      replyToken,
+      &#x27;測定種目を選択してください。&#x27;,
+      [
+        &#x27;20mシャトルラン&#x27;,
+        &#x27;反復横跳び&#x27;,
+        &#x27;L字コーン&#x27;,
+        &#x27;垂直跳び&#x27;,
+        &#x27;120回ハンドリング&#x27;,
+        &#x27;キャンセル&#x27;
+      ]
+    );
+
+    return;
+  }
+
+  session.agilityRecord = {
+    eventName: text,
+    unit: eventConfig.unit
+  };
+
+  session.state = STATE.AGILITY_VALUE;
+
+  saveSession_(userId, session);
+
+  replyText_(
+    replyToken,
+    text + &#x27;の記録を入力してください。\n\n&#x27; +
+    &#x27;例：&#x27; + eventConfig.example + &#x27;\n&#x27; +
+    &#x27;単位：&#x27; + eventConfig.unit + &#x27;\n\n&#x27; +
+    &#x27;数字だけ入力してください。&#x27;
+  );
+}
+
+function handleAgilityValue_(replyToken, userId, text, session) {
+  const eventName = session.agilityRecord.eventName;
+  const eventConfig = AGILITY_EVENTS[eventName];
+  const value = parseDecimal_(text);
+
+  if (!eventConfig) {
+    startAgilityInput_(replyToken, userId, session.player);
+    return;
+  }
+
+  if (
+    value === null ||
+    value &lt; eventConfig.min ||
+    value &gt; eventConfig.max
+  ) {
+    replyText_(
+      replyToken,
+      eventName + &#x27;は&#x27; +
+      eventConfig.min + &#x27;〜&#x27; +
+      eventConfig.max + eventConfig.unit +
+      &#x27;の範囲で入力してください。\n&#x27; +
+      &#x27;例：&#x27; + eventConfig.example
+    );
+
+    return;
+  }
+
+  const normalizedValue = roundByDigits_(
+    value,
+    eventConfig.decimals
+  );
+
+  session.agilityRecord.value = normalizedValue;
+  session.state = STATE.AGILITY_CONFIRM;
+
+  saveSession_(userId, session);
+
+  const monthKey = getCurrentMonthKey_();
+
+  const message =
+    &#x27;入力内容を確認してください。\n\n&#x27; +
+    &#x27;選手：&#x27; + session.player.playerName + &#x27;\n&#x27; +
+    &#x27;カテゴリー：&#x27; + session.player.category + &#x27;\n&#x27; +
+    &#x27;記録月：&#x27; + monthKey + &#x27;\n&#x27; +
+    &#x27;種目：&#x27; + eventName + &#x27;\n&#x27; +
+    &#x27;記録：&#x27; + formatByDigits_(
+      normalizedValue,
+      eventConfig.decimals
+    ) + eventConfig.unit + &#x27;\n\n&#x27; +
+    &#x27;同じ月に記録がある場合は、今回の数値に更新されます。\n\n&#x27; +
+    &#x27;この内容で保存しますか？&#x27;;
+
+  replyQuick_(
+    replyToken,
+    message,
+    [
+      &#x27;保存&#x27;,
+      &#x27;やり直す&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function handleAgilityConfirm_(replyToken, userId, text, session) {
+  if (text === &#x27;保存&#x27;) {
+    const result = saveAgilityRecord_(
+      session.player,
+      session.agilityRecord
+    );
+
+    session.state = STATE.MENU;
+    session.agilityRecord = {};
+
+    saveSession_(userId, session);
+
+    replyQuick_(
+      replyToken,
+      &#x27;アジリティ記録を保存しました。\n\n&#x27; +
+      &#x27;記録月：&#x27; + result.monthKey + &#x27;\n&#x27; +
+      &#x27;種目：&#x27; + result.eventName + &#x27;\n&#x27; +
+      &#x27;記録：&#x27; + formatByDigits_(
+        result.value,
+        result.decimals
+      ) + result.unit,
+      [
+        &#x27;シューティング&#x27;,
+        &#x27;身長・体重&#x27;,
+        &#x27;アジリティ&#x27;,
+        &#x27;ログアウト&#x27;
+      ]
+    );
+
+    return;
+  }
+
+  if (text === &#x27;やり直す&#x27;) {
+    startAgilityInput_(replyToken, userId, session.player);
+    return;
+  }
+
+  replyQuick_(
+    replyToken,
+    &#x27;「保存」または「やり直す」を選んでください。&#x27;,
+    [
+      &#x27;保存&#x27;,
+      &#x27;やり直す&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function saveAgilityRecord_(player, agilityRecord) {
+  const sheet = ensureAgilitySheet_();
+  const eventConfig = AGILITY_EVENTS[agilityRecord.eventName];
+
+  if (!eventConfig) {
+    throw new Error(&#x27;アジリティ種目が正しくありません。&#x27;);
+  }
+
+  const monthKey = getCurrentMonthKey_();
+  const value = Number(agilityRecord.value);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const monthColumn = findOrCreateMonthlyColumn_(
+      sheet,
+      monthKey,
+      4
+    );
+
+    const row = findOrCreateAgilityRow_(
+      sheet,
+      player.playerName,
+      agilityRecord.eventName,
+      eventConfig.unit
+    );
+
+    sheet
+      .getRange(row, monthColumn)
+      .setValue(value);
+
+    SpreadsheetApp.flush();
+
+  } finally {
+    lock.releaseLock();
+  }
+
+  return {
+    monthKey: monthKey,
+    eventName: agilityRecord.eventName,
+    value: value,
+    unit: eventConfig.unit,
+    decimals: eventConfig.decimals
+  };
+}
+
+function ensureAgilitySheet_() {
+  const ss = getSpreadsheet_();
+  let sheet = ss.getSheetByName(CONFIG.AGILITY_SHEET);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.AGILITY_SHEET);
+  }
+
+  const headers = sheet
+    .getRange(1, 1, 1, 3)
+    .getDisplayValues()[0]
+    .map(normalizeText_);
+
+  if (
+    headers[0] !== &#x27;選手名&#x27; ||
+    headers[1] !== &#x27;種目&#x27; ||
+    headers[2] !== &#x27;単位&#x27;
+  ) {
+    sheet
+      .getRange(1, 1, 1, 3)
+      .setValues([
+        [
+          &#x27;選手名&#x27;,
+          &#x27;種目&#x27;,
+          &#x27;単位&#x27;
+        ]
+      ]);
+  }
+
+  return sheet;
+}
+
+function findOrCreateAgilityRow_(sheet, playerName, eventName, unit) {
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow &gt;= 2) {
+    const values = sheet
+      .getRange(2, 1, lastRow - 1, 3)
+      .getDisplayValues();
+
+    const targetPlayer = normalizePlayerName_(playerName);
+    const targetEvent = normalizeText_(eventName);
+
+    for (let i = 0; i &lt; values.length; i++) {
+      const rowPlayer = normalizePlayerName_(values[i][0]);
+      const rowEvent = normalizeText_(values[i][1]);
+
+      if (
+        rowPlayer === targetPlayer &amp;&amp;
+        rowEvent === targetEvent
+      ) {
+        return i + 2;
+      }
+    }
+  }
+
+  const newRow = Math.max(lastRow + 1, 2);
+
+  sheet
+    .getRange(newRow, 1, 1, 3)
+    .setValues([
+      [
+        playerName,
+        eventName,
+        unit
+      ]
+    ]);
+
+  return newRow;
+}
+
+/* =========================================================
+ * 身長・体重
+ * ======================================================= */
+
+function startBodyInput_(replyToken, userId, player) {
+  if (!player) {
+    startLogin_(replyToken, userId);
+    return;
+  }
+
+  saveSession_(userId, {
+    state: STATE.BODY_HEIGHT,
+    player: player,
+    bodyRecord: {}
+  });
+
+  replyText_(
+    replyToken,
+    &#x27;身長・体重を入力します。\n\n&#x27; +
+    &#x27;現在の身長をcmで入力してください。\n&#x27; +
+    &#x27;例：158.4\n\n&#x27; +
+    &#x27;数字だけ入力してください。&#x27;
+  );
+}
+
+function handleBodyHeight_(replyToken, userId, text, session) {
+  const height = parseDecimal_(text);
+
+  if (
+    height === null ||
+    height &lt; 100 ||
+    height &gt; 250
+  ) {
+    replyText_(
+      replyToken,
+      &#x27;身長は100〜250cmの範囲で入力してください。\n&#x27; +
+      &#x27;例：158.4&#x27;
+    );
+
+    return;
+  }
+
+  session.bodyRecord = session.bodyRecord || {};
+  session.bodyRecord.height = roundOneDecimal_(height);
+  session.state = STATE.BODY_WEIGHT;
+
+  saveSession_(userId, session);
+
+  replyText_(
+    replyToken,
+    &#x27;身長：&#x27; + formatNumber_(session.bodyRecord.height) + &#x27;cm\n\n&#x27; +
+    &#x27;現在の体重をkgで入力してください。\n&#x27; +
+    &#x27;例：47.2\n\n&#x27; +
+    &#x27;数字だけ入力してください。&#x27;
+  );
+}
+
+function handleBodyWeight_(replyToken, userId, text, session) {
+  const weight = parseDecimal_(text);
+
+  if (
+    weight === null ||
+    weight &lt; 20 ||
+    weight &gt; 200
+  ) {
+    replyText_(
+      replyToken,
+      &#x27;体重は20〜200kgの範囲で入力してください。\n&#x27; +
+      &#x27;例：47.2&#x27;
+    );
+
+    return;
+  }
+
+  session.bodyRecord = session.bodyRecord || {};
+  session.bodyRecord.weight = roundOneDecimal_(weight);
+  session.state = STATE.BODY_CONFIRM;
+
+  saveSession_(userId, session);
+
+  const monthKey = getCurrentMonthKey_();
+
+  const message =
+    &#x27;入力内容を確認してください。\n\n&#x27; +
+    &#x27;選手：&#x27; + session.player.playerName + &#x27;\n&#x27; +
+    &#x27;カテゴリー：&#x27; + session.player.category + &#x27;\n&#x27; +
+    &#x27;記録月：&#x27; + monthKey + &#x27;\n&#x27; +
+    &#x27;身長：&#x27; + formatNumber_(session.bodyRecord.height) + &#x27;cm\n&#x27; +
+    &#x27;体重：&#x27; + formatNumber_(session.bodyRecord.weight) + &#x27;kg\n\n&#x27; +
+    &#x27;同じ月に記録がある場合は、今回の数値に更新されます。\n\n&#x27; +
+    &#x27;この内容で保存しますか？&#x27;;
+
+  replyQuick_(
+    replyToken,
+    message,
+    [
+      &#x27;保存&#x27;,
+      &#x27;やり直す&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function handleBodyConfirm_(replyToken, userId, text, session) {
+  if (text === &#x27;保存&#x27;) {
+    const result = saveBodyRecord_(
+      session.player,
+      session.bodyRecord
+    );
+
+    session.state = STATE.MENU;
+    session.bodyRecord = {};
+
+    saveSession_(userId, session);
+
+    replyQuick_(
+      replyToken,
+      &#x27;身長・体重を保存しました。\n\n&#x27; +
+      &#x27;記録月：&#x27; + result.monthKey + &#x27;\n&#x27; +
+      &#x27;身長：&#x27; + formatNumber_(result.height) + &#x27;cm\n&#x27; +
+      &#x27;体重：&#x27; + formatNumber_(result.weight) + &#x27;kg&#x27;,
+      [
+        &#x27;シューティング&#x27;,
+        &#x27;身長・体重&#x27;,
+        &#x27;アジリティ&#x27;,
+        &#x27;ログアウト&#x27;
+      ]
+    );
+
+    return;
+  }
+
+  if (text === &#x27;やり直す&#x27;) {
+    startBodyInput_(replyToken, userId, session.player);
+    return;
+  }
+
+  replyQuick_(
+    replyToken,
+    &#x27;「保存」または「やり直す」を選んでください。&#x27;,
+    [
+      &#x27;保存&#x27;,
+      &#x27;やり直す&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function saveBodyRecord_(player, bodyRecord) {
+  const sheet = getSpreadsheet_()
+    .getSheetByName(CONFIG.BODY_SHEET);
+
+  if (!sheet) {
+    throw new Error(&#x27;身体測定 シートが見つかりません。&#x27;);
+  }
+
+  const height = Number(bodyRecord.height);
+  const weight = Number(bodyRecord.weight);
+  const monthKey = getCurrentMonthKey_();
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const monthColumn = findOrCreateMonthlyColumn_(
+      sheet,
+      monthKey,
+      3
+    );
+
+    const heightRow = findOrCreateBodyMetricRow_(
+      sheet,
+      player.playerName,
+      &#x27;身長&#x27;
+    );
+
+    const weightRow = findOrCreateBodyMetricRow_(
+      sheet,
+      player.playerName,
+      &#x27;体重&#x27;
+    );
+
+    sheet
+      .getRange(heightRow, monthColumn)
+      .setValue(height);
+
+    sheet
+      .getRange(weightRow, monthColumn)
+      .setValue(weight);
+
+    SpreadsheetApp.flush();
+
+  } finally {
+    lock.releaseLock();
+  }
+
+  return {
+    monthKey: monthKey,
+    height: height,
+    weight: weight
+  };
+}
+
+function findOrCreateBodyMetricRow_(sheet, playerName, metric) {
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow &gt;= 2) {
+    const values = sheet
+      .getRange(2, 1, lastRow - 1, 2)
+      .getDisplayValues();
+
+    const targetPlayer = normalizePlayerName_(playerName);
+    const targetMetric = normalizeText_(metric);
+
+    for (let i = 0; i &lt; values.length; i++) {
+      const rowPlayer = normalizePlayerName_(values[i][0]);
+      const rowMetric = normalizeText_(values[i][1]);
+
+      if (
+        rowPlayer === targetPlayer &amp;&amp;
+        rowMetric === targetMetric
+      ) {
+        return i + 2;
+      }
+    }
+  }
+
+  const newRow = Math.max(lastRow + 1, 2);
+
+  sheet
+    .getRange(newRow, 1, 1, 2)
+    .setValues([
+      [
+        playerName,
+        metric
+      ]
+    ]);
+
+  return newRow;
+}
+
+function findOrCreateMonthlyColumn_(sheet, monthKey, firstMonthColumn) {
+  const lastColumn = Math.max(
+    sheet.getLastColumn(),
+    firstMonthColumn - 1
+  );
+
+  const headers = sheet
+    .getRange(1, 1, 1, lastColumn)
+    .getDisplayValues()[0];
+
+  for (
+    let column = firstMonthColumn;
+    column &lt;= headers.length;
+    column++
+  ) {
+    if (
+      normalizeMonthKey_(headers[column - 1]) === monthKey
+    ) {
+      return column;
+    }
+  }
+
+  const newColumn = Math.max(
+    lastColumn + 1,
+    firstMonthColumn
+  );
+
+  sheet
+    .getRange(1, newColumn)
+    .setValue(monthKey);
+
+  return newColumn;
+}
+
+function getCurrentMonthKey_() {
+  return Utilities.formatDate(
+    new Date(),
+    CONFIG.TIMEZONE,
+    &#x27;yyyy/M&#x27;
+  );
+}
+
+function normalizeMonthKey_(value) {
+  let text = normalizeText_(value);
+
+  if (!text) {
+    return &#x27;&#x27;;
+  }
+
+  text = text
+    .replace(/[年月]/g, &#x27;/&#x27;)
+    .replace(/日/g, &#x27;&#x27;)
+    .replace(/-/g, &#x27;/&#x27;)
+    .replace(/\./g, &#x27;/&#x27;)
+    .replace(/\/+/g, &#x27;/&#x27;)
+    .replace(/^\/|\/$/g, &#x27;&#x27;);
+
+  const match = text.match(/^(\d{4})\/(\d{1,2})/);
+
+  if (!match) {
+    return text;
+  }
+
+  return Number(match[1]) + &#x27;/&#x27; + Number(match[2]);
+}
+
+/* =========================================================
+ * シューティング
+ * ======================================================= */
+
+function startShootingInput_(replyToken, userId, player) {
+  if (!player) {
+    startLogin_(replyToken, userId);
+    return;
+  }
+
+  saveSession_(userId, {
+    state: STATE.PRACTICE,
+    player: player,
+    record: {}
+  });
+
+  replyQuick_(
+    replyToken,
+    &#x27;練習区分を選んでください。&#x27;,
+    [
+      &#x27;通常練習&#x27;,
+      &#x27;自主練習&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function handlePractice_(replyToken, userId, text, session) {
+  if (
+    [
+      &#x27;通常練習&#x27;,
+      &#x27;自主練習&#x27;
+    ].indexOf(text) === -1
+  ) {
+    replyQuick_(
+      replyToken,
+      &#x27;練習区分を選んでください。&#x27;,
+      [
+        &#x27;通常練習&#x27;,
+        &#x27;自主練習&#x27;,
+        &#x27;キャンセル&#x27;
+      ]
+    );
+
+    return;
+  }
+
+  session.record.practice = text;
+  session.state = STATE.SHOT_TYPE;
+
+  saveSession_(userId, session);
+
+  replyQuick_(
+    replyToken,
+    &#x27;シュートの種目を選んでください。&#x27;,
+    [
+      &#x27;2P&#x27;,
+      &#x27;3P&#x27;,
+      &#x27;FT&#x27;,
+      &#x27;マイカン&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function handleShotType_(replyToken, userId, text, session) {
+  if (
+    [
+      &#x27;2P&#x27;,
+      &#x27;3P&#x27;,
+      &#x27;FT&#x27;,
+      &#x27;マイカン&#x27;
+    ].indexOf(text) === -1
+  ) {
+    replyQuick_(
+      replyToken,
+      &#x27;種目を選んでください。&#x27;,
+      [
+        &#x27;2P&#x27;,
+        &#x27;3P&#x27;,
+        &#x27;FT&#x27;,
+        &#x27;マイカン&#x27;,
+        &#x27;キャンセル&#x27;
+      ]
+    );
+
+    return;
+  }
+
+  session.record.shotType = text;
+
+  if (
+    text === &#x27;FT&#x27; ||
+    text === &#x27;マイカン&#x27;
+  ) {
+    session.record.position =
+      text === &#x27;FT&#x27;
+        ? &#x27;フリースロー&#x27;
+        : &#x27;マイカン&#x27;;
+
+    session.state = STATE.ATTEMPTS;
+
+    saveSession_(userId, session);
+
+    replyText_(
+      replyToken,
+      &#x27;何本打ちましたか？\n数字だけ入力してください。&#x27;
+    );
+
+    return;
+  }
+
+  session.state = STATE.POSITION;
+
+  saveSession_(userId, session);
+
+  replyQuick_(
+    replyToken,
+    &#x27;どこから打ちましたか？&#x27;,
+    getPositions_(text).concat([&#x27;キャンセル&#x27;])
+  );
+}
+
+function handlePosition_(replyToken, userId, text, session) {
+  const positions = getPositions_(session.record.shotType);
+
+  if (positions.indexOf(text) === -1) {
+    replyQuick_(
+      replyToken,
+      &#x27;ポジションを選んでください。&#x27;,
+      positions.concat([&#x27;キャンセル&#x27;])
+    );
+
+    return;
+  }
+
+  session.record.position = text;
+  session.state = STATE.ATTEMPTS;
+
+  saveSession_(userId, session);
+
+  replyText_(
+    replyToken,
+    &#x27;何本打ちましたか？\n数字だけ入力してください。&#x27;
+  );
+}
+
+function handleAttempts_(replyToken, userId, text, session) {
+  const attempts = parseInteger_(text);
+
+  if (
+    attempts === null ||
+    attempts &lt;= 0
+  ) {
+    replyText_(
+      replyToken,
+      &#x27;試投数は1以上の数字で入力してください。&#x27;
+    );
+
+    return;
+  }
+
+  session.record.attempts = attempts;
+  session.state = STATE.MADE;
+
+  saveSession_(userId, session);
+
+  replyText_(
+    replyToken,
+    &#x27;何本入りましたか？\n&#x27; +
+    &#x27;0〜&#x27; + attempts + &#x27;の数字で入力してください。&#x27;
+  );
+}
+
+function handleMade_(replyToken, userId, text, session) {
+  const made = parseInteger_(text);
+  const attempts = Number(session.record.attempts);
+
+  if (
+    made === null ||
+    made &lt; 0 ||
+    made &gt; attempts
+  ) {
+    replyText_(
+      replyToken,
+      &#x27;成功数は0〜&#x27; + attempts +
+      &#x27;の数字で入力してください。&#x27;
+    );
+
+    return;
+  }
+
+  session.record.made = made;
+  session.state = STATE.CONFIRM;
+
+  saveSession_(userId, session);
+
+  const rate = calculateRate_(made, attempts);
+
+  const message =
+    &#x27;入力内容を確認してください。\n\n&#x27; +
+    &#x27;選手：&#x27; + session.player.playerName + &#x27;\n&#x27; +
+    &#x27;カテゴリー：&#x27; + session.player.category + &#x27;\n&#x27; +
+    &#x27;練習：&#x27; + session.record.practice + &#x27;\n&#x27; +
+    &#x27;種目：&#x27; + session.record.shotType + &#x27;\n&#x27; +
+    &#x27;ポジション：&#x27; + session.record.position + &#x27;\n&#x27; +
+    &#x27;成功数：&#x27; + made + &#x27;本\n&#x27; +
+    &#x27;試投数：&#x27; + attempts + &#x27;本\n&#x27; +
+    &#x27;成功率：&#x27; + rate + &#x27;%\n\n&#x27; +
+    &#x27;この内容で保存しますか？&#x27;;
+
+  replyQuick_(
+    replyToken,
+    message,
+    [
+      &#x27;保存&#x27;,
+      &#x27;やり直す&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function handleConfirm_(replyToken, userId, text, session) {
+  if (text === &#x27;保存&#x27;) {
+    const result = saveShootingRecord_(
+      session.player,
+      session.record
+    );
+
+    session.state = STATE.MENU;
+    session.record = {};
+
+    saveSession_(userId, session);
+
+    replyQuick_(
+      replyToken,
+      &#x27;保存しました。\n\n&#x27; +
+      result.shotType + &#x27;／&#x27; + result.position + &#x27;\n&#x27; +
+      result.made + &#x27;本成功／&#x27; +
+      result.attempts + &#x27;本中\n&#x27; +
+      &#x27;成功率：&#x27; + result.rate + &#x27;%&#x27;,
+      [
+        &#x27;シューティング&#x27;,
+        &#x27;身長・体重&#x27;,
+        &#x27;アジリティ&#x27;,
+        &#x27;ログアウト&#x27;
+      ]
+    );
+
+    return;
+  }
+
+  if (text === &#x27;やり直す&#x27;) {
+    startShootingInput_(replyToken, userId, session.player);
+    return;
+  }
+
+  replyQuick_(
+    replyToken,
+    &#x27;「保存」または「やり直す」を選んでください。&#x27;,
+    [
+      &#x27;保存&#x27;,
+      &#x27;やり直す&#x27;,
+      &#x27;キャンセル&#x27;
+    ]
+  );
+}
+
+function saveShootingRecord_(player, record) {
+  const sheet = getSpreadsheet_()
+    .getSheetByName(CONFIG.RECORDS_SHEET);
+
+  if (!sheet) {
+    throw new Error(&#x27;shooting_records シートが見つかりません。&#x27;);
+  }
+
+  const now = new Date();
+
+  const sentAt = Utilities.formatDate(
+    now,
+    CONFIG.TIMEZONE,
+    &#x27;yyyy/MM/dd HH:mm:ss&#x27;
+  );
+
+  const recordDate = Utilities.formatDate(
+    now,
+    CONFIG.TIMEZONE,
+    &#x27;yyyy-MM-dd&#x27;
+  );
+
+  const createdAt = now.toISOString();
+
+  const rate = calculateRate_(
+    record.made,
+    record.attempts
+  );
+
+  const row = [
+    sentAt,
+    &#x27;create&#x27;,
+    Utilities.getUuid(),
+    recordDate,
+    player.playerName,
+    player.category,
+    record.practice,
+    record.shotType,
+    record.position,
+    Number(record.made),
+    Number(record.attempts),
+    rate,
+    createdAt,
+    &#x27;&#x27;,
+    &#x27;&#x27;
+  ];
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    sheet.appendRow(row);
+
+  } finally {
+    lock.releaseLock();
+  }
+
+  rebuildSummary_();
+
+  return {
+    shotType: record.shotType,
+    position: record.position,
+    made: Number(record.made),
+    attempts: Number(record.attempts),
+    rate: rate
+  };
+}
+
+/* =========================================================
+ * 選手情報
+ * ======================================================= */
+
+function findPlayerById_(playerId) {
+  const sheet = getSpreadsheet_()
+    .getSheetByName(CONFIG.PLAYERS_SHEET);
+
+  if (!sheet) {
+    throw new Error(&#x27;players シートが見つかりません。&#x27;);
+  }
+
+  const values = sheet.getDataRange().getDisplayValues();
+
+  if (values.length &lt; 2) {
+    return null;
+  }
+
+  const headers = values[0].map(normalizeText_);
+
+  const idColumn = headers.indexOf(&#x27;選手ID&#x27;);
+  const passwordColumn = headers.indexOf(&#x27;パスワード&#x27;);
+  const nameColumn = headers.indexOf(&#x27;選手名&#x27;);
+  const categoryColumn = headers.indexOf(&#x27;カテゴリー&#x27;);
+
+  if (
+    [
+      idColumn,
+      passwordColumn,
+      nameColumn,
+      categoryColumn
+    ].some(function(index) {
+      return index &lt; 0;
+    })
+  ) {
+    throw new Error(
+      &#x27;players シートの必要な列が見つかりません。&#x27;
+    );
+  }
+
+  const target = normalizeText_(playerId);
+
+  for (let i = 1; i &lt; values.length; i++) {
+    if (
+      normalizeText_(values[i][idColumn]) === target
+    ) {
+      return {
+        playerId: values[i][idColumn],
+        password: values[i][passwordColumn],
+        playerName: values[i][nameColumn],
+        category: values[i][categoryColumn]
+      };
+    }
+  }
+
+  return null;
+}
+
+function getPositions_(shotType) {
+  if (shotType === &#x27;2P&#x27;) {
+    return [
+      &#x27;右0度（コーナー）&#x27;,
+      &#x27;右45度（ウイング）&#x27;,
+      &#x27;90度（トップ）&#x27;,
+      &#x27;左45度（ウイング）&#x27;,
+      &#x27;左0度（コーナー）&#x27;,
+      &#x27;右エルボー&#x27;,
+      &#x27;左エルボー&#x27;
+    ];
+  }
+
+  if (shotType === &#x27;3P&#x27;) {
+    return [
+      &#x27;右0度（コーナー）&#x27;,
+      &#x27;右45度（ウイング）&#x27;,
+      &#x27;90度（トップ）&#x27;,
+      &#x27;左45度（ウイング）&#x27;,
+      &#x27;左0度（コーナー）&#x27;
+    ];
+  }
+
+  return [];
+}
+
+/* =========================================================
+ * Spreadsheet・LINE設定
+ * ======================================================= */
+
+function getSpreadsheet_() {
+  const id = PropertiesService
+    .getScriptProperties()
+    .getProperty(&#x27;SPREADSHEET_ID&#x27;);
+
+  if (!id) {
+    throw new Error(
+      &#x27;Script Properties にSPREADSHEET_IDを設定してください。&#x27;
+    );
+  }
+
+  return SpreadsheetApp.openById(id);
+}
+
+function getAccessToken_() {
+  const token = PropertiesService
+    .getScriptProperties()
+    .getProperty(&#x27;LINE_CHANNEL_ACCESS_TOKEN&#x27;);
+
+  if (!token) {
+    throw new Error(
+      &#x27;Script Properties にLINE_CHANNEL_ACCESS_TOKENを設定してください。&#x27;
+    );
+  }
+
+  return token;
+}
+
+/* =========================================================
+ * LINE返信
+ * ======================================================= */
+
+function replyText_(replyToken, text) {
+  replyMessages_(
+    replyToken,
+    [
+      {
+        type: &#x27;text&#x27;,
+        text: String(text).slice(0, 5000)
+      }
+    ]
+  );
+}
+
+function replyQuick_(replyToken, text, labels) {
+  const items = labels
+    .slice(0, 13)
+    .map(function(label) {
+      return {
+        type: &#x27;action&#x27;,
+        action: {
+          type: &#x27;message&#x27;,
+          label: String(label).slice(0, 20),
+          text: String(label)
+        }
+      };
+    });
+
+  replyMessages_(
+    replyToken,
+    [
+      {
+        type: &#x27;text&#x27;,
+        text: String(text).slice(0, 5000),
+        quickReply: {
+          items: items
+        }
+      }
+    ]
+  );
+}
+
+function replyMessages_(replyToken, messages) {
+  const response = UrlFetchApp.fetch(
+    &#x27;https://api.line.me/v2/bot/message/reply&#x27;,
+    {
+      method: &#x27;post&#x27;,
+      contentType: &#x27;application/json&#x27;,
+      headers: {
+        Authorization: &#x27;Bearer &#x27; + getAccessToken_()
+      },
+      payload: JSON.stringify({
+        replyToken: replyToken,
+        messages: messages
+      }),
+      muteHttpExceptions: true
+    }
+  );
+
+  const code = response.getResponseCode();
+
+  if (
+    code &lt; 200 ||
+    code &gt;= 300
+  ) {
+    throw new Error(
+      &#x27;LINE返信エラー &#x27; +
+      code + &#x27;: &#x27; +
+      response.getContentText()
+    );
+  }
+}
+
+/* =========================================================
+ * LINEと選手の紐付け
+ * ======================================================= */
+
+function linkPlayer_(lineUserId, playerId) {
+  const properties = PropertiesService.getScriptProperties();
+  const links = getLinks_();
+
+  links[lineUserId] = playerId;
+
+  properties.setProperty(
+    &#x27;LINE_PLAYER_LINKS&#x27;,
+    JSON.stringify(links)
+  );
+}
+
+function unlinkPlayer_(lineUserId) {
+  const properties = PropertiesService.getScriptProperties();
+  const links = getLinks_();
+
+  delete links[lineUserId];
+
+  properties.setProperty(
+    &#x27;LINE_PLAYER_LINKS&#x27;,
+    JSON.stringify(links)
+  );
+}
+
+function getLinkedPlayer_(lineUserId) {
+  const playerId = getLinks_()[lineUserId];
+
+  if (!playerId) {
+    return null;
+  }
+
+  const player = findPlayerById_(playerId);
+
+  return player
+    ? {
+        playerId: player.playerId,
+        playerName: player.playerName,
+        category: player.category
+      }
+    : null;
+}
+
+function getLinks_() {
+  const raw = PropertiesService
+    .getScriptProperties()
+    .getProperty(&#x27;LINE_PLAYER_LINKS&#x27;);
+
+  if (!raw) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(raw);
+
+  } catch (error) {
+    return {};
+  }
+}
+
+/* =========================================================
+ * セッション
+ * ======================================================= */
+
+function saveSession_(userId, session) {
+  CacheService
+    .getScriptCache()
+    .put(
+      &#x27;session_&#x27; + userId,
+      JSON.stringify(session),
+      CONFIG.SESSION_SECONDS
+    );
+}
+
+function getSession_(userId) {
+  const raw = CacheService
+    .getScriptCache()
+    .get(&#x27;session_&#x27; + userId);
+
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw);
+
+  } catch (error) {
+    return null;
+  }
+}
+
+function clearSession_(userId) {
+  CacheService
+    .getScriptCache()
+    .remove(&#x27;session_&#x27; + userId);
+}
+
+/* =========================================================
+ * 共通処理
+ * ======================================================= */
+
+function calculateRate_(made, attempts) {
+  return Number(attempts) &gt; 0
+    ? Math.round(
+        (
+          Number(made) /
+          Number(attempts)
+        ) * 100
+      )
+    : 0;
+}
+
+function parseInteger_(value) {
+  const text = convertFullWidthNumber_(value)
+    .replace(/本/g, &#x27;&#x27;)
+    .trim();
+
+  return /^\d+$/.test(text)
+    ? Number(text)
+    : null;
+}
+
+function parseDecimal_(value) {
+  const text = convertFullWidthNumber_(value)
+    .replace(/cm/gi, &#x27;&#x27;)
+    .replace(/kg/gi, &#x27;&#x27;)
+    .replace(/秒/g, &#x27;&#x27;)
+    .replace(/回/g, &#x27;&#x27;)
+    .replace(/センチ/g, &#x27;&#x27;)
+    .replace(/キロ/g, &#x27;&#x27;)
+    .replace(/，/g, &#x27;.&#x27;)
+    .replace(/,/g, &#x27;.&#x27;)
+    .trim();
+
+  if (!/^\d+(\.\d+)?$/.test(text)) {
+    return null;
+  }
+
+  const number = Number(text);
+
+  return isFinite(number)
+    ? number
+    : null;
+}
+
+function convertFullWidthNumber_(value) {
+  return String(value == null ? &#x27;&#x27; : value)
+    .trim()
+    .replace(/[０-９]/g, function(character) {
+      return String.fromCharCode(
+        character.charCodeAt(0) - 0xFEE0
+      );
+    })
+    .replace(/．/g, &#x27;.&#x27;);
+}
+
+function roundOneDecimal_(value) {
+  return Math.round(Number(value) * 10) / 10;
+}
+
+function roundByDigits_(value, digits) {
+  const factor = Math.pow(10, Number(digits) || 0);
+  return Math.round(Number(value) * factor) / factor;
+}
+
+function formatNumber_(value) {
+  const number = Number(value);
+
+  if (!isFinite(number)) {
+    return &#x27;&#x27;;
+  }
+
+  return number % 1 === 0
+    ? String(number)
+    : number.toFixed(1);
+}
+
+function formatByDigits_(value, digits) {
+  const number = Number(value);
+
+  if (!isFinite(number)) {
+    return &#x27;&#x27;;
+  }
+
+  if (!digits) {
+    return String(Math.round(number));
+  }
+
+  return number
+    .toFixed(digits)
+    .replace(/0+$/, &#x27;&#x27;)
+    .replace(/\.$/, &#x27;&#x27;);
+}
+
+function normalizeText_(value) {
+  return String(value == null ? &#x27;&#x27; : value).trim();
+}
+
+function normalizePlayerName_(value) {
+  return normalizeText_(value)
+    .replace(/[\s　]+/g, &#x27;&#x27;);
+}
+
+function validateHeaders_(sheet, requiredHeaders) {
+  const headers = sheet
+    .getRange(
+      1,
+      1,
+      1,
+      Math.max(
+        sheet.getLastColumn(),
+        requiredHeaders.length
+      )
+    )
+    .getDisplayValues()[0]
+    .map(normalizeText_);
+
+  const missing = requiredHeaders.filter(function(header) {
+    return headers.indexOf(header) === -1;
+  });
+
+  if (missing.length) {
+    throw new Error(
+      sheet.getName() +
+      &#x27; シートに必要な列がありません：&#x27; +
+      missing.join(&#x27;, &#x27;)
+    );
+  }
+}
+
+function textResponse_(text) {
+  return ContentService
+    .createTextOutput(text)
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+/* =========================================================
+ * summary再集計
+ * ======================================================= */
+
+function rebuildSummary_() {
+  const ss = getSpreadsheet_();
+
+  const recordsSheet = ss.getSheetByName(
+    CONFIG.RECORDS_SHEET
+  );
+
+  const summarySheet = ss.getSheetByName(
+    CONFIG.SUMMARY_SHEET
+  );
+
+  if (!recordsSheet) {
+    throw new Error(
+      &#x27;shooting_records シートが見つかりません。&#x27;
+    );
+  }
+
+  if (!summarySheet) {
+    throw new Error(
+      &#x27;summary シートが見つかりません。&#x27;
+    );
+  }
+
+  const values = recordsSheet
+    .getDataRange()
+    .getDisplayValues();
+
+  const summaryLastRow = summarySheet.getLastRow();
+
+  if (values.length &lt;= 1) {
+    if (summaryLastRow &gt; 1) {
+      summarySheet
+        .getRange(
+          2,
+          1,
+          summaryLastRow - 1,
+          7
+        )
+        .clearContent();
+    }
+
+    return;
+  }
+
+  const headers = values[0].map(normalizeText_);
+
+  const columns = {
+    syncType: headers.indexOf(&#x27;同期種別&#x27;),
+    recordId: headers.indexOf(&#x27;記録ID&#x27;),
+    playerName: headers.indexOf(&#x27;選手名&#x27;),
+    category: headers.indexOf(&#x27;カテゴリー&#x27;),
+    shotType: headers.indexOf(&#x27;種目&#x27;),
+    position: headers.indexOf(&#x27;ポジション&#x27;),
+    made: headers.indexOf(&#x27;成功数&#x27;),
+    attempts: headers.indexOf(&#x27;試投数&#x27;),
+    deletedAt: headers.indexOf(&#x27;削除日時&#x27;)
+  };
+
+  Object.keys(columns).forEach(function(key) {
+    if (columns[key] &lt; 0) {
+      throw new Error(
+        &#x27;shooting_records に必要な列がありません：&#x27; +
+        key
+      );
+    }
+  });
+
+  const latestByRecordId = {};
+
+  for (let i = 1; i &lt; values.length; i++) {
+    const row = values[i];
+    const recordId = normalizeText_(
+      row[columns.recordId]
+    );
+
+    if (!recordId) {
+      continue;
+    }
+
+    latestByRecordId[recordId] = row;
+  }
+
+  const totals = {};
+
+  Object.keys(latestByRecordId).forEach(function(recordId) {
+    const row = latestByRecordId[recordId];
+
+    const syncType = normalizeText_(
+      row[columns.syncType]
+    ).toLowerCase();
+
+    const deletedAt = normalizeText_(
+      row[columns.deletedAt]
+    );
+
+    if (
+      syncType === &#x27;delete&#x27; ||
+      deletedAt
+    ) {
+      return;
+    }
+
+    const playerName = normalizeText_(
+      row[columns.playerName]
+    );
+
+    const category = normalizeText_(
+      row[columns.category]
+    );
+
+    const shotType = normalizeText_(
+      row[columns.shotType]
+    );
+
+    const position = normalizeText_(
+      row[columns.position]
+    );
+
+    if (
+      !playerName ||
+      !shotType ||
+      !position
+    ) {
+      return;
+    }
+
+    const made = Number(
+      String(row[columns.made]).replace(/,/g, &#x27;&#x27;)
+    ) || 0;
+
+    const attempts = Number(
+      String(row[columns.attempts]).replace(/,/g, &#x27;&#x27;)
+    ) || 0;
+
+    const key = [
+      playerName,
+      category,
+      shotType,
+      position
+    ].join(&#x27;|||&#x27;);
+
+    if (!totals[key]) {
+      totals[key] = {
+        playerName: playerName,
+        category: category,
+        shotType: shotType,
+        position: position,
+        made: 0,
+        attempts: 0
+      };
+    }
+
+    totals[key].made += made;
+    totals[key].attempts += attempts;
+  });
+
+  const output = Object
+    .keys(totals)
+    .map(function(key) {
+      const item = totals[key];
+
+      const rate = item.attempts &gt; 0
+        ? Math.round(
+            (
+              item.made /
+              item.attempts
+            ) * 100
+          )
+        : 0;
+
+      return [
+        item.playerName,
+        item.category,
+        item.shotType,
+        item.position,
+        item.made,
+        item.attempts,
+        rate
+      ];
+    });
+
+  output.sort(function(a, b) {
+    return (
+      String(a[1]).localeCompare(String(b[1]), &#x27;ja&#x27;) ||
+      String(a[0]).localeCompare(String(b[0]), &#x27;ja&#x27;) ||
+      String(a[2]).localeCompare(String(b[2]), &#x27;ja&#x27;) ||
+      String(a[3]).localeCompare(String(b[3]), &#x27;ja&#x27;)
+    );
+  });
+
+  if (summaryLastRow &gt; 1) {
+    summarySheet
+      .getRange(
+        2,
+        1,
+        summaryLastRow - 1,
+        7
+      )
+      .clearContent();
+  }
+
+  if (output.length &gt; 0) {
+    summarySheet
+      .getRange(
+        2,
+        1,
+        output.length,
+        7
+      )
+      .setValues(output);
+  }
+}
+/**
+ * ============================================================
+ * アジリティ／アジリティ測定 安全統合
+ * ============================================================
+ *
+ * 【目的】
+ * 「アジリティ測定」のデータを「アジリティ」へ安全に統合します。
+ *
+ * 【安全仕様】
+ * 1. 元シートは削除しません。
+ * 2. 統合前に両方のバックアップシートを自動作成します。
+ * 3. 統合先に既存値がある場合は上書きしません。
+ * 4. 値が異なる場合は「アジリティ統合ログ」へ記録します。
+ * 5. 同じ選手名＋種目を1行として月別に統合します。
+ *
+ * 【実行方法】
+ * Apps Scriptへこのコードを追加して保存し、
+ * safeMergeAgilitySheets を1回だけ実行してください。
+ */
+
+function safeMergeAgilitySheets() {
+  const CONFIG = {
+    TARGET_SHEET: &#x27;アジリティ&#x27;,
+    SOURCE_SHEET: &#x27;アジリティ測定&#x27;,
+    LOG_SHEET: &#x27;アジリティ統合ログ&#x27;,
+    TIMEZONE: &#x27;Asia/Tokyo&#x27;,
+    FIRST_MONTH_COLUMN: 4
+  };
+
+  const ss = getSpreadsheetForAgilityMerge_();
+  const target = ss.getSheetByName(CONFIG.TARGET_SHEET);
+  const source = ss.getSheetByName(CONFIG.SOURCE_SHEET);
+
+  if (!target) {
+    throw new Error(&#x27;統合先「アジリティ」シートが見つかりません。&#x27;);
+  }
+
+  if (!source) {
+    throw new Error(&#x27;統合元「アジリティ測定」シートが見つかりません。&#x27;);
+  }
+
+  validateAgilityWideSheet_(target, CONFIG.TARGET_SHEET);
+  validateAgilityWideSheet_(source, CONFIG.SOURCE_SHEET);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const timestamp = Utilities.formatDate(
+      new Date(),
+      CONFIG.TIMEZONE,
+      &#x27;yyyyMMdd_HHmmss&#x27;
+    );
+
+    const backupTargetName = createSheetBackup_(
+      ss,
+      target,
+      &#x27;BK_アジリティ_&#x27; + timestamp
+    );
+
+    const backupSourceName = createSheetBackup_(
+      ss,
+      source,
+      &#x27;BK_アジリティ測定_&#x27; + timestamp
+    );
+
+    const logSheet = prepareAgilityMergeLog_(ss, CONFIG.LOG_SHEET);
+
+    const sourceData = source.getDataRange().getDisplayValues();
+    const sourceHeaders = sourceData[0];
+
+    const monthMap = {};
+
+    for (
+      let col = CONFIG.FIRST_MONTH_COLUMN;
+      col &lt;= sourceHeaders.length;
+      col++
+    ) {
+      const monthKey = normalizeAgilityMonthKey_(
+        sourceHeaders[col - 1]
+      );
+
+      if (!monthKey) {
+        continue;
+      }
+
+      monthMap[col] = findOrCreateAgilityMonthColumn_(
+        target,
+        monthKey,
+        CONFIG.FIRST_MONTH_COLUMN
+      );
+    }
+
+    const targetRowMap = buildAgilityTargetRowMap_(target);
+
+    let copiedCount = 0;
+    let skippedBlankCount = 0;
+    let sameValueCount = 0;
+    let conflictCount = 0;
+    let createdRowCount = 0;
+
+    const logRows = [];
+
+    for (let row = 2; row &lt;= sourceData.length; row++) {
+      const playerName = normalizeAgilityText_(sourceData[row - 1][0]);
+      const eventName = normalizeAgilityText_(sourceData[row - 1][1]);
+      const unit = normalizeAgilityText_(sourceData[row - 1][2]);
+
+      if (!playerName || !eventName) {
+        continue;
+      }
+
+      const key = makeAgilityRowKey_(playerName, eventName);
+
+      let targetRow = targetRowMap[key];
+
+      if (!targetRow) {
+        targetRow = Math.max(target.getLastRow() + 1, 2);
+
+        target.getRange(targetRow, 1, 1, 3).setValues([
+          [
+            playerName,
+            eventName,
+            unit
+          ]
+        ]);
+
+        targetRowMap[key] = targetRow;
+        createdRowCount++;
+      } else {
+        const existingUnit = normalizeAgilityText_(
+          target.getRange(targetRow, 3).getDisplayValue()
+        );
+
+        if (!existingUnit &amp;&amp; unit) {
+          target.getRange(targetRow, 3).setValue(unit);
+        } else if (
+          existingUnit &amp;&amp;
+          unit &amp;&amp;
+          existingUnit !== unit
+        ) {
+          conflictCount++;
+
+          logRows.push([
+            new Date(),
+            playerName,
+            eventName,
+            &#x27;&#x27;,
+            &#x27;単位不一致&#x27;,
+            existingUnit,
+            unit,
+            &#x27;統合先を保持&#x27;
+          ]);
+        }
+      }
+
+      Object.keys(monthMap).forEach(function(sourceColumnText) {
+        const sourceColumn = Number(sourceColumnText);
+        const targetColumn = monthMap[sourceColumn];
+        const sourceValue = normalizeAgilityText_(
+          sourceData[row - 1][sourceColumn - 1]
+        );
+
+        if (!sourceValue) {
+          skippedBlankCount++;
+          return;
+        }
+
+        const targetCell = target.getRange(targetRow, targetColumn);
+        const targetValue = normalizeAgilityText_(
+          targetCell.getDisplayValue()
+        );
+
+        const monthKey = normalizeAgilityMonthKey_(
+          target.getRange(1, targetColumn).getDisplayValue()
+        );
+
+        if (!targetValue) {
+          targetCell.setValue(parseAgilityCellValue_(sourceValue));
+          copiedCount++;
+
+          logRows.push([
+            new Date(),
+            playerName,
+            eventName,
+            monthKey,
+            &#x27;コピー&#x27;,
+            &#x27;&#x27;,
+            sourceValue,
+            &#x27;統合先へ追加&#x27;
+          ]);
+
+          return;
+        }
+
+        if (
+          normalizeComparableAgilityValue_(targetValue) ===
+          normalizeComparableAgilityValue_(sourceValue)
+        ) {
+          sameValueCount++;
+          return;
+        }
+
+        conflictCount++;
+
+        logRows.push([
+          new Date(),
+          playerName,
+          eventName,
+          monthKey,
+          &#x27;値の競合&#x27;,
+          targetValue,
+          sourceValue,
+          &#x27;統合先を保持&#x27;
+        ]);
+      });
+    }
+
+    if (logRows.length &gt; 0) {
+      const startRow = Math.max(logSheet.getLastRow() + 1, 2);
+
+      logSheet
+        .getRange(startRow, 1, logRows.length, logRows[0].length)
+        .setValues(logRows);
+    }
+
+    SpreadsheetApp.flush();
+
+    const result = {
+      status: &#x27;完了&#x27;,
+      targetSheet: CONFIG.TARGET_SHEET,
+      sourceSheet: CONFIG.SOURCE_SHEET,
+      backupTarget: backupTargetName,
+      backupSource: backupSourceName,
+      createdRows: createdRowCount,
+      copiedValues: copiedCount,
+      sameValues: sameValueCount,
+      conflicts: conflictCount,
+      skippedBlankCells: skippedBlankCount,
+      sourceDeleted: false
+    };
+
+    Logger.log(JSON.stringify(result, null, 2));
+
+    SpreadsheetApp.getUi().alert(
+      &#x27;安全統合が完了しました。\n\n&#x27; +
+      &#x27;新規行：&#x27; + createdRowCount + &#x27;\n&#x27; +
+      &#x27;コピーした値：&#x27; + copiedCount + &#x27;\n&#x27; +
+      &#x27;同じ値：&#x27; + sameValueCount + &#x27;\n&#x27; +
+      &#x27;競合：&#x27; + conflictCount + &#x27;\n\n&#x27; +
+      &#x27;競合内容は「&#x27; + CONFIG.LOG_SHEET + &#x27;」で確認できます。\n&#x27; +
+      &#x27;「&#x27; + CONFIG.SOURCE_SHEET + &#x27;」は削除していません。&#x27;
+    );
+
+    return result;
+
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 統合結果を確認後にだけ実行してください。
+ * 「アジリティ測定」シートを削除せず、非表示にします。
+ */
+function hideLegacyAgilitySheetAfterCheck() {
+  const ss = getSpreadsheetForAgilityMerge_();
+  const source = ss.getSheetByName(&#x27;アジリティ測定&#x27;);
+
+  if (!source) {
+    throw new Error(&#x27;「アジリティ測定」シートが見つかりません。&#x27;);
+  }
+
+  source.hideSheet();
+
+  SpreadsheetApp.getUi().alert(
+    &#x27;「アジリティ測定」シートを非表示にしました。\n&#x27; +
+    &#x27;削除はしていません。&#x27;
+  );
+}
+
+/**
+ * 非表示にした「アジリティ測定」を再表示します。
+ */
+function showLegacyAgilitySheet() {
+  const ss = getSpreadsheetForAgilityMerge_();
+  const source = ss.getSheetByName(&#x27;アジリティ測定&#x27;);
+
+  if (!source) {
+    throw new Error(&#x27;「アジリティ測定」シートが見つかりません。&#x27;);
+  }
+
+  source.showSheet();
+}
+
+/**
+ * 対象スプレッドシート取得
+ * 既存コードに getSpreadsheet_() がある場合はそれを利用します。
+ */
+function getSpreadsheetForAgilityMerge_() {
+  if (typeof getSpreadsheet_ === &#x27;function&#x27;) {
+    return getSpreadsheet_();
+  }
+
+  const id = PropertiesService
+    .getScriptProperties()
+    .getProperty(&#x27;SPREADSHEET_ID&#x27;);
+
+  if (!id) {
+    throw new Error(
+      &#x27;Script Properties に SPREADSHEET_ID を設定してください。&#x27;
+    );
+  }
+
+  return SpreadsheetApp.openById(id);
+}
+
+function validateAgilityWideSheet_(sheet, sheetName) {
+  const lastColumn = Math.max(sheet.getLastColumn(), 3);
+
+  const headers = sheet
+    .getRange(1, 1, 1, lastColumn)
+    .getDisplayValues()[0]
+    .map(normalizeAgilityText_);
+
+  if (
+    headers[0] !== &#x27;選手名&#x27; ||
+    headers[1] !== &#x27;種目&#x27;
+  ) {
+    throw new Error(
+      &#x27;「&#x27; + sheetName + &#x27;」の形式を確認してください。\n&#x27; +
+      &#x27;A1=選手名、B1=種目、C1=単位、D列以降=月別記録が必要です。&#x27;
+    );
+  }
+
+  if (!headers[2]) {
+    sheet.getRange(1, 3).setValue(&#x27;単位&#x27;);
+  }
+}
+
+function createSheetBackup_(ss, sourceSheet, requestedName) {
+  const safeName = makeUniqueSheetName_(ss, requestedName);
+  const backup = sourceSheet.copyTo(ss);
+
+  backup.setName(safeName);
+  backup.hideSheet();
+
+  return safeName;
+}
+
+function makeUniqueSheetName_(ss, requestedName) {
+  let name = requestedName.slice(0, 95);
+  let index = 1;
+
+  while (ss.getSheetByName(name)) {
+    const suffix = &#x27;_&#x27; + index;
+    name = requestedName
+      .slice(0, 95 - suffix.length) + suffix;
+    index++;
+  }
+
+  return name;
+}
+
+function prepareAgilityMergeLog_(ss, sheetName) {
+  let sheet = ss.getSheetByName(sheetName);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  const headers = [
+    &#x27;処理日時&#x27;,
+    &#x27;選手名&#x27;,
+    &#x27;種目&#x27;,
+    &#x27;月&#x27;,
+    &#x27;処理区分&#x27;,
+    &#x27;統合先の値&#x27;,
+    &#x27;統合元の値&#x27;,
+    &#x27;結果&#x27;
+  ];
+
+  sheet
+    .getRange(1, 1, 1, headers.length)
+    .setValues([headers]);
+
+  return sheet;
+}
+
+function buildAgilityTargetRowMap_(sheet) {
+  const map = {};
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow &lt; 2) {
+    return map;
+  }
+
+  const values = sheet
+    .getRange(2, 1, lastRow - 1, 2)
+    .getDisplayValues();
+
+  values.forEach(function(row, index) {
+    const playerName = normalizeAgilityText_(row[0]);
+    const eventName = normalizeAgilityText_(row[1]);
+
+    if (!playerName || !eventName) {
+      return;
+    }
+
+    const key = makeAgilityRowKey_(playerName, eventName);
+
+    if (!map[key]) {
+      map[key] = index + 2;
+    }
+  });
+
+  return map;
+}
+
+function findOrCreateAgilityMonthColumn_(
+  sheet,
+  monthKey,
+  firstMonthColumn
+) {
+  const lastColumn = Math.max(
+    sheet.getLastColumn(),
+    firstMonthColumn - 1
+  );
+
+  const headers = sheet
+    .getRange(1, 1, 1, lastColumn)
+    .getDisplayValues()[0];
+
+  for (
+    let column = firstMonthColumn;
+    column &lt;= headers.length;
+    column++
+  ) {
+    if (
+      normalizeAgilityMonthKey_(headers[column - 1]) === monthKey
+    ) {
+      return column;
+    }
+  }
+
+  const newColumn = Math.max(
+    lastColumn + 1,
+    firstMonthColumn
+  );
+
+  sheet.getRange(1, newColumn).setValue(monthKey);
+
+  return newColumn;
+}
+
+function normalizeAgilityMonthKey_(value) {
+  let text = normalizeAgilityText_(value);
+
+  if (!text) {
+    return &#x27;&#x27;;
+  }
+
+  text = text
+    .replace(/[年月]/g, &#x27;/&#x27;)
+    .replace(/日/g, &#x27;&#x27;)
+    .replace(/-/g, &#x27;/&#x27;)
+    .replace(/\./g, &#x27;/&#x27;)
+    .replace(/\/+/g, &#x27;/&#x27;)
+    .replace(/^\/|\/$/g, &#x27;&#x27;);
+
+  const match = text.match(/^(\d{4})\/(\d{1,2})/);
+
+  if (!match) {
+    return &#x27;&#x27;;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+
+  if (
+    year &lt; 2000 ||
+    year &gt; 2100 ||
+    month &lt; 1 ||
+    month &gt; 12
+  ) {
+    return &#x27;&#x27;;
+  }
+
+  return year + &#x27;/&#x27; + month;
+}
+
+function normalizeAgilityText_(value) {
+  return String(value == null ? &#x27;&#x27; : value).trim();
+}
+
+function normalizeAgilityPlayerName_(value) {
+  return normalizeAgilityText_(value)
+    .replace(/[\s　]+/g, &#x27;&#x27;);
+}
+
+function makeAgilityRowKey_(playerName, eventName) {
+  return [
+    normalizeAgilityPlayerName_(playerName),
+    normalizeAgilityText_(eventName)
+  ].join(&#x27;|||&#x27;);
+}
+
+function normalizeComparableAgilityValue_(value) {
+  const text = normalizeAgilityText_(value)
+    .replace(/,/g, &#x27;&#x27;)
+    .replace(/回/g, &#x27;&#x27;)
+    .replace(/秒/g, &#x27;&#x27;)
+    .replace(/cm/gi, &#x27;&#x27;)
+    .trim();
+
+  const number = Number(text);
+
+  if (text !== &#x27;&#x27; &amp;&amp; isFinite(number)) {
+    return String(number);
+  }
+
+  return text;
+}
+
+function parseAgilityCellValue_(value) {
+  const text = normalizeAgilityText_(value)
+    .replace(/,/g, &#x27;&#x27;)
+    .replace(/回/g, &#x27;&#x27;)
+    .replace(/秒/g, &#x27;&#x27;)
+    .replace(/cm/gi, &#x27;&#x27;)
+    .trim();
+
+  const number = Number(text);
+
+  return text !== &#x27;&#x27; &amp;&amp; isFinite(number)
+    ? number
+    : value;
+}
+
+/* =========================================================
+ * 成長記録 API（LIFF / JSONP）
+ * ======================================================= */
+
+function handleGrowthApi_(action, params) {
+  try {
+    if (action === &#x27;growthSession&#x27;) {
+      return growthSessionApi_(params);
+    }
+
+    if (action === &#x27;growthBundle&#x27;) {
+      return growthBundleApi_(params);
+    }
+
+    if (action === &#x27;growthPing&#x27;) {
+      return {
+        status: &#x27;ok&#x27;,
+        app: CONFIG.APP_NAME,
+        time: new Date().toISOString()
+      };
+    }
+
+    return {
+      status: &#x27;error&#x27;,
+      message: &#x27;未対応の処理です。&#x27;
+    };
+
+  } catch (error) {
+    console.error(error.stack || error);
+
+    return {
+      status: &#x27;error&#x27;,
+      message: error.message || String(error)
+    };
+  }
+}
+
+function growthSessionApi_(params) {
+  const lineUserId = verifyGrowthIdToken_(
+    normalizeText_(params.idToken)
+  );
+
+  const player = getLinkedPlayer_(lineUserId);
+
+  if (!player) {
+    return {
+      status: &#x27;unlinked&#x27;,
+      message:
+        &#x27;このLINEアカウントは選手と連携されていません。&#x27; +
+        &#x27;LINEトークで「最初から」と送信し、選手IDとパスワードでログインしてください。&#x27;
+    };
+  }
+
+  return {
+    status: &#x27;ok&#x27;,
+    player: {
+      playerId: player.playerId,
+      name: player.playerName,
+      category: player.category
+    }
+  };
+}
+
+function growthBundleApi_(params) {
+  const lineUserId = verifyGrowthIdToken_(
+    normalizeText_(params.idToken)
+  );
+
+  const player = getLinkedPlayer_(lineUserId);
+
+  if (!player) {
+    return {
+      status: &#x27;unlinked&#x27;,
+      message:
+        &#x27;このLINEアカウントは選手と連携されていません。&#x27;
+    };
+  }
+
+  return {
+    status: &#x27;ok&#x27;,
+    player: {
+      playerId: player.playerId,
+      name: player.playerName,
+      category: player.category
+    },
+    shooting: buildGrowthShootingV3_(player.playerName),
+    body: buildGrowthBodyV3_(player.playerName),
+    agility: buildGrowthAgilityV3_(player.playerName)
+  };
+}
+
+function verifyGrowthIdToken_(idToken) {
+  if (!idToken) {
+    throw new Error(
+      &#x27;LINE認証情報を取得できませんでした。&#x27;
+    );
+  }
+
+  const channelId = PropertiesService
+    .getScriptProperties()
+    .getProperty(&#x27;LINE_LOGIN_CHANNEL_ID&#x27;);
+
+  if (!channelId) {
+    throw new Error(
+      &#x27;LINE_LOGIN_CHANNEL_ID が設定されていません。&#x27;
+    );
+  }
+
+  const response = UrlFetchApp.fetch(
+    &#x27;https://api.line.me/oauth2/v2.1/verify&#x27;,
+    {
+      method: &#x27;post&#x27;,
+      contentType: &#x27;application/x-www-form-urlencoded&#x27;,
+      payload: {
+        id_token: idToken,
+        client_id: channelId
+      },
+      muteHttpExceptions: true
+    }
+  );
+
+  if (response.getResponseCode() !== 200) {
+    console.error(
+      &#x27;LINE verify failed: &#x27; +
+      response.getResponseCode() + &#x27; &#x27; +
+      response.getContentText()
+    );
+
+    throw new Error(
+      &#x27;LINE認証に失敗しました。LINEを閉じて開き直してください。&#x27;
+    );
+  }
+
+  const payload = JSON.parse(
+    response.getContentText()
+  );
+
+  if (!payload.sub) {
+    throw new Error(
+      &#x27;LINEユーザーIDを確認できませんでした。&#x27;
+    );
+  }
+
+  return payload.sub;
+}
+
+function buildGrowthShootingV3_(playerName) {
+  const sheet = getSpreadsheet_()
+    .getSheetByName(CONFIG.RECORDS_SHEET);
+
+  if (!sheet || sheet.getLastRow() &lt; 2) {
+    return emptyGrowthShootingV3_();
+  }
+
+  const values = sheet
+    .getDataRange()
+    .getDisplayValues();
+
+  const headers = values[0].map(normalizeText_);
+
+  const columns = {
+    recordId: headers.indexOf(&#x27;記録ID&#x27;),
+    syncType: headers.indexOf(&#x27;同期種別&#x27;),
+    date: headers.indexOf(&#x27;日付&#x27;),
+    playerName: headers.indexOf(&#x27;選手名&#x27;),
+    shotType: headers.indexOf(&#x27;種目&#x27;),
+    position: headers.indexOf(&#x27;ポジション&#x27;),
+    made: headers.indexOf(&#x27;成功数&#x27;),
+    attempts: headers.indexOf(&#x27;試投数&#x27;),
+    deletedAt: headers.indexOf(&#x27;削除日時&#x27;)
+  };
+
+  Object.keys(columns).forEach(function(key) {
+    if (columns[key] &lt; 0) {
+      throw new Error(
+        &#x27;shooting_records に必要な列がありません：&#x27; +
+        key
+      );
+    }
+  });
+
+  /*
+   * 同じ記録IDに更新行・削除行がある場合は、
+   * シート内で最後に現れる行を現在の状態として採用します。
+   */
+  const latestById = {};
+
+  for (let i = 1; i &lt; values.length; i++) {
+    const row = values[i];
+    const recordId = normalizeText_(
+      row[columns.recordId]
+    );
+
+    if (recordId) {
+      latestById[recordId] = row;
+    }
+  }
+
+  const target = normalizePlayerName_(playerName);
+
+  let totalMade = 0;
+  let totalAttempts = 0;
+  let latestDate = &#x27;&#x27;;
+
+  const byTypeMap = {};
+  const byPositionMap = {};
+
+  /*
+   * 月別比較画面で使用する集計です。
+   *
+   * monthly:
+   *   月ごとの成功数・試投数・成功率
+   *
+   * monthlyByType:
+   *   月ごとの2P・3P・FT・マイカン等
+   *
+   * monthlyByPosition:
+   *   月ごとのポジション別シュートチャート
+   */
+  const monthlyMap = {};
+  const monthlyByTypeMap = {};
+  const monthlyByPositionMap = {};
+
+  Object.keys(latestById).forEach(function(id) {
+    const row = latestById[id];
+
+    if (
+      normalizePlayerName_(
+        row[columns.playerName]
+      ) !== target
+    ) {
+      return;
+    }
+
+    if (
+      normalizeText_(
+        row[columns.syncType]
+      ).toLowerCase() === &#x27;delete&#x27; ||
+      normalizeText_(row[columns.deletedAt])
+    ) {
+      return;
+    }
+
+    const made = Number(
+      String(row[columns.made]).replace(/,/g, &#x27;&#x27;)
+    ) || 0;
+
+    const attempts = Number(
+      String(row[columns.attempts]).replace(/,/g, &#x27;&#x27;)
+    ) || 0;
+
+    const shotType =
+      normalizeText_(row[columns.shotType]) ||
+      &#x27;その他&#x27;;
+
+    const position =
+      normalizeText_(row[columns.position]) ||
+      &#x27;未設定&#x27;;
+
+    const date =
+      normalizeText_(row[columns.date]);
+
+    const month = date
+      ? normalizeGrowthShootingMonthV4_(date)
+      : &#x27;&#x27;;
+
+    totalMade += made;
+    totalAttempts += attempts;
+
+    if (date &amp;&amp; date &gt; latestDate) {
+      latestDate = date;
+    }
+
+    addGrowthShootingAggregateV4_(
+      byTypeMap,
+      shotType,
+      {
+        type: shotType
+      },
+      made,
+      attempts
+    );
+
+    const positionKey =
+      shotType + &#x27;|||&#x27; + position;
+
+    addGrowthShootingAggregateV4_(
+      byPositionMap,
+      positionKey,
+      {
+        type: shotType,
+        position: position
+      },
+      made,
+      attempts
+    );
+
+    if (!month) {
+      return;
+    }
+
+    addGrowthShootingAggregateV4_(
+      monthlyMap,
+      month,
+      {
+        month: month
+      },
+      made,
+      attempts
+    );
+
+    if (!monthlyByTypeMap[month]) {
+      monthlyByTypeMap[month] = {};
+    }
+
+    addGrowthShootingAggregateV4_(
+      monthlyByTypeMap[month],
+      shotType,
+      {
+        type: shotType
+      },
+      made,
+      attempts
+    );
+
+    if (!monthlyByPositionMap[month]) {
+      monthlyByPositionMap[month] = {};
+    }
+
+    addGrowthShootingAggregateV4_(
+      monthlyByPositionMap[month],
+      positionKey,
+      {
+        type: shotType,
+        position: position
+      },
+      made,
+      attempts
+    );
+  });
+
+  const byType = finalizeGrowthShootingMapV4_(
+    byTypeMap
+  ).sort(function(a, b) {
+    return a.type.localeCompare(b.type, &#x27;ja&#x27;);
+  });
+
+  const byPosition = finalizeGrowthShootingMapV4_(
+    byPositionMap
+  ).sort(function(a, b) {
+    return (
+      a.type.localeCompare(b.type, &#x27;ja&#x27;) ||
+      b.attempts - a.attempts ||
+      b.rate - a.rate
+    );
+  });
+
+  const monthly = finalizeGrowthShootingMapV4_(
+    monthlyMap
+  ).sort(function(a, b) {
+    return String(a.month).localeCompare(
+      String(b.month)
+    );
+  });
+
+  const monthlyByType = {};
+
+  Object.keys(monthlyByTypeMap).forEach(function(month) {
+    monthlyByType[month] =
+      finalizeGrowthShootingMapV4_(
+        monthlyByTypeMap[month]
+      ).sort(function(a, b) {
+        return a.type.localeCompare(b.type, &#x27;ja&#x27;);
+      });
+  });
+
+  const monthlyByPosition = {};
+
+  Object.keys(monthlyByPositionMap).forEach(function(month) {
+    monthlyByPosition[month] =
+      finalizeGrowthShootingMapV4_(
+        monthlyByPositionMap[month]
+      ).sort(function(a, b) {
+        return (
+          a.type.localeCompare(b.type, &#x27;ja&#x27;) ||
+          b.attempts - a.attempts ||
+          b.rate - a.rate
+        );
+      });
+  });
+
+  return {
+    total: {
+      made: totalMade,
+      attempts: totalAttempts,
+      rate: growthRateV3_(
+        totalMade,
+        totalAttempts
+      ),
+      latestDate: latestDate
+    },
+    byType: byType,
+    byPosition: byPosition,
+    monthly: monthly,
+    monthlyByType: monthlyByType,
+    monthlyByPosition: monthlyByPosition
+  };
+}
+
+/*
+ * シューティング集計用の共通加算処理です。
+ * 同じ種目・月・ポジションを一つにまとめます。
+ */
+function addGrowthShootingAggregateV4_(
+  map,
+  key,
+  base,
+  made,
+  attempts
+) {
+  if (!map[key]) {
+    map[key] = Object.assign(
+      {},
+      base,
+      {
+        made: 0,
+        attempts: 0
+      }
+    );
+  }
+
+  map[key].made += Number(made) || 0;
+  map[key].attempts += Number(attempts) || 0;
+}
+
+/*
+ * 集計途中のMapを、成長記録画面へ返す配列へ変換します。
+ */
+function finalizeGrowthShootingMapV4_(map) {
+  return Object.keys(map).map(function(key) {
+    const item = map[key];
+
+    return Object.assign(
+      {},
+      item,
+      {
+        made: Number(item.made) || 0,
+        attempts: Number(item.attempts) || 0,
+        rate: growthRateV3_(
+          item.made,
+          item.attempts
+        )
+      }
+    );
+  });
+}
+
+/*
+ * shooting_records の日付を YYYY/M 形式へ統一します。
+ * 例：
+ * 2026-07-24 → 2026/7
+ * 2026/07/24 → 2026/7
+ */
+function normalizeGrowthShootingMonthV4_(value) {
+  const text = normalizeText_(value)
+    .replace(/\./g, &#x27;/&#x27;)
+    .replace(/-/g, &#x27;/&#x27;);
+
+  const match = text.match(
+    /^(\d{4})\/(\d{1,2})/
+  );
+
+  if (!match) {
+    return &#x27;&#x27;;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+
+  if (
+    year &lt; 2000 ||
+    year &gt; 2100 ||
+    month &lt; 1 ||
+    month &gt; 12
+  ) {
+    return &#x27;&#x27;;
+  }
+
+  return year + &#x27;/&#x27; + month;
+}
+
+function emptyGrowthShootingV3_() {
+  return {
+    total: {
+      made: 0,
+      attempts: 0,
+      rate: 0,
+      latestDate: &#x27;&#x27;
+    },
+    byType: [],
+    byPosition: [],
+    monthly: [],
+    monthlyByType: {},
+    monthlyByPosition: {}
+  };
+}
+
+function buildGrowthBodyV3_(playerName) {
+  const sheet = getSpreadsheet_()
+    .getSheetByName(CONFIG.BODY_SHEET);
+
+  if (!sheet || sheet.getLastRow() &lt; 2) {
+    return {
+      records: [],
+      latest: null,
+      first: null,
+      change: {
+        height: null,
+        weight: null
+      }
+    };
+  }
+
+  const values = sheet.getDataRange()
+    .getDisplayValues();
+
+  const headers = values[0];
+  const target = normalizePlayerName_(playerName);
+
+  let heightRow = null;
+  let weightRow = null;
+
+  for (let i = 1; i &lt; values.length; i++) {
+    const row = values[i];
+
+    if (
+      normalizePlayerName_(row[0]) !== target
+    ) {
+      continue;
+    }
+
+    const metric = normalizeText_(row[1]);
+
+    if (metric === &#x27;身長&#x27;) {
+      heightRow = row;
+    }
+
+    if (metric === &#x27;体重&#x27;) {
+      weightRow = row;
+    }
+  }
+
+  const records = [];
+
+  for (
+    let column = 2;
+    column &lt; headers.length;
+    column++
+  ) {
+    const month = normalizeMonthKey_(
+      headers[column]
+    );
+
+    if (!month) {
+      continue;
+    }
+
+    const height = heightRow
+      ? growthNumberV3_(heightRow[column])
+      : null;
+
+    const weight = weightRow
+      ? growthNumberV3_(weightRow[column])
+      : null;
+
+    if (height !== null || weight !== null) {
+      records.push({
+        month: month,
+        height: height,
+        weight: weight
+      });
+    }
+  }
+
+  records.sort(function(a, b) {
+    return growthMonthKeyV3_(a.month) -
+      growthMonthKeyV3_(b.month);
+  });
+
+  const first = records.length
+    ? records[0]
+    : null;
+
+  const latest = records.length
+    ? records[records.length - 1]
+    : null;
+
+  return {
+    records: records,
+    first: first,
+    latest: latest,
+    change: {
+      height:
+        first &amp;&amp;
+        latest &amp;&amp;
+        first.height !== null &amp;&amp;
+        latest.height !== null
+          ? roundOneDecimal_(
+              latest.height - first.height
+            )
+          : null,
+      weight:
+        first &amp;&amp;
+        latest &amp;&amp;
+        first.weight !== null &amp;&amp;
+        latest.weight !== null
+          ? roundOneDecimal_(
+              latest.weight - first.weight
+            )
+          : null
+    }
+  };
+}
+
+function buildGrowthAgilityV3_(playerName) {
+  const sheet = getSpreadsheet_()
+    .getSheetByName(CONFIG.AGILITY_SHEET);
+
+  if (!sheet || sheet.getLastRow() &lt; 2) {
+    return {
+      latest: [],
+      records: []
+    };
+  }
+
+  const values = sheet.getDataRange()
+    .getDisplayValues();
+
+  const headers = values[0];
+  const target = normalizePlayerName_(playerName);
+  const records = [];
+
+  for (let i = 1; i &lt; values.length; i++) {
+    const row = values[i];
+
+    if (
+      normalizePlayerName_(row[0]) !== target
+    ) {
+      continue;
+    }
+
+    const eventName = normalizeText_(row[1]);
+    const unit = normalizeText_(row[2]);
+
+    for (
+      let column = 3;
+      column &lt; headers.length;
+      column++
+    ) {
+      const month = normalizeMonthKey_(
+        headers[column]
+      );
+
+      const value = growthNumberV3_(
+        row[column]
+      );
+
+      if (month &amp;&amp; value !== null) {
+        records.push({
+          month: month,
+          type: eventName,
+          value: value,
+          unit: unit
+        });
+      }
+    }
+  }
+
+  records.sort(function(a, b) {
+    return (
+      growthMonthKeyV3_(a.month) -
+      growthMonthKeyV3_(b.month) ||
+      a.type.localeCompare(b.type, &#x27;ja&#x27;)
+    );
+  });
+
+  const latestMap = {};
+
+  records.forEach(function(record) {
+    latestMap[record.type] = record;
+  });
+
+  return {
+    latest: Object.keys(latestMap)
+      .map(function(key) {
+        return latestMap[key];
+      })
+      .sort(function(a, b) {
+        return a.type.localeCompare(b.type, &#x27;ja&#x27;);
+      }),
+    records: records
+  };
+}
+
+function growthRateV3_(made, attempts) {
+  return Number(attempts) &gt; 0
+    ? Math.round(
+        Number(made) /
+        Number(attempts) *
+        100
+      )
+    : 0;
+}
+
+function growthNumberV3_(value) {
+  const text = String(
+    value == null ? &#x27;&#x27; : value
+  )
+    .replace(/,/g, &#x27;&#x27;)
+    .trim();
+
+  if (!text) {
+    return null;
+  }
+
+  const number = Number(text);
+
+  return isFinite(number)
+    ? number
+    : null;
+}
+
+function growthMonthKeyV3_(month) {
+  const match = String(month).match(
+    /^(\d{4})\/(\d{1,2})$/
+  );
+
+  return match
+    ? Number(match[1]) * 100 +
+      Number(match[2])
+    : 0;
+}
+
+</pre>
+</body></html>
