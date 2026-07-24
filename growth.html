@@ -102,6 +102,23 @@ button,select{font:inherit}
 .compare-table th{color:var(--muted)}
 canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid var(--line);border-radius:14px}
 .refresh{width:100%;border:1px solid var(--line);background:#1b4f80;color:#fff;border-radius:14px;padding:14px;font-weight:900}
+.agility-select-wrap{
+  background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:12px
+}
+.agility-select-wrap label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.agility-select-wrap select{
+  width:100%;background:#0b1a2d;color:var(--text);border:1px solid var(--line);
+  border-radius:12px;padding:12px;font-weight:800
+}
+.toggle-list{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  border-radius:14px;padding:13px;font-weight:900
+}
+.toggle-icon{font-size:22px;line-height:1}
+.collapsible{display:none;margin-top:10px}
+.collapsible.open{display:block}
+
 .empty{color:var(--muted);text-align:center;padding:16px}
 @media(max-width:650px){
   .grid,.grid.three,.compare-grid{grid-template-columns:1fr}
@@ -201,16 +218,33 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
 
     <section id="agilityView" class="view">
       <div class="card">
-        <h2 class="title">アジリティ成長比較</h2>
-        <div class="section-lead">初回・前回・最新・ベストを種目ごとに表示します。</div>
-        <div id="agilityComparison" class="list"></div>
+        <h2 class="title">アジリティ</h2>
+        <div class="section-lead">確認したい種目を選択してください。</div>
+
+        <div class="agility-select-wrap">
+          <label>種目
+            <select id="agilityTypeSelect" onchange="renderSelectedAgility()"></select>
+          </label>
+        </div>
+
+        <div id="selectedAgilityComparison"></div>
       </div>
+
       <div class="card">
-        <h2 class="title">種目別記録推移</h2>
-        <div class="section-lead">5種目をそれぞれ別のグラフで確認できます。</div>
-        <div id="agilityCharts" class="list"></div>
+        <h2 class="title">記録推移グラフ</h2>
+        <div id="selectedAgilityChartTitle" class="section-lead"></div>
+        <canvas id="selectedAgilityChart" width="660" height="300"></canvas>
       </div>
-      <div class="card"><h2 class="title">記録一覧</h2><div id="agilityList" class="list"></div></div>
+
+      <div class="card">
+        <button id="agilityListToggle" class="toggle-list" type="button" onclick="toggleAgilityList()">
+          <span id="agilityListToggleIcon" class="toggle-icon">＋</span>
+          <span id="agilityListToggleText">記録一覧を表示</span>
+        </button>
+        <div id="agilityListPanel" class="collapsible">
+          <div id="selectedAgilityList" class="list"></div>
+        </div>
+      </div>
     </section>
 
     <button class="refresh" onclick="loadBundle()">最新情報に更新</button>
@@ -263,8 +297,9 @@ function renderAll(){
   setupMonthSelectors();
   renderShootingComparison();
   renderBody();
-  renderAgility();
-  setTimeout(function(){drawShooting();drawBody();drawAgilityCharts()},50);
+  setupAgilitySelector();
+  renderSelectedAgility();
+  setTimeout(function(){drawShooting();drawBody();renderSelectedAgility()},50);
 }
 
 function monthRows(){
@@ -433,74 +468,6 @@ function statHtml(label,value,unit,sub){
     '</b><div class="small">'+esc(sub||"")+'</div></div>';
 }
 
-function renderAgility(){
-  const rows=((bundle.agility||{}).records||[]).slice(),groups={};
-  rows.forEach(function(r){
-    const type=normalizeAgilityType(r.type);
-    const normalized=Object.assign({},r,{type:type});
-    if(!groups[type])groups[type]=[];
-    groups[type].push(normalized);
-  });
-  const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング"];
-  const types=Object.keys(groups).sort(function(a,b){
-    const ai=order.indexOf(a),bi=order.indexOf(b);if(ai<0&&bi<0)return a.localeCompare(b,"ja");if(ai<0)return 1;if(bi<0)return-1;return ai-bi;
-  });
-  document.getElementById("agilityComparison").innerHTML=types.length?types.map(function(t){return buildAgilityCard(t,groups[t])}).join(""):'<div class="empty">まだ記録がありません。</div>';
-  document.getElementById("agilityList").innerHTML=rows.length?rows.slice().reverse().map(function(r){
-    return '<div class="item"><b>'+esc(r.type)+'</b>　<span class="value">'+fmt(r.value)+esc(r.unit||"")+
-      '</span><br><span class="muted">'+esc(r.month)+'</span></div>';
-  }).join(""):'<div class="empty">まだ記録がありません。</div>';
-}
-function buildAgilityCard(type,records){
-  const valid=records.filter(function(r){return Number.isFinite(Number(r.value))});
-  if(!valid.length)return'<div class="item"><b>'+esc(type)+'</b><div class="empty">記録がありません。</div></div>';
-  const first=valid[0],latest=valid[valid.length-1],previous=valid.length>=2?valid[valid.length-2]:null,lower=isLowerBetter(type);
-  const best=valid.reduce(function(a,b){return lower?Number(b.value)<Number(a.value)?b:a:Number(b.value)>Number(a.value)?b:a});
-  const unit=latest.unit||first.unit||"";
-  return '<div class="item"><b>'+esc(type)+'</b><div class="grid three" style="margin-top:10px">'+
-    statHtml("初回",first.value,unit,first.month)+statHtml("前回",previous?previous.value:null,unit,previous?previous.month:"比較なし")+
-    statHtml("最新",latest.value,unit,latest.month)+'</div><div class="grid" style="margin-top:10px">'+
-    comparisonBox("初回比",Number(latest.value)-Number(first.value),unit,!lower)+
-    comparisonBox("前回比",previous?Number(latest.value)-Number(previous.value):null,unit,!lower)+'</div>'+
-    '<div class="summary-box" style="margin-top:10px"><div class="kpi-label">ベスト記録</div><div class="kpi-value">'+
-    fmt(best.value)+esc(best.unit||unit)+'</div><div class="kpi-note">'+esc(best.month||"")+'</div></div></div>';
-}
-function comparisonBox(label,diff,unit,higherIsBetter){
-  if(diff==null||!Number.isFinite(Number(diff)))return'<div class="summary-box"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-value">－</div><div class="kpi-note">比較できる記録がありません</div></div>';
-  const n=Number(diff),improved=n===0?null:(higherIsBetter?n>0:n<0),cls=improved===true?"status-good":improved===false?"status-warn":"";
-  return '<div class="summary-box"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-value '+cls+'">'+
-    (n>0?"+":"")+fmt(n)+esc(unit)+'</div><div class="kpi-note '+cls+'">'+(improved===true?"改善":improved===false?"変化あり":"変化なし")+'</div></div>';
-}
-function isLowerBetter(type){return type==="L字コーン"||type==="120回ハンドリング"}
-
-function showView(name){
-  document.querySelectorAll(".view").forEach(function(v){v.classList.remove("active")});
-  document.querySelectorAll(".tabs button").forEach(function(b){b.classList.remove("active")});
-  document.getElementById(name+"View").classList.add("active");
-  document.getElementById("tab"+name.charAt(0).toUpperCase()+name.slice(1)).classList.add("active");
-  setTimeout(function(){
-    if(name==="shooting")drawShooting();
-    if(name==="body")drawBody();
-    if(name==="agility")drawAgilityCharts();
-  },30);
-}
-function drawShooting(){
-  drawLines("shootChart",[{label:"成功率",points:monthRows().map(function(r){return{label:r.month,value:Number(r.rate)}}),min:0,max:100}]);
-}
-function drawBody(){
-  const rows=((bundle.body||{}).records||[]);
-  const heightPoints=rows.filter(function(r){
-    return r.height!==null&&r.height!==undefined&&Number.isFinite(Number(r.height));
-  }).map(function(r){return{label:r.month,value:Number(r.height)}});
-
-  const weightPoints=rows.filter(function(r){
-    return r.weight!==null&&r.weight!==undefined&&Number.isFinite(Number(r.weight));
-  }).map(function(r){return{label:r.month,value:Number(r.weight)}});
-
-  drawLines("heightChart",[{label:"身長 cm",points:heightPoints}]);
-  drawLines("weightChart",[{label:"体重 kg",points:weightPoints}]);
-}
-
 function normalizeAgilityType(type){
   const value=String(type||"").normalize("NFKC").replace(/\s+/g,"");
   if(value.includes("シャトル"))return "20mシャトルラン";
@@ -517,50 +484,133 @@ function agilityTypeOrder(type){
   return index<0?999:index;
 }
 
-function drawAgilityCharts(){
-  const holder=document.getElementById("agilityCharts");
-  if(!holder)return;
-
+function getAgilityGroups(){
   const rows=((bundle.agility||{}).records||[]);
   const groups={};
 
   rows.forEach(function(r){
     const type=normalizeAgilityType(r.type);
+    const normalized=Object.assign({},r,{type:type});
     if(!groups[type])groups[type]=[];
-    groups[type].push({
-      label:r.month,
-      value:Number(r.value),
-      unit:r.unit||""
+    groups[type].push(normalized);
+  });
+
+  Object.keys(groups).forEach(function(type){
+    groups[type].sort(function(a,b){
+      return String(a.month).localeCompare(String(b.month));
     });
   });
 
+  return groups;
+}
+
+function setupAgilitySelector(){
+  const select=document.getElementById("agilityTypeSelect");
+  if(!select)return;
+
+  const groups=getAgilityGroups();
   const types=Object.keys(groups).sort(function(a,b){
     return agilityTypeOrder(a)-agilityTypeOrder(b)||a.localeCompare(b,"ja");
   });
 
+  const current=select.value;
+
   if(!types.length){
-    holder.innerHTML='<div class="empty">アジリティ記録がありません。</div>';
+    select.innerHTML='<option value="">記録なし</option>';
     return;
   }
 
-  holder.innerHTML=types.map(function(type,index){
-    const unit=(groups[type][0]&&groups[type][0].unit)||"";
-    return '<div class="item"><b>'+esc(type)+'</b>'+
-      '<div class="small" style="margin:3px 0 9px">'+esc(unit)+'</div>'+
-      '<canvas id="agilityChart_'+index+'" width="660" height="260"></canvas></div>';
+  select.innerHTML=types.map(function(type){
+    return '<option value="'+esc(type)+'">'+esc(type)+'</option>';
   }).join("");
 
-  types.forEach(function(type,index){
-    const points=groups[type].filter(function(p){
-      return Number.isFinite(p.value);
-    }).sort(function(a,b){
-      return String(a.label).localeCompare(String(b.label));
-    }).map(function(p){
-      return{label:p.label,value:p.value};
-    });
-    const unit=(groups[type][0]&&groups[type][0].unit)||"";
-    drawLines("agilityChart_"+index,[{label:type+(unit?" "+unit:""),points:points}]);
+  select.value=types.includes(current)?current:types[0];
+}
+
+function renderSelectedAgility(){
+  const select=document.getElementById("agilityTypeSelect");
+  const comparison=document.getElementById("selectedAgilityComparison");
+  const list=document.getElementById("selectedAgilityList");
+  const chartTitle=document.getElementById("selectedAgilityChartTitle");
+
+  if(!select||!comparison||!list||!chartTitle)return;
+
+  const groups=getAgilityGroups();
+  const type=select.value;
+  const records=groups[type]||[];
+
+  if(!type||!records.length){
+    comparison.innerHTML='<div class="empty">この種目の記録がありません。</div>';
+    list.innerHTML='<div class="empty">記録がありません。</div>';
+    chartTitle.textContent="";
+    drawLines("selectedAgilityChart",[]);
+    return;
+  }
+
+  comparison.innerHTML=buildAgilityCard(type,records);
+  list.innerHTML=records.slice().reverse().map(function(r){
+    return '<div class="item"><b>'+esc(r.month)+'</b><br>'+
+      '<span class="value">'+fmt(r.value)+esc(r.unit||"")+'</span></div>';
+  }).join("");
+
+  chartTitle.textContent=type+" の記録推移";
+
+  const unit=(records[0]&&records[0].unit)||"";
+  const points=records.filter(function(r){
+    return Number.isFinite(Number(r.value));
+  }).map(function(r){
+    return {label:r.month,value:Number(r.value)};
   });
+
+  drawLines("selectedAgilityChart",[
+    {label:type+(unit?" "+unit:""),points:points}
+  ]);
+}
+
+function buildAgilityCard(type,records){
+  const valid=records.filter(function(r){return Number.isFinite(Number(r.value))});
+  if(!valid.length){
+    return '<div class="item"><b>'+esc(type)+'</b><div class="empty">記録がありません。</div></div>';
+  }
+
+  const first=valid[0];
+  const latest=valid[valid.length-1];
+  const previous=valid.length>=2?valid[valid.length-2]:null;
+  const lower=isLowerBetter(type);
+  const best=valid.reduce(function(a,b){
+    return lower
+      ? Number(b.value)<Number(a.value)?b:a
+      : Number(b.value)>Number(a.value)?b:a;
+  });
+  const unit=latest.unit||first.unit||"";
+
+  return '<div class="item"><b>'+esc(type)+'</b>'+
+    '<div class="grid three" style="margin-top:10px">'+
+      statHtml("初回",first.value,unit,first.month)+
+      statHtml("前回",previous?previous.value:null,unit,previous?previous.month:"比較なし")+
+      statHtml("最新",latest.value,unit,latest.month)+
+    '</div>'+
+    '<div class="grid" style="margin-top:10px">'+
+      comparisonBox("初回比",Number(latest.value)-Number(first.value),unit,!lower)+
+      comparisonBox("前回比",previous?Number(latest.value)-Number(previous.value):null,unit,!lower)+
+    '</div>'+
+    '<div class="summary-box" style="margin-top:10px">'+
+      '<div class="kpi-label">ベスト記録</div>'+
+      '<div class="kpi-value">'+fmt(best.value)+esc(best.unit||unit)+'</div>'+
+      '<div class="kpi-note">'+esc(best.month||"")+'</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function toggleAgilityList(){
+  const panel=document.getElementById("agilityListPanel");
+  const icon=document.getElementById("agilityListToggleIcon");
+  const textEl=document.getElementById("agilityListToggleText");
+  if(!panel||!icon||!textEl)return;
+
+  const open=panel.classList.toggle("open");
+  icon.textContent=open?"－":"＋";
+  textEl.textContent=open?"記録一覧を閉じる":"記録一覧を表示";
 }
 
 function drawLines(canvasId,series){
