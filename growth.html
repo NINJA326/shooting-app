@@ -1,19 +1,785 @@
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>NINJA 成長記録</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script><style>
-:root{--bg:#07110c;--card:#102219;--card2:#142b20;--line:#244634;--green:#25d47a;--green2:#76f0aa;--text:#f6fff9;--muted:#a8c4b2;--red:#ff6b6b}*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#06100b,#0a1710);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}.wrap{max-width:620px;margin:auto;padding:18px 14px 40px}.card,.hero{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:14px}.login{margin-top:8vh}.brand{font-size:12px;letter-spacing:1.8px;color:var(--green2);font-weight:900}.title,.name{font-size:26px;font-weight:900;margin:7px 0 4px}.sub,.meta,.note,.small{color:var(--muted)}label{display:block;font-size:13px;font-weight:800;margin:14px 0 6px}input{width:100%;border:1px solid var(--line);background:#0b1a12;color:var(--text);border-radius:13px;padding:14px;font-size:16px}button{width:100%;border:0;border-radius:14px;padding:14px;font-size:15px;font-weight:900}.primary{background:var(--green);color:#052010;margin-top:16px}.secondary{background:#173424;color:var(--text);border:1px solid var(--line);margin-top:10px}.danger{background:#371b1b;color:#ffd6d6;border:1px solid #713232;margin-top:10px}.error{display:none;background:#3a1818;border:1px solid #7b3030;color:#ffd6d6;border-radius:14px;padding:12px;margin-top:12px}.loading{text-align:center;padding:45px;color:var(--muted)}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.tab{border:1px solid var(--line);background:#10271c;color:var(--muted);padding:11px 4px}.tab.active{background:var(--green);color:#052010}.panel{display:none}.panel.active{display:block}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.metric{background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:14px}.label{font-size:12px;color:var(--muted)}.value{font-size:24px;font-weight:900;margin-top:4px}.list{display:grid;gap:9px}.row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px}.row span{color:var(--green2);font-weight:900;text-align:right}.empty{text-align:center;color:var(--muted);padding:20px}canvas{max-height:250px}.small{text-align:center;font-size:11px;margin-top:10px}h2{font-size:17px;margin:0 0 12px}
-</style></head><body><div class="wrap">
-<section id="loginView" class="card login"><div class="brand">NINJA PLAYER DATA</div><div class="title">成長記録ログイン</div><div class="sub">初回のみ選手IDとパスワードを入力します。ログイン状態は30日間保持されます。</div><label>選手ID</label><input id="playerId" autocomplete="username"><label>パスワード</label><input id="password" type="password" autocomplete="current-password"><button id="loginBtn" class="primary">ログイン</button><div id="loginError" class="error"></div></section>
-<section id="loadingView" class="card loading" style="display:none">成長記録を読み込んでいます…</section>
-<main id="appView" style="display:none"><section class="hero"><div class="brand">NINJA PLAYER DATA</div><div id="playerName" class="name"></div><div id="playerMeta" class="meta"></div></section><div class="tabs"><button class="tab active" data-tab="shooting">シュート</button><button class="tab" data-tab="body">身体成長</button><button class="tab" data-tab="agility">アジリティ</button></div>
-<section id="shooting" class="panel active"><div class="card"><h2>シュート総合</h2><div class="metrics"><div class="metric"><div class="label">総成功数</div><div id="totalMade" class="value">-</div></div><div class="metric"><div class="label">総試投数</div><div id="totalAttempts" class="value">-</div></div><div class="metric"><div class="label">総合成功率</div><div id="totalRate" class="value">-</div></div><div class="metric"><div class="label">最新入力日</div><div id="shootLatest" class="value" style="font-size:16px">-</div></div></div></div><div class="card"><h2>種目別成功率</h2><div id="shotRates" class="list"></div></div><div class="card"><h2>月別シュート成功率</h2><canvas id="shootChart"></canvas></div></section>
-<section id="body" class="panel"><div class="card"><h2>最新の身体測定</h2><div class="metrics"><div class="metric"><div class="label">身長</div><div id="heightNow" class="value">-</div><div id="heightDiff" class="note"></div></div><div class="metric"><div class="label">体重</div><div id="weightNow" class="value">-</div><div id="weightDiff" class="note"></div></div></div></div><div class="card"><h2>身長の推移</h2><canvas id="heightChart"></canvas></div><div class="card"><h2>体重の推移</h2><canvas id="weightChart"></canvas></div></section>
-<section id="agility" class="panel"><div class="card"><h2>最新アジリティ記録</h2><div id="agilityList" class="list"></div></div></section><button id="refreshBtn" class="secondary">最新情報に更新</button><button id="logoutBtn" class="danger">ログアウト</button><div id="appError" class="error"></div><div class="small">本人の記録のみ表示します。</div></main></div>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<base target="_top">
+<title>NINJA 成長記録</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+:root{
+  --bg:#06100b;--panel:#102219;--panel2:#152d21;--line:#28513b;
+  --text:#f5fff8;--muted:#a9c5b3;--green:#27d77d;--green2:#75efaa;
+  --red:#ff7676;--yellow:#ffd45c;--blue:#69a7ff
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;
+  background:linear-gradient(180deg,#06100b,#0a1811);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif
+}
+button{font:inherit}
+.wrap{max-width:760px;margin:auto;padding:14px 14px calc(28px + env(safe-area-inset-bottom))}
+.header,.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:17px;
+  margin-bottom:14px
+}
+.header{background:linear-gradient(135deg,#153725,#0d2418)}
+.brand{font-size:12px;letter-spacing:1.8px;color:var(--green2);font-weight:900}
+.name{font-size:25px;font-weight:900;margin:7px 0 3px}
+.muted,.small{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+.loading{text-align:center;padding:54px 16px}
+.spinner{
+  width:38px;height:38px;border-radius:50%;
+  border:4px solid var(--line);border-top-color:var(--green);
+  margin:0 auto 14px;animation:spin .85s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.notice{
+  border-radius:15px;padding:14px;margin-bottom:14px;
+  background:#173425;color:#d7ffea;white-space:pre-wrap
+}
+.notice.error{background:#39191d;color:#ffd7dc;border:1px solid #78333a}
+.tabs{
+  position:sticky;top:0;z-index:20;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:7px;
+  margin:0 0 14px;padding:8px 0;
+  background:linear-gradient(180deg,rgba(6,16,11,.98),rgba(6,16,11,.88))
+}
+.tabs button{
+  min-height:48px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--muted);
+  border-radius:13px;padding:9px 4px;font-weight:900;font-size:13px
+}
+.tabs button.active{background:var(--green);border-color:var(--green);color:#052010}
+.view{display:none}.view.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.grid.three{grid-template-columns:repeat(3,1fr)}
+.stat,.item,.summary-box{
+  background:var(--panel2);border:1px solid var(--line);
+  border-radius:15px;padding:13px
+}
+.stat b{display:block;font-size:23px;margin-top:5px;word-break:break-word}
+.title{font-size:17px;font-weight:900;margin:0 0 12px}
+.section-lead{font-size:13px;color:var(--muted);margin:-4px 0 12px}
+.list{display:grid;gap:9px}
+.item{line-height:1.65}
+.value{color:var(--green2);font-weight:900}
+.kpi-label{font-size:12px;color:var(--muted)}
+.kpi-value{font-size:22px;font-weight:900;margin-top:4px}
+.kpi-note{font-size:12px;color:var(--muted);margin-top:4px}
+.status-good{color:var(--green2)}
+.status-warn{color:var(--yellow)}
+canvas{
+  display:block;width:100%;height:auto;background:#091710;
+  border:1px solid var(--line);border-radius:14px
+}
+.refresh{
+  width:100%;border:1px solid var(--line);background:#183a29;
+  color:var(--text);border-radius:14px;padding:14px;font-weight:900
+}
+.empty{color:var(--muted);text-align:center;padding:16px}
+.home-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.home-card{
+  border:1px solid var(--line);background:var(--panel2);
+  border-radius:16px;padding:14px;min-height:112px
+}
+.home-card .label{font-size:12px;color:var(--muted)}
+.home-card .main{font-size:22px;font-weight:900;margin-top:7px}
+.home-card .sub{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5}
+@media(max-width:600px){
+  .grid,.grid.three,.home-grid{grid-template-columns:1fr}
+  .tabs button{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="header">
+    <div class="brand">NINJA PLAYER DATA</div>
+    <div id="profile" class="hidden">
+      <div id="playerName" class="name"></div>
+      <div id="playerMeta" class="muted"></div>
+    </div>
+  </header>
+
+  <div id="loading" class="card loading">
+    <div class="spinner"></div>
+    <div id="loadingText">LINEを初期化しています…</div>
+  </div>
+
+  <div id="message" class="notice hidden"></div>
+
+  <main id="app" class="hidden">
+    <nav class="tabs" aria-label="成長記録メニュー">
+      <button id="tabHome" class="active" onclick="showView('home')">ホーム</button>
+      <button id="tabShooting" onclick="showView('shooting')">シュート</button>
+      <button id="tabBody" onclick="showView('body')">身体成長</button>
+      <button id="tabAgility" onclick="showView('agility')">アジリティ</button>
+    </nav>
+
+    <section id="homeView" class="view active">
+      <div class="card">
+        <h2 class="title">現在の成長記録</h2>
+        <div class="section-lead">LINEで入力した本人の記録だけを表示します。</div>
+        <div class="home-grid">
+          <div class="home-card">
+            <div class="label">シュート成功率</div>
+            <div id="homeShootRate" class="main">0%</div>
+            <div id="homeShootSub" class="sub">0本成功 / 0本中</div>
+          </div>
+          <div class="home-card">
+            <div class="label">最新の身体測定</div>
+            <div id="homeBodyMain" class="main">記録なし</div>
+            <div id="homeBodySub" class="sub"></div>
+          </div>
+          <div class="home-card">
+            <div class="label">アジリティ最新記録</div>
+            <div id="homeAgilityMain" class="main">記録なし</div>
+            <div id="homeAgilitySub" class="sub"></div>
+          </div>
+          <div class="home-card">
+            <div class="label">最新シュート入力日</div>
+            <div id="homeLatestDate" class="main">記録なし</div>
+            <div class="sub">最新情報は下の更新ボタンで再取得できます。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="title">成長のまとめ</h2>
+        <div id="growthSummary" class="list"></div>
+      </div>
+    </section>
+
+    <section id="shootingView" class="view">
+      <div class="card">
+        <h2 class="title">シュート総合</h2>
+        <div class="grid three">
+          <div class="stat"><span class="muted">成功数</span><b id="shootMade">0</b></div>
+          <div class="stat"><span class="muted">試投数</span><b id="shootAttempts">0</b></div>
+          <div class="stat"><span class="muted">成功率</span><b id="shootRate">0%</b></div>
+        </div>
+      </div>
+      <div class="card"><h2 class="title">月別成功率</h2><canvas id="shootChart" width="660" height="300"></canvas></div>
+      <div class="card"><h2 class="title">種目別</h2><div id="shootTypes" class="list"></div></div>
+      <div class="card"><h2 class="title">ポジション別</h2><div id="shootPositions" class="list"></div></div>
+    </section>
+
+    <section id="bodyView" class="view">
+      <div class="card">
+        <h2 class="title">最新の身体測定</h2>
+        <div class="grid three">
+          <div class="stat"><span class="muted">身長</span><b id="latestHeight">－</b><div id="heightChange" class="small"></div></div>
+          <div class="stat"><span class="muted">体重</span><b id="latestWeight">－</b><div id="weightChange" class="small"></div></div>
+          <div class="stat"><span class="muted">最新記録月</span><b id="latestBodyMonth" style="font-size:17px">－</b></div>
+        </div>
+      </div>
+      <div class="card"><h2 class="title">成長グラフ</h2><canvas id="bodyChart" width="660" height="320"></canvas></div>
+      <div class="card"><h2 class="title">記録一覧</h2><div id="bodyList" class="list"></div></div>
+    </section>
+
+    <section id="agilityView" class="view">
+      <div class="card"><h2 class="title">最新記録</h2><div id="agilityLatest" class="list"></div></div>
+      <div class="card"><h2 class="title">記録推移</h2><canvas id="agilityChart" width="660" height="340"></canvas></div>
+      <div class="card"><h2 class="title">記録一覧</h2><div id="agilityList" class="list"></div></div>
+    </section>
+
+    <button class="refresh" onclick="loadBundle()">最新情報に更新</button>
+  </main>
+</div>
+
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycbwQ-vrkGPdBZnhV2wjZI0aXxb3jAn6qH4_rS6TJ-85EwzIS5Y96-pR2t42kN-e0NhrQRw/exec',SESSION_KEY='ninja_growth_session_v1';let charts={};
-window.addEventListener('load',async()=>{bind();const s=getSession();if(s)await loadDashboard(s.token,true)});
-function bind(){loginBtn.onclick=login;password.onkeydown=e=>{if(e.key==='Enter')login()};refreshBtn.onclick=()=>{const s=getSession();if(s)loadDashboard(s.token,false)};logoutBtn.onclick=logout;document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active')})}
-async function login(){const playerId=document.getElementById('playerId').value.trim(),password=document.getElementById('password').value;if(!playerId||!password)return err('loginError','選手IDとパスワードを入力してください。');busy(true);hide();try{const r=await jsonp('growthLogin',{playerId,password});if(!r||r.status!=='ok')throw Error(r&&r.message||'ログインできませんでした。');localStorage.setItem(SESSION_KEY,JSON.stringify({token:r.token,expiresAt:r.expiresAt}));document.getElementById('password').value='';await loadDashboard(r.token,false)}catch(e){busy(false);err('loginError',e.message)}}
-async function loadDashboard(token,silent){view('loading');hide();try{const r=await jsonp('growthDashboard',{token});if(!r||r.status!=='ok'){if(r&&r.code==='SESSION_EXPIRED'){localStorage.removeItem(SESSION_KEY);view('login');if(!silent)err('loginError','ログイン期限が切れました。');return}throw Error(r&&r.message||'データ取得失敗')}render(r);view('app')}catch(e){if(silent){localStorage.removeItem(SESSION_KEY);view('login');err('loginError','自動ログインできませんでした。')}else{view('app');err('appError',e.message)}}finally{busy(false)}}
-function render(r){text('playerName',r.player.name);text('playerMeta',r.player.category+' / '+r.player.playerId);const s=r.shooting;text('totalMade',s.totalMade+'本');text('totalAttempts',s.totalAttempts+'本');text('totalRate',s.totalRate+'%');text('shootLatest',s.latestDate||'記録なし');shotRates.innerHTML=s.byType.length?'':'<div class="empty">記録がありません</div>';s.byType.forEach(x=>shotRates.insertAdjacentHTML('beforeend',`<div class="row"><strong>${esc(x.type)}</strong><span>${x.rate}%（${x.made}/${x.attempts}）</span></div>`));draw('shootChart',s.monthly.map(x=>x.month),s.monthly.map(x=>x.rate),'成功率（%）');const b=r.body;text('heightNow',b.latestHeight==null?'-':b.latestHeight+'cm');text('weightNow',b.latestWeight==null?'-':b.latestWeight+'kg');text('heightDiff',diff(b.heightChange,'cm'));text('weightDiff',diff(b.weightChange,'kg'));draw('heightChart',b.months,b.heights,'身長（cm）');draw('weightChart',b.months,b.weights,'体重（kg）');agilityList.innerHTML=r.agility.length?'':'<div class="empty">記録がありません</div>';r.agility.forEach(x=>agilityList.insertAdjacentHTML('beforeend',`<div class="row"><div><strong>${esc(x.event)}</strong><div class="note">${esc(x.date||'')}</div></div><span>${esc(x.value)}${esc(x.unit||'')}</span></div>`))}
-function jsonp(action,params={}){return new Promise((resolve,reject)=>{const cb='ninjaCb_'+Date.now()+'_'+Math.random().toString(36).slice(2),s=document.createElement('script'),timer=setTimeout(()=>done(Error('通信がタイムアウトしました。')),25000);function done(e,d){clearTimeout(timer);delete window[cb];s.remove();e?reject(e):resolve(d)}window[cb]=d=>done(null,d);s.src=GAS_URL+'?'+new URLSearchParams({action,callback:cb,...params,_:Date.now()});s.onerror=()=>done(Error('サーバーへ接続できませんでした。'));document.body.appendChild(s)})}
-function getSession(){try{const s=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');if(!s||!s.token||Date.now()>=Number(s.expiresAt||0)){localStorage.removeItem(SESSION_KEY);return null}return s}catch(e){return null}}async function logout(){const s=getSession();localStorage.removeItem(SESSION_KEY);if(s)jsonp('growthLogout',{token:s.token}).catch(()=>{});view('login')}function view(v){loginView.style.display=v==='login'?'block':'none';loadingView.style.display=v==='loading'?'block':'none';appView.style.display=v==='app'?'block':'none'}function busy(v){loginBtn.disabled=v;loginBtn.textContent=v?'確認中…':'ログイン'}function err(id,m){const e=document.getElementById(id);e.textContent=m;e.style.display='block'}function hide(){document.querySelectorAll('.error').forEach(e=>e.style.display='none')}function text(id,v){document.getElementById(id).textContent=v}function diff(v,u){return v==null?'比較できる記録がありません':`初回から ${v>0?'+':''}${v}${u}`}function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function draw(id,labels,data,label){const c=document.getElementById(id);if(charts[id])charts[id].destroy();charts[id]=new Chart(c,{type:'line',data:{labels,datasets:[{label,data,tension:.3,fill:false}]},options:{responsive:true}})}
-</script></body></html>
+const LIFF_ID = "2010789200-zVWWxqSQ";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwDgVHM-btSc15gLt2rhvexUT2ICSS3rSGKXUwtyC8G3lr7BoujQ1pPy63z7sUUavhf/exec";
+
+let idToken = "";
+let bundle = null;
+
+window.addEventListener("load", init);
+
+async function init(){
+  try{
+    if(!window.liff){
+      throw new Error("LIFF SDKを読み込めませんでした。通信環境を確認してください。");
+    }
+
+    setLoading("LINE認証を初期化しています…");
+
+    await liff.init({
+      liffId: LIFF_ID,
+      withLoginOnExternalBrowser: true
+    });
+
+    if(!liff.isLoggedIn()){
+      setLoading("LINEログイン画面へ移動します…");
+      liff.login({redirectUri: location.href.split("#")[0]});
+      return;
+    }
+
+    idToken = liff.getIDToken();
+
+    if(!idToken){
+      throw new Error("LINE認証情報を取得できませんでした。LIFFのScopeにopenidが設定されているか確認してください。");
+    }
+
+    setLoading("本人情報を確認しています…");
+
+    const session = await jsonp({
+      action:"growthSession",
+      idToken:idToken
+    });
+
+    if(!session || session.status!=="ok"){
+      throw new Error(
+        session && session.message
+          ? session.message
+          : "本人情報を確認できませんでした。"
+      );
+    }
+
+    text("playerName",session.player.name);
+    text("playerMeta",session.player.category+" / "+session.player.playerId);
+    show("profile");
+
+    await loadBundle();
+
+  }catch(error){
+    showError(error);
+  }
+}
+
+async function loadBundle(){
+  try{
+    if(!idToken){
+      throw new Error("LINE認証情報がありません。LINEのリッチメニューから開き直してください。");
+    }
+
+    show("loading");
+    hide("app");
+    hide("message");
+    setLoading("成長記録を取得しています…");
+
+    const result = await jsonp({
+      action:"growthBundle",
+      idToken:idToken
+    });
+
+    if(!result || result.status!=="ok"){
+      throw new Error(
+        result && result.message
+          ? result.message
+          : "成長記録を取得できませんでした。"
+      );
+    }
+
+    bundle=result;
+    renderAll();
+
+    hide("loading");
+    show("app");
+
+  }catch(error){
+    showError(error);
+  }
+}
+
+function renderAll(){
+  renderHome();
+  renderShooting();
+  renderBody();
+  renderAgility();
+
+  setTimeout(function(){
+    drawShooting();
+    drawBody();
+    drawAgility();
+  },50);
+}
+
+function renderHome(){
+  const shooting=bundle.shooting||{};
+  const total=shooting.total||{};
+  const body=bundle.body||{};
+  const latestBody=body.latest||null;
+  const agility=bundle.agility||{};
+  const latestAgility=(agility.latest||[]);
+
+  text("homeShootRate",String(total.rate||0)+"%");
+  text("homeShootSub",String(total.made||0)+"本成功 / "+String(total.attempts||0)+"本中");
+  text("homeLatestDate",total.latestDate||"記録なし");
+
+  if(latestBody){
+    const bodyText=[
+      latestBody.height!==null&&latestBody.height!==undefined ? fmt(latestBody.height)+"cm" : "",
+      latestBody.weight!==null&&latestBody.weight!==undefined ? fmt(latestBody.weight)+"kg" : ""
+    ].filter(Boolean).join(" / ");
+
+    text("homeBodyMain",bodyText||"記録なし");
+    text("homeBodySub",latestBody.month||"");
+  }else{
+    text("homeBodyMain","記録なし");
+    text("homeBodySub","");
+  }
+
+  if(latestAgility.length){
+    const first=latestAgility[0];
+    text("homeAgilityMain",first.type);
+    text("homeAgilitySub",fmt(first.value)+(first.unit||"")+" / "+(first.month||""));
+  }else{
+    text("homeAgilityMain","記録なし");
+    text("homeAgilitySub","");
+  }
+
+  const summaries=[];
+
+  if(Number(total.attempts||0)>0){
+    summaries.push(
+      '<div class="summary-box"><div class="kpi-label">シュート</div>'+
+      '<div class="kpi-value">'+esc(total.rate||0)+'%</div>'+
+      '<div class="kpi-note">'+esc(total.made||0)+'本成功 / '+esc(total.attempts||0)+'本中</div></div>'
+    );
+  }
+
+  if(latestBody){
+    summaries.push(
+      '<div class="summary-box"><div class="kpi-label">身体成長</div>'+
+      '<div class="kpi-value">'+
+      (latestBody.height!==null?esc(fmt(latestBody.height))+'cm':'－')+
+      ' / '+
+      (latestBody.weight!==null?esc(fmt(latestBody.weight))+'kg':'－')+
+      '</div><div class="kpi-note">'+esc(latestBody.month||"")+'</div></div>'
+    );
+  }
+
+  latestAgility.forEach(function(r){
+    summaries.push(
+      '<div class="summary-box"><div class="kpi-label">'+esc(r.type)+'</div>'+
+      '<div class="kpi-value">'+esc(fmt(r.value))+esc(r.unit||"")+'</div>'+
+      '<div class="kpi-note">'+esc(r.month||"")+'</div></div>'
+    );
+  });
+
+  document.getElementById("growthSummary").innerHTML=summaries.length
+    ?summaries.join("")
+    :'<div class="empty">まだ成長記録がありません。</div>';
+}
+
+function renderShooting(){
+  const s=bundle.shooting||{};
+  const total=s.total||{};
+
+  text("shootMade",String(total.made||0));
+  text("shootAttempts",String(total.attempts||0));
+  text("shootRate",String(total.rate||0)+"%");
+
+  const types=s.byType||[];
+
+  document.getElementById("shootTypes").innerHTML=types.length
+    ?types.map(function(x){
+      return '<div class="item"><b>'+esc(x.type)+'</b><br><span class="value">'+x.rate+'%</span>　'+x.made+' / '+x.attempts+'</div>';
+    }).join("")
+    :'<div class="empty">まだ記録がありません。</div>';
+
+  const positions=(s.byPosition||[]).filter(function(x){
+    return Number(x.attempts)>0;
+  });
+
+  document.getElementById("shootPositions").innerHTML=positions.length
+    ?positions.map(function(x){
+      return '<div class="item"><b>'+esc(x.type)+' / '+esc(x.position)+'</b><br><span class="value">'+x.rate+'%</span>　'+x.made+' / '+x.attempts+'</div>';
+    }).join("")
+    :'<div class="empty">まだ記録がありません。</div>';
+}
+
+function renderBody(){
+  const b=bundle.body||{};
+  const latest=b.latest;
+
+  text("latestHeight",latest&&latest.height!==null?fmt(latest.height)+"cm":"－");
+  text("latestWeight",latest&&latest.weight!==null?fmt(latest.weight)+"kg":"－");
+  text("latestBodyMonth",latest?latest.month:"－");
+  text("heightChange",changeText(b.change&&b.change.height,"cm"));
+  text("weightChange",changeText(b.change&&b.change.weight,"kg"));
+
+  const rows=(b.records||[]).slice().reverse();
+
+  document.getElementById("bodyList").innerHTML=rows.length
+    ?rows.map(function(r){
+      return '<div class="item"><b>'+esc(r.month)+'</b><br>身長：<span class="value">'+
+        (r.height===null?"－":fmt(r.height)+"cm")+
+        '</span>　体重：<span class="value">'+
+        (r.weight===null?"－":fmt(r.weight)+"kg")+
+        '</span></div>';
+    }).join("")
+    :'<div class="empty">まだ記録がありません。</div>';
+}
+
+function renderAgility(){
+  const a=bundle.agility||{};
+  const latest=a.latest||[];
+  const rows=(a.records||[]).slice().reverse();
+
+  document.getElementById("agilityLatest").innerHTML=latest.length
+    ?latest.map(function(r){
+      return '<div class="item"><b>'+esc(r.type)+'</b><br><span class="value">'+
+        fmt(r.value)+esc(r.unit||"")+
+        '</span>　<span class="muted">'+esc(r.month)+'</span></div>';
+    }).join("")
+    :'<div class="empty">まだ記録がありません。</div>';
+
+  document.getElementById("agilityList").innerHTML=rows.length
+    ?rows.map(function(r){
+      return '<div class="item"><b>'+esc(r.type)+'</b>　<span class="value">'+
+        fmt(r.value)+esc(r.unit||"")+
+        '</span><br><span class="muted">'+esc(r.month)+'</span></div>';
+    }).join("")
+    :'<div class="empty">まだ記録がありません。</div>';
+}
+
+function showView(name){
+  document.querySelectorAll(".view").forEach(function(view){
+    view.classList.remove("active");
+  });
+
+  document.querySelectorAll(".tabs button").forEach(function(button){
+    button.classList.remove("active");
+  });
+
+  document.getElementById(name+"View").classList.add("active");
+  document.getElementById(
+    "tab"+name.charAt(0).toUpperCase()+name.slice(1)
+  ).classList.add("active");
+
+  setTimeout(function(){
+    if(name==="shooting")drawShooting();
+    if(name==="body")drawBody();
+    if(name==="agility")drawAgility();
+  },30);
+}
+
+function drawShooting(){
+  const rows=(bundle.shooting&&bundle.shooting.monthly)||[];
+
+  drawLines("shootChart",[
+    {
+      label:"成功率",
+      points:rows.map(function(r){
+        return {label:r.month,value:Number(r.rate)};
+      }),
+      min:0,
+      max:100
+    }
+  ]);
+}
+
+function drawBody(){
+  const rows=(bundle.body&&bundle.body.records)||[];
+
+  drawLines("bodyChart",[
+    {
+      label:"身長",
+      points:rows
+        .filter(function(r){return r.height!==null;})
+        .map(function(r){return {label:r.month,value:Number(r.height)};})
+    },
+    {
+      label:"体重",
+      points:rows
+        .filter(function(r){return r.weight!==null;})
+        .map(function(r){return {label:r.month,value:Number(r.weight)};})
+    }
+  ]);
+}
+
+function drawAgility(){
+  const rows=(bundle.agility&&bundle.agility.records)||[];
+  const groups={};
+
+  rows.forEach(function(r){
+    if(!groups[r.type]){
+      groups[r.type]=[];
+    }
+
+    groups[r.type].push(r);
+  });
+
+  drawLines(
+    "agilityChart",
+    Object.keys(groups).map(function(type){
+      return {
+        label:type,
+        points:groups[type].map(function(r){
+          return {label:r.month,value:Number(r.value)};
+        })
+      };
+    })
+  );
+}
+
+function drawLines(canvasId,series){
+  const canvas=document.getElementById(canvasId);
+  const ctx=canvas.getContext("2d");
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const active=series.filter(function(s){
+    return s.points&&s.points.length;
+  });
+
+  const all=active
+    .flatMap(function(s){
+      return s.points.map(function(p){return p.value;});
+    })
+    .filter(Number.isFinite);
+
+  if(!all.length){
+    ctx.fillStyle="#a9c5b3";
+    ctx.font="20px sans-serif";
+    ctx.textAlign="center";
+    ctx.fillText("記録がありません",canvas.width/2,canvas.height/2);
+    ctx.textAlign="left";
+    return;
+  }
+
+  const left=55;
+  const right=20;
+  const top=42;
+  const bottom=48;
+  const width=canvas.width-left-right;
+  const height=canvas.height-top-bottom;
+
+  let min=Math.min.apply(null,all);
+  let max=Math.max.apply(null,all);
+
+  if(active.some(function(s){return s.min===0;})){
+    min=0;
+  }
+
+  if(active.some(function(s){return s.max===100;})){
+    max=100;
+  }
+
+  if(min===max){
+    min-=1;
+    max+=1;
+  }
+
+  const padding=(max-min)*0.1;
+
+  if(!active.some(function(s){return s.min===0;})){
+    min-=padding;
+  }
+
+  if(!active.some(function(s){return s.max===100;})){
+    max+=padding;
+  }
+
+  ctx.strokeStyle="#28513b";
+  ctx.fillStyle="#a9c5b3";
+  ctx.font="12px sans-serif";
+
+  for(let i=0;i<=4;i++){
+    const y=top+i*height/4;
+    ctx.beginPath();
+    ctx.moveTo(left,y);
+    ctx.lineTo(canvas.width-right,y);
+    ctx.stroke();
+    ctx.fillText(fmt(max-(max-min)*i/4),5,y+4);
+  }
+
+  const colors=["#27d77d","#69a7ff","#ff7676","#ffd45c","#ad7cff","#44d8e8"];
+
+  active.forEach(function(s,seriesIndex){
+    const color=colors[seriesIndex%colors.length];
+
+    const points=s.points.map(function(p,index){
+      return {
+        x:left+index*(width/Math.max(1,s.points.length-1)),
+        y:top+(max-p.value)*height/(max-min),
+        label:p.label,
+        value:p.value
+      };
+    });
+
+    ctx.beginPath();
+
+    points.forEach(function(p,index){
+      if(index===0){
+        ctx.moveTo(p.x,p.y);
+      }else{
+        ctx.lineTo(p.x,p.y);
+      }
+    });
+
+    ctx.strokeStyle=color;
+    ctx.lineWidth=4;
+    ctx.stroke();
+
+    points.forEach(function(p){
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,5,0,Math.PI*2);
+      ctx.fillStyle=color;
+      ctx.fill();
+    });
+
+    ctx.fillStyle=color;
+    ctx.fillRect(left+(seriesIndex%3)*190,10,15,5);
+    ctx.fillStyle="#f5fff8";
+    ctx.fillText(s.label,left+22+(seriesIndex%3)*190,17);
+  });
+
+  const labels=active[0].points;
+
+  ctx.fillStyle="#a9c5b3";
+  ctx.font="11px sans-serif";
+  ctx.textAlign="center";
+
+  labels.forEach(function(p,index){
+    if(
+      labels.length>6 &&
+      index%Math.ceil(labels.length/6)!==0 &&
+      index!==labels.length-1
+    ){
+      return;
+    }
+
+    const x=left+index*(width/Math.max(1,labels.length-1));
+
+    ctx.fillText(
+      String(p.label).replace(/^\d{4}\//,""),
+      x,
+      canvas.height-16
+    );
+  });
+
+  ctx.textAlign="left";
+}
+
+function jsonp(params,timeoutMs){
+  timeoutMs=timeoutMs||25000;
+
+  return new Promise(function(resolve,reject){
+    const callback=
+      "__ninjaGrowth_"+Date.now()+"_"+
+      Math.random().toString(36).slice(2);
+
+    const script=document.createElement("script");
+
+    const timer=setTimeout(function(){
+      cleanup(new Error("Apps Scriptとの通信がタイムアウトしました。"));
+    },timeoutMs);
+
+    function cleanup(error,data){
+      clearTimeout(timer);
+
+      try{
+        delete window[callback];
+      }catch(_){}
+
+      if(script.parentNode){
+        script.remove();
+      }
+
+      error?reject(error):resolve(data);
+    }
+
+    window[callback]=function(data){
+      cleanup(null,data);
+    };
+
+    script.src=
+      GAS_URL+"?"+
+      new URLSearchParams(
+        Object.assign(
+          {},
+          params,
+          {
+            callback:callback,
+            _:Date.now()
+          }
+        )
+      ).toString();
+
+    script.onerror=function(){
+      cleanup(new Error("Apps Scriptへ接続できませんでした。"));
+    };
+
+    document.head.appendChild(script);
+  });
+}
+
+function setLoading(value){
+  text("loadingText",value);
+}
+
+function showError(error){
+  hide("loading");
+  hide("app");
+
+  const box=document.getElementById("message");
+
+  box.textContent=
+    error&&error.message
+      ?error.message
+      :String(error);
+
+  box.className="notice error";
+  show("message");
+}
+
+function changeText(value,unit){
+  if(value===null||value===undefined){
+    return "比較できる記録がありません";
+  }
+
+  return "初回から "+(value>0?"+":"")+fmt(value)+unit;
+}
+
+function show(id){
+  document.getElementById(id).classList.remove("hidden");
+}
+
+function hide(id){
+  document.getElementById(id).classList.add("hidden");
+}
+
+function text(id,value){
+  const element=document.getElementById(id);
+
+  if(element){
+    element.textContent=value==null?"":value;
+  }
+}
+
+function fmt(value){
+  const number=Number(value);
+
+  return Number.isFinite(number)
+    ?String(Math.round(number*10)/10)
+    :"－";
+}
+
+function esc(value){
+  return String(value==null?"":value).replace(
+    /[&<>"']/g,
+    function(character){
+      return {
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#39;"
+      }[character];
+    }
+  );
+}
+</script>
+</body>
+</html>
