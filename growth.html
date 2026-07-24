@@ -126,6 +126,54 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
   .month-control{grid-template-columns:1fr}
   .shot-marker{width:55px;height:55px}
 }
+
+.body-compact-summary{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px
+}
+.body-compact-box{
+  border:1px solid var(--line);
+  background:var(--panel2);
+  border-radius:12px;
+  padding:10px
+}
+.body-compact-box .label{font-size:11px;color:var(--muted)}
+.body-compact-box .main{font-size:20px;font-weight:900;margin-top:2px}
+.body-compact-box .sub{font-size:11px;color:var(--muted);margin-top:3px}
+.body-table-wrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  margin-top:10px
+}
+.body-table{
+  border-collapse:separate;
+  border-spacing:0;
+  width:max-content;
+  min-width:100%;
+  font-size:13px
+}
+.body-table th,.body-table td{
+  min-width:72px;
+  padding:10px 8px;
+  text-align:center;
+  white-space:nowrap;
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line)
+}
+.body-table tr:first-child th{border-top:1px solid var(--line)}
+.body-table th:first-child,.body-table td:first-child{
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:70px;
+  background:var(--panel2);
+  font-weight:900;
+  border-left:1px solid var(--line)
+}
+.body-table th:first-child{border-top-left-radius:10px}
+.body-table tr:first-child th:last-child{border-top-right-radius:10px}
 </style>
 </head>
 <body>
@@ -208,12 +256,17 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
     <section id="bodyView" class="view">
       <div class="card">
         <h2 class="title">身体成長</h2>
-        <div class="section-lead">初回・前回・最新を比較して成長を確認できます。</div>
-        <div id="bodyComparison" class="list"></div>
+        <div id="bodyCompactSummary" class="body-compact-summary"></div>
       </div>
+
+      <div class="card">
+        <h2 class="title">身長・体重一覧</h2>
+        <div class="section-lead">月ごとの変化を横に並べて確認できます。</div>
+        <div id="bodyHistoryTable" class="body-table-wrap"></div>
+      </div>
+
       <div class="card"><h2 class="title">身長の成長グラフ</h2><canvas id="heightChart" width="660" height="300"></canvas></div>
       <div class="card"><h2 class="title">体重の成長グラフ</h2><canvas id="weightChart" width="660" height="300"></canvas></div>
-      <div class="card"><h2 class="title">記録一覧</h2><div id="bodyList" class="list"></div></div>
     </section>
 
     <section id="agilityView" class="view">
@@ -441,19 +494,88 @@ function showCourtDetail(row,currentMonth,compareMonth){
     '<div class="detail-grid"><div><small>成功</small><b>'+p.made+'本</b></div><div><small>試投</small><b>'+p.attempts+'本</b></div></div>';
 }
 
-function renderBody(){
-  const rows=((bundle.body||{}).records||[]).slice();
-  const height=rows.filter(function(r){return r.height!==null&&r.height!==undefined&&Number.isFinite(Number(r.height))});
-  const weight=rows.filter(function(r){return r.weight!==null&&r.weight!==undefined&&Number.isFinite(Number(r.weight))});
-  document.getElementById("bodyComparison").innerHTML=[
-    buildBodyCard("身長",height,"height","cm"),buildBodyCard("体重",weight,"weight","kg")
-  ].join("");
-  document.getElementById("bodyList").innerHTML=rows.length?rows.slice().reverse().map(function(r){
-    return '<div class="item"><b>'+esc(r.month)+'</b><br>身長：<span class="value">'+
-      (r.height==null?"－":fmt(r.height)+"cm")+'</span>　体重：<span class="value">'+
-      (r.weight==null?"－":fmt(r.weight)+"kg")+'</span></div>';
-  }).join(""):'<div class="empty">まだ記録がありません。</div>';
+function formatBodyMonth(value){
+  const text=String(value||"").replace(/-/g,"/");
+  const match=text.match(/^(\d{4})\/(\d{1,2})/);
+  if(!match)return text;
+  return String(match[1]).slice(-2)+"."+Number(match[2]);
 }
+
+function renderBody(){
+  const rows=((bundle.body||{}).records||[]).slice().sort(function(a,b){
+    return String(a.month||"").localeCompare(String(b.month||""));
+  });
+
+  const summary=document.getElementById("bodyCompactSummary");
+  const table=document.getElementById("bodyHistoryTable");
+
+  if(!rows.length){
+    if(summary)summary.innerHTML='<div class="empty">まだ記録がありません。</div>';
+    if(table)table.innerHTML='<div class="empty">まだ記録がありません。</div>';
+    return;
+  }
+
+  const heightRows=rows.filter(function(r){
+    return r.height!==null&&r.height!==undefined&&Number.isFinite(Number(r.height));
+  });
+  const weightRows=rows.filter(function(r){
+    return r.weight!==null&&r.weight!==undefined&&Number.isFinite(Number(r.weight));
+  });
+
+  const latestHeight=heightRows.length?heightRows[heightRows.length-1]:null;
+  const firstHeight=heightRows.length?heightRows[0]:null;
+  const latestWeight=weightRows.length?weightRows[weightRows.length-1]:null;
+  const firstWeight=weightRows.length?weightRows[0]:null;
+
+  if(summary){
+    summary.innerHTML=
+      '<div class="body-compact-box">'+
+        '<div class="label">最新身長</div>'+
+        '<div class="main">'+(latestHeight?fmt(latestHeight.height)+'cm':'－')+'</div>'+
+        '<div class="sub">'+
+          (latestHeight&&firstHeight
+            ?'初回比 '+signedBodyDiff(Number(latestHeight.height)-Number(firstHeight.height),'cm')
+            :'比較なし')+
+        '</div>'+
+      '</div>'+
+      '<div class="body-compact-box">'+
+        '<div class="label">最新体重</div>'+
+        '<div class="main">'+(latestWeight?fmt(latestWeight.weight)+'kg':'－')+'</div>'+
+        '<div class="sub">'+
+          (latestWeight&&firstWeight
+            ?'初回比 '+signedBodyDiff(Number(latestWeight.weight)-Number(firstWeight.weight),'kg')
+            :'比較なし')+
+        '</div>'+
+      '</div>';
+  }
+
+  if(table){
+    const dates=rows.map(function(r){
+      return '<th>'+esc(formatBodyMonth(r.month))+'</th>';
+    }).join("");
+
+    const heights=rows.map(function(r){
+      return '<td>'+(r.height==null?'－':fmt(r.height))+'</td>';
+    }).join("");
+
+    const weights=rows.map(function(r){
+      return '<td>'+(r.weight==null?'－':fmt(r.weight))+'</td>';
+    }).join("");
+
+    table.innerHTML=
+      '<table class="body-table">'+
+        '<tr><th>記録</th>'+dates+'</tr>'+
+        '<tr><td>身長 cm</td>'+heights+'</tr>'+
+        '<tr><td>体重 kg</td>'+weights+'</tr>'+
+      '</table>';
+  }
+}
+
+function signedBodyDiff(value,unit){
+  if(!Number.isFinite(value))return '－';
+  return (value>0?'+':'')+fmt(value)+unit;
+}
+
 function buildBodyCard(label,rows,key,unit){
   if(!rows.length)return'<div class="item"><b>'+esc(label)+'</b><div class="empty">記録がありません。</div></div>';
   const first=rows[0],latest=rows[rows.length-1],previous=rows.length>=2?rows[rows.length-2]:null;
