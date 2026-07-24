@@ -174,19 +174,20 @@ canvas{
 
     <section id="bodyView" class="view">
       <div class="card">
-        <h2 class="title">最新の身体測定</h2>
-        <div class="grid three">
-          <div class="stat"><span class="muted">身長</span><b id="latestHeight">－</b><div id="heightChange" class="small"></div></div>
-          <div class="stat"><span class="muted">体重</span><b id="latestWeight">－</b><div id="weightChange" class="small"></div></div>
-          <div class="stat"><span class="muted">最新記録月</span><b id="latestBodyMonth" style="font-size:17px">－</b></div>
-        </div>
+        <h2 class="title">身体成長</h2>
+        <div class="section-lead">初回・前回・最新を比較して成長を確認できます。</div>
+        <div id="bodyComparison" class="list"></div>
       </div>
       <div class="card"><h2 class="title">成長グラフ</h2><canvas id="bodyChart" width="660" height="320"></canvas></div>
       <div class="card"><h2 class="title">記録一覧</h2><div id="bodyList" class="list"></div></div>
     </section>
 
     <section id="agilityView" class="view">
-      <div class="card"><h2 class="title">最新記録</h2><div id="agilityLatest" class="list"></div></div>
+      <div class="card">
+        <h2 class="title">アジリティ成長比較</h2>
+        <div class="section-lead">種目ごとに初回・前回・最新・ベストを表示します。</div>
+        <div id="agilityComparison" class="list"></div>
+      </div>
       <div class="card"><h2 class="title">記録推移</h2><canvas id="agilityChart" width="660" height="340"></canvas></div>
       <div class="card"><h2 class="title">記録一覧</h2><div id="agilityList" class="list"></div></div>
     </section>
@@ -400,18 +401,25 @@ function renderShooting(){
 
 function renderBody(){
   const b=bundle.body||{};
-  const latest=b.latest;
+  const rows=(b.records||[]).slice();
 
-  text("latestHeight",latest&&latest.height!==null?fmt(latest.height)+"cm":"－");
-  text("latestWeight",latest&&latest.weight!==null?fmt(latest.weight)+"kg":"－");
-  text("latestBodyMonth",latest?latest.month:"－");
-  text("heightChange",changeText(b.change&&b.change.height,"cm"));
-  text("weightChange",changeText(b.change&&b.change.weight,"kg"));
+  const heightRecords=rows.filter(function(r){
+    return r.height!==null&&r.height!==undefined&&Number.isFinite(Number(r.height));
+  });
 
-  const rows=(b.records||[]).slice().reverse();
+  const weightRecords=rows.filter(function(r){
+    return r.weight!==null&&r.weight!==undefined&&Number.isFinite(Number(r.weight));
+  });
 
-  document.getElementById("bodyList").innerHTML=rows.length
-    ?rows.map(function(r){
+  document.getElementById("bodyComparison").innerHTML=[
+    buildBodyComparisonCard("身長",heightRecords,"height","cm"),
+    buildBodyComparisonCard("体重",weightRecords,"weight","kg")
+  ].join("");
+
+  const displayRows=rows.slice().reverse();
+
+  document.getElementById("bodyList").innerHTML=displayRows.length
+    ?displayRows.map(function(r){
       return '<div class="item"><b>'+esc(r.month)+'</b><br>身長：<span class="value">'+
         (r.height===null?"－":fmt(r.height)+"cm")+
         '</span>　体重：<span class="value">'+
@@ -421,26 +429,142 @@ function renderBody(){
     :'<div class="empty">まだ記録がありません。</div>';
 }
 
+function buildBodyComparisonCard(label,records,key,unit){
+  if(!records.length){
+    return '<div class="item"><b>'+esc(label)+'</b><div class="empty">記録がありません。</div></div>';
+  }
+
+  const first=records[0];
+  const latest=records[records.length-1];
+  const previous=records.length>=2?records[records.length-2]:null;
+
+  const firstDiff=Number(latest[key])-Number(first[key]);
+  const previousDiff=previous?Number(latest[key])-Number(previous[key]):null;
+
+  return '<div class="item">'+
+    '<b>'+esc(label)+'</b>'+
+    '<div class="grid three" style="margin-top:10px">'+
+      '<div class="stat"><span class="muted">初回</span><b>'+fmt(first[key])+esc(unit)+'</b><div class="small">'+esc(first.month||"")+'</div></div>'+
+      '<div class="stat"><span class="muted">前回</span><b>'+(previous?fmt(previous[key])+esc(unit):"－")+'</b><div class="small">'+(previous?esc(previous.month||""):"比較なし")+'</div></div>'+
+      '<div class="stat"><span class="muted">最新</span><b>'+fmt(latest[key])+esc(unit)+'</b><div class="small">'+esc(latest.month||"")+'</div></div>'+
+    '</div>'+
+    '<div class="grid" style="margin-top:10px">'+
+      comparisonBox("初回比",firstDiff,unit,true)+
+      comparisonBox("前回比",previousDiff,unit,true)+
+    '</div>'+
+  '</div>';
+}
+
 function renderAgility(){
   const a=bundle.agility||{};
-  const latest=a.latest||[];
-  const rows=(a.records||[]).slice().reverse();
+  const rows=(a.records||[]).slice();
+  const groups={};
 
-  document.getElementById("agilityLatest").innerHTML=latest.length
-    ?latest.map(function(r){
-      return '<div class="item"><b>'+esc(r.type)+'</b><br><span class="value">'+
-        fmt(r.value)+esc(r.unit||"")+
-        '</span>　<span class="muted">'+esc(r.month)+'</span></div>';
+  rows.forEach(function(r){
+    if(!groups[r.type]){
+      groups[r.type]=[];
+    }
+    groups[r.type].push(r);
+  });
+
+  const preferredOrder=[
+    "20mシャトルラン",
+    "反復横跳び",
+    "L字コーン",
+    "垂直跳び",
+    "120回ハンドリング"
+  ];
+
+  const types=Object.keys(groups).sort(function(a,b){
+    const ai=preferredOrder.indexOf(a);
+    const bi=preferredOrder.indexOf(b);
+    if(ai===-1&&bi===-1)return a.localeCompare(b,"ja");
+    if(ai===-1)return 1;
+    if(bi===-1)return -1;
+    return ai-bi;
+  });
+
+  document.getElementById("agilityComparison").innerHTML=types.length
+    ?types.map(function(type){
+      return buildAgilityComparisonCard(type,groups[type]);
     }).join("")
     :'<div class="empty">まだ記録がありません。</div>';
 
-  document.getElementById("agilityList").innerHTML=rows.length
-    ?rows.map(function(r){
+  const displayRows=rows.slice().reverse();
+
+  document.getElementById("agilityList").innerHTML=displayRows.length
+    ?displayRows.map(function(r){
       return '<div class="item"><b>'+esc(r.type)+'</b>　<span class="value">'+
         fmt(r.value)+esc(r.unit||"")+
         '</span><br><span class="muted">'+esc(r.month)+'</span></div>';
     }).join("")
     :'<div class="empty">まだ記録がありません。</div>';
+}
+
+function buildAgilityComparisonCard(type,records){
+  const valid=records.filter(function(r){
+    return Number.isFinite(Number(r.value));
+  });
+
+  if(!valid.length){
+    return '<div class="item"><b>'+esc(type)+'</b><div class="empty">記録がありません。</div></div>';
+  }
+
+  const first=valid[0];
+  const latest=valid[valid.length-1];
+  const previous=valid.length>=2?valid[valid.length-2]:null;
+  const lowerIsBetter=isLowerBetter(type);
+
+  const best=valid.reduce(function(bestRecord,current){
+    if(!bestRecord)return current;
+
+    return lowerIsBetter
+      ?Number(current.value)<Number(bestRecord.value)?current:bestRecord
+      :Number(current.value)>Number(bestRecord.value)?current:bestRecord;
+  },null);
+
+  const firstDiff=Number(latest.value)-Number(first.value);
+  const previousDiff=previous?Number(latest.value)-Number(previous.value):null;
+  const unit=latest.unit||first.unit||"";
+
+  return '<div class="item">'+
+    '<b>'+esc(type)+'</b>'+
+    '<div class="grid three" style="margin-top:10px">'+
+      '<div class="stat"><span class="muted">初回</span><b>'+fmt(first.value)+esc(unit)+'</b><div class="small">'+esc(first.month||"")+'</div></div>'+
+      '<div class="stat"><span class="muted">前回</span><b>'+(previous?fmt(previous.value)+esc(unit):"－")+'</b><div class="small">'+(previous?esc(previous.month||""):"比較なし")+'</div></div>'+
+      '<div class="stat"><span class="muted">最新</span><b>'+fmt(latest.value)+esc(unit)+'</b><div class="small">'+esc(latest.month||"")+'</div></div>'+
+    '</div>'+
+    '<div class="grid" style="margin-top:10px">'+
+      comparisonBox("初回比",firstDiff,unit,!lowerIsBetter)+
+      comparisonBox("前回比",previousDiff,unit,!lowerIsBetter)+
+    '</div>'+
+    '<div class="summary-box" style="margin-top:10px">'+
+      '<div class="kpi-label">ベスト記録</div>'+
+      '<div class="kpi-value">'+fmt(best.value)+esc(best.unit||unit)+'</div>'+
+      '<div class="kpi-note">'+esc(best.month||"")+'</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function comparisonBox(label,diff,unit,higherIsBetter){
+  if(diff===null||diff===undefined||!Number.isFinite(Number(diff))){
+    return '<div class="summary-box"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-value">－</div><div class="kpi-note">比較できる記録がありません</div></div>';
+  }
+
+  const n=Number(diff);
+  const improved=n===0?null:(higherIsBetter?n>0:n<0);
+  const className=improved===true?"status-good":improved===false?"status-warn":"";
+  const note=improved===true?"改善":improved===false?"変化あり":"変化なし";
+
+  return '<div class="summary-box">'+
+    '<div class="kpi-label">'+esc(label)+'</div>'+
+    '<div class="kpi-value '+className+'">'+(n>0?"+":"")+fmt(n)+esc(unit)+'</div>'+
+    '<div class="kpi-note '+className+'">'+note+'</div>'+
+  '</div>';
+}
+
+function isLowerBetter(type){
+  return type==="L字コーン"||type==="120回ハンドリング";
 }
 
 function showView(name){
