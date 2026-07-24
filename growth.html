@@ -8,94 +8,106 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
 :root{
-  --bg:#06100b;--panel:#102219;--panel2:#152d21;--line:#28513b;
-  --text:#f5fff8;--muted:#a9c5b3;--green:#27d77d;--green2:#75efaa;
-  --red:#ff7676;--yellow:#ffd45c;--blue:#69a7ff
+  --bg:#071426;--bg2:#0b1b31;--panel:#10223b;--panel2:#162b47;--line:#29496d;
+  --text:#f5f9ff;--muted:#a7bad2;--blue:#42a5f5;--blue2:#77c4ff;
+  --orange:#ffb35c;--red:#ff7373;--silver:#c9d4e2;--court:#d7a86e
 }
 *{box-sizing:border-box}
 html,body{min-height:100%}
 body{
-  margin:0;
-  background:linear-gradient(180deg,#06100b,#0a1811);
-  color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif
+  margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2));
+  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif
 }
-button{font:inherit}
-.wrap{max-width:760px;margin:auto;padding:14px 14px calc(28px + env(safe-area-inset-bottom))}
+button,select{font:inherit}
+.wrap{max-width:780px;margin:auto;padding:12px 12px calc(30px + env(safe-area-inset-bottom))}
 .header,.card{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:20px;
-  padding:17px;
-  margin-bottom:14px
+  background:rgba(16,34,59,.96);border:1px solid var(--line);border-radius:20px;
+  padding:16px;margin-bottom:12px;box-shadow:0 10px 28px rgba(0,0,0,.12)
 }
-.header{background:linear-gradient(135deg,#153725,#0d2418)}
-.brand{font-size:12px;letter-spacing:1.8px;color:var(--green2);font-weight:900}
+.header{background:linear-gradient(135deg,#17385f,#10233d)}
+.brand{font-size:12px;letter-spacing:1.7px;color:var(--blue2);font-weight:900}
 .name{font-size:25px;font-weight:900;margin:7px 0 3px}
 .muted,.small{font-size:12px;color:var(--muted)}
 .hidden{display:none!important}
 .loading{text-align:center;padding:54px 16px}
 .spinner{
-  width:38px;height:38px;border-radius:50%;
-  border:4px solid var(--line);border-top-color:var(--green);
-  margin:0 auto 14px;animation:spin .85s linear infinite
+  width:38px;height:38px;border-radius:50%;border:4px solid var(--line);
+  border-top-color:var(--blue);margin:0 auto 14px;animation:spin .85s linear infinite
 }
 @keyframes spin{to{transform:rotate(360deg)}}
-.notice{
-  border-radius:15px;padding:14px;margin-bottom:14px;
-  background:#173425;color:#d7ffea;white-space:pre-wrap
-}
-.notice.error{background:#39191d;color:#ffd7dc;border:1px solid #78333a}
+.notice{border-radius:15px;padding:14px;margin-bottom:14px;background:#17345a;color:#e1f1ff;white-space:pre-wrap}
+.notice.error{background:#3b1d25;color:#ffd9df;border:1px solid #7c3947}
 .tabs{
-  position:sticky;top:0;z-index:20;
-  display:grid;grid-template-columns:repeat(4,1fr);gap:7px;
-  margin:0 0 14px;padding:8px 0;
-  background:linear-gradient(180deg,rgba(6,16,11,.98),rgba(6,16,11,.88))
+  position:sticky;top:0;z-index:20;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin:0 0 12px;padding:8px 0;background:linear-gradient(180deg,rgba(7,20,38,.99),rgba(7,20,38,.88))
 }
 .tabs button{
-  min-height:48px;border:1px solid var(--line);
-  background:var(--panel2);color:var(--muted);
-  border-radius:13px;padding:9px 4px;font-weight:900;font-size:13px
+  min-height:48px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);
+  border-radius:14px;padding:9px 5px;font-weight:900;font-size:13px
 }
-.tabs button.active{background:var(--green);border-color:var(--green);color:#052010}
+.tabs button.active{background:var(--blue);border-color:var(--blue);color:#06182a}
 .view{display:none}.view.active{display:block}
+.title{font-size:18px;font-weight:900;margin:0 0 12px}
+.section-lead{font-size:13px;color:var(--muted);margin:-4px 0 12px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .grid.three{grid-template-columns:repeat(3,1fr)}
 .stat,.item,.summary-box{
-  background:var(--panel2);border:1px solid var(--line);
-  border-radius:15px;padding:13px
+  background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:13px
 }
-.stat b{display:block;font-size:23px;margin-top:5px;word-break:break-word}
-.title{font-size:17px;font-weight:900;margin:0 0 12px}
-.section-lead{font-size:13px;color:var(--muted);margin:-4px 0 12px}
-.list{display:grid;gap:9px}
-.item{line-height:1.65}
-.value{color:var(--green2);font-weight:900}
+.stat b{display:block;font-size:22px;margin-top:5px;word-break:break-word}
+.list{display:grid;gap:9px}.item{line-height:1.65}
+.value{color:var(--blue2);font-weight:900}
 .kpi-label{font-size:12px;color:var(--muted)}
 .kpi-value{font-size:22px;font-weight:900;margin-top:4px}
 .kpi-note{font-size:12px;color:var(--muted);margin-top:4px}
-.status-good{color:var(--green2)}
-.status-warn{color:var(--yellow)}
-canvas{
-  display:block;width:100%;height:auto;background:#091710;
-  border:1px solid var(--line);border-radius:14px
+.status-good{color:var(--blue2)}.status-warn{color:var(--orange)}
+.month-control{
+  display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;
+  background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:12px
 }
-.refresh{
-  width:100%;border:1px solid var(--line);background:#183a29;
-  color:var(--text);border-radius:14px;padding:14px;font-weight:900
+.month-control label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.month-control select{
+  width:100%;background:#0b1a2d;color:var(--text);border:1px solid var(--line);
+  border-radius:12px;padding:11px
 }
+.compare-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.compare-card{background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:13px}
+.compare-label{font-size:12px;color:var(--muted)}
+.compare-main{font-size:25px;font-weight:900;margin-top:5px}
+.compare-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.delta{margin-top:7px;font-size:12px;font-weight:900}
+.delta.up{color:var(--blue2)}.delta.down{color:var(--orange)}.delta.same{color:var(--silver)}
+.court-wrap{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:12px;align-items:start}
+.shot-court{
+  position:relative;width:100%;max-width:590px;margin:auto;aspect-ratio:.92/1;
+  background:var(--court);border:4px solid #fff;border-radius:9px;overflow:hidden
+}
+.shot-court svg{position:absolute;inset:0;width:100%;height:100%}
+.shot-marker{
+  position:absolute;transform:translate(-50%,-50%);width:60px;height:60px;border:3px solid #fff;
+  border-radius:50%;display:grid;place-items:center;text-align:center;padding:3px;cursor:pointer;
+  box-shadow:0 3px 10px rgba(0,0,0,.35);color:#fff;background:#1f6fb2
+}
+.shot-marker strong{font-size:15px;line-height:1}.shot-marker span{font-size:9px;line-height:1.15}
+.rank-red{background:#b42318}.rank-yellow{background:#d4a017;color:#16120a}.rank-green{background:#1f8a4c}
+.rank-silver{background:linear-gradient(145deg,#f7f7f7,#9ea8b3 60%,#6e7882);color:#111}
+.rank-gold{background:linear-gradient(145deg,#fff3a6,#d4af37 55%,#8f6b00);color:#1a1400}
+.court-detail{background:#0b1a2d;border:1px solid var(--line);border-radius:15px;padding:14px;min-height:185px}
+.court-detail h3{margin:0 0 8px;font-size:16px}.detail-rate{font-size:32px;font-weight:900;margin:7px 0}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.detail-grid div{background:var(--panel2);border-radius:10px;padding:9px}
+.detail-grid small{display:block;color:var(--muted);margin-bottom:3px}
+.compare-table{width:100%;border-collapse:collapse;font-size:12px}
+.compare-table th,.compare-table td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left}
+.compare-table th{color:var(--muted)}
+canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid var(--line);border-radius:14px}
+.refresh{width:100%;border:1px solid var(--line);background:#1b4f80;color:#fff;border-radius:14px;padding:14px;font-weight:900}
 .empty{color:var(--muted);text-align:center;padding:16px}
-.home-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.home-card{
-  border:1px solid var(--line);background:var(--panel2);
-  border-radius:16px;padding:14px;min-height:112px
-}
-.home-card .label{font-size:12px;color:var(--muted)}
-.home-card .main{font-size:22px;font-weight:900;margin-top:7px}
-.home-card .sub{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5}
-@media(max-width:600px){
-  .grid,.grid.three,.home-grid{grid-template-columns:1fr}
-  .tabs button{font-size:12px}
+@media(max-width:650px){
+  .grid,.grid.three,.compare-grid{grid-template-columns:1fr}
+  .court-wrap{grid-template-columns:1fr}
+  .month-control{grid-template-columns:1fr}
+  .shot-marker{width:55px;height:55px}
 }
 </style>
 </head>
@@ -118,58 +130,62 @@ canvas{
 
   <main id="app" class="hidden">
     <nav class="tabs" aria-label="成長記録メニュー">
-      <button id="tabHome" class="active" onclick="showView('home')">ホーム</button>
-      <button id="tabShooting" onclick="showView('shooting')">シュート</button>
-      <button id="tabBody" onclick="showView('body')">身体成長</button>
+      <button id="tabShooting" class="active" onclick="showView('shooting')">シュート</button>
+      <button id="tabBody" onclick="showView('body')">身体測定</button>
       <button id="tabAgility" onclick="showView('agility')">アジリティ</button>
     </nav>
 
-    <section id="homeView" class="view active">
+    <section id="shootingView" class="view active">
       <div class="card">
-        <h2 class="title">現在の成長記録</h2>
-        <div class="section-lead">LINEで入力した本人の記録だけを表示します。</div>
-        <div class="home-grid">
-          <div class="home-card">
-            <div class="label">シュート成功率</div>
-            <div id="homeShootRate" class="main">0%</div>
-            <div id="homeShootSub" class="sub">0本成功 / 0本中</div>
+        <h2 class="title">月別シュート比較</h2>
+        <div class="month-control">
+          <label>今月
+            <select id="currentMonthSelect" onchange="renderShootingComparison()"></select>
+          </label>
+          <label>比較月
+            <select id="compareMonthSelect" onchange="renderShootingComparison()"></select>
+          </label>
+        </div>
+        <div id="shootCompareCards" class="compare-grid"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="title">ポジション別シュートチャート</h2>
+        <div class="section-lead">コート上の円を押すと、選択月と比較月の成功率・成功数・試投数を表示します。</div>
+        <div class="court-wrap">
+          <div class="shot-court" aria-label="ポジション別シュート成功率">
+            <svg viewBox="0 0 920 1000" aria-hidden="true">
+              <rect x="8" y="8" width="904" height="984" rx="4" fill="none" stroke="#fff" stroke-width="10"/>
+              <line x1="8" y1="120" x2="912" y2="120" stroke="#fff" stroke-width="10"/>
+              <path d="M350 120 A110 110 0 0 0 570 120" fill="none" stroke="#fff" stroke-width="10"/>
+              <line x1="105" y1="992" x2="105" y2="690" stroke="#fff" stroke-width="10"/>
+              <line x1="815" y1="992" x2="815" y2="690" stroke="#fff" stroke-width="10"/>
+              <path d="M105 690 A365 365 0 0 1 815 690" fill="none" stroke="#fff" stroke-width="10"/>
+              <rect x="315" y="655" width="290" height="337" fill="#f07c00" stroke="#fff" stroke-width="10"/>
+              <path d="M365 655 A95 95 0 0 1 555 655" fill="none" stroke="#fff" stroke-width="10"/>
+              <path d="M365 655 A95 95 0 0 0 555 655" fill="none" stroke="#fff" stroke-width="10" stroke-dasharray="18 16"/>
+              <path d="M395 925 A65 65 0 0 1 525 925" fill="none" stroke="#fff" stroke-width="10"/>
+              <line x1="395" y1="955" x2="525" y2="955" stroke="#fff" stroke-width="12"/>
+              <circle cx="460" cy="925" r="20" fill="none" stroke="#fff" stroke-width="8"/>
+            </svg>
+            <div id="shotMarkers"></div>
           </div>
-          <div class="home-card">
-            <div class="label">最新の身体測定</div>
-            <div id="homeBodyMain" class="main">記録なし</div>
-            <div id="homeBodySub" class="sub"></div>
-          </div>
-          <div class="home-card">
-            <div class="label">アジリティ最新記録</div>
-            <div id="homeAgilityMain" class="main">記録なし</div>
-            <div id="homeAgilitySub" class="sub"></div>
-          </div>
-          <div class="home-card">
-            <div class="label">最新シュート入力日</div>
-            <div id="homeLatestDate" class="main">記録なし</div>
-            <div class="sub">最新情報は下の更新ボタンで再取得できます。</div>
-          </div>
+          <aside id="courtDetail" class="court-detail">
+            <h3>ポジションを選択</h3>
+            <div class="small">円を押すと月別比較を表示します。</div>
+          </aside>
         </div>
       </div>
 
       <div class="card">
-        <h2 class="title">成長のまとめ</h2>
-        <div id="growthSummary" class="list"></div>
+        <h2 class="title">種目別比較</h2>
+        <div style="overflow:auto"><table class="compare-table">
+          <thead><tr><th>種目</th><th id="typeCurrentHead">今月</th><th id="typeCompareHead">比較月</th><th>差</th></tr></thead>
+          <tbody id="shootTypeCompare"></tbody>
+        </table></div>
       </div>
-    </section>
 
-    <section id="shootingView" class="view">
-      <div class="card">
-        <h2 class="title">シュート総合</h2>
-        <div class="grid three">
-          <div class="stat"><span class="muted">成功数</span><b id="shootMade">0</b></div>
-          <div class="stat"><span class="muted">試投数</span><b id="shootAttempts">0</b></div>
-          <div class="stat"><span class="muted">成功率</span><b id="shootRate">0%</b></div>
-        </div>
-      </div>
-      <div class="card"><h2 class="title">月別成功率</h2><canvas id="shootChart" width="660" height="300"></canvas></div>
-      <div class="card"><h2 class="title">種目別</h2><div id="shootTypes" class="list"></div></div>
-      <div class="card"><h2 class="title">ポジション別</h2><div id="shootPositions" class="list"></div></div>
+      <div class="card"><h2 class="title">月別成功率推移</h2><canvas id="shootChart" width="660" height="300"></canvas></div>
     </section>
 
     <section id="bodyView" class="view">
@@ -185,7 +201,7 @@ canvas{
     <section id="agilityView" class="view">
       <div class="card">
         <h2 class="title">アジリティ成長比較</h2>
-        <div class="section-lead">種目ごとに初回・前回・最新・ベストを表示します。</div>
+        <div class="section-lead">初回・前回・最新・ベストを種目ごとに表示します。</div>
         <div id="agilityComparison" class="list"></div>
       </div>
       <div class="card"><h2 class="title">記録推移</h2><canvas id="agilityChart" width="660" height="340"></canvas></div>
@@ -197,713 +213,319 @@ canvas{
 </div>
 
 <script>
-const LIFF_ID = "2010789200-zVWWxqSQ";
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwDgVHM-btSc15gLt2rhvexUT2ICSS3rSGKXUwtyC8G3lr7BoujQ1pPy63z7sUUavhf/exec";
+const LIFF_ID="2010789200-zVWWxqSQ";
+const GAS_URL="https://script.google.com/macros/s/AKfycbwDgVHM-btSc15gLt2rhvexUT2ICSS3rSGKXUwtyC8G3lr7BoujQ1pPy63z7sUUavhf/exec";
+let idToken="";
+let bundle=null;
 
-let idToken = "";
-let bundle = null;
-
-window.addEventListener("load", init);
+window.addEventListener("load",init);
 
 async function init(){
   try{
-    if(!window.liff){
-      throw new Error("LIFF SDKを読み込めませんでした。通信環境を確認してください。");
-    }
-
+    if(!window.liff)throw new Error("LIFF SDKを読み込めませんでした。");
     setLoading("LINE認証を初期化しています…");
-
-    await liff.init({
-      liffId: LIFF_ID,
-      withLoginOnExternalBrowser: true
-    });
-
+    await liff.init({liffId:LIFF_ID,withLoginOnExternalBrowser:true});
     if(!liff.isLoggedIn()){
       setLoading("LINEログイン画面へ移動します…");
-      liff.login({redirectUri: location.href.split("#")[0]});
+      liff.login({redirectUri:location.href.split("#")[0]});
       return;
     }
-
-    idToken = liff.getIDToken();
-
-    if(!idToken){
-      throw new Error("LINE認証情報を取得できませんでした。LIFFのScopeにopenidが設定されているか確認してください。");
-    }
-
+    idToken=liff.getIDToken();
+    if(!idToken)throw new Error("LINE認証情報を取得できませんでした。");
     setLoading("本人情報を確認しています…");
-
-    const session = await jsonp({
-      action:"growthSession",
-      idToken:idToken
-    });
-
-    if(!session || session.status!=="ok"){
-      throw new Error(
-        session && session.message
-          ? session.message
-          : "本人情報を確認できませんでした。"
-      );
-    }
-
+    const session=await jsonp({action:"growthSession",idToken:idToken});
+    if(!session||session.status!=="ok")throw new Error(session&&session.message?session.message:"本人情報を確認できませんでした。");
     text("playerName",session.player.name);
     text("playerMeta",session.player.category+" / "+session.player.playerId);
     show("profile");
-
     await loadBundle();
-
-  }catch(error){
-    showError(error);
-  }
+  }catch(error){showError(error)}
 }
 
 async function loadBundle(){
   try{
-    if(!idToken){
-      throw new Error("LINE認証情報がありません。LINEのリッチメニューから開き直してください。");
-    }
-
-    show("loading");
-    hide("app");
-    hide("message");
-    setLoading("成長記録を取得しています…");
-
-    const result = await jsonp({
-      action:"growthBundle",
-      idToken:idToken
-    });
-
-    if(!result || result.status!=="ok"){
-      throw new Error(
-        result && result.message
-          ? result.message
-          : "成長記録を取得できませんでした。"
-      );
-    }
-
+    if(!idToken)throw new Error("LINE認証情報がありません。LINEのリッチメニューから開き直してください。");
+    show("loading");hide("app");hide("message");setLoading("成長記録を取得しています…");
+    const result=await jsonp({action:"growthBundle",idToken:idToken});
+    if(!result||result.status!=="ok")throw new Error(result&&result.message?result.message:"成長記録を取得できませんでした。");
     bundle=result;
     renderAll();
-
-    hide("loading");
-    show("app");
-
-  }catch(error){
-    showError(error);
-  }
+    hide("loading");show("app");
+  }catch(error){showError(error)}
 }
 
 function renderAll(){
-  renderHome();
-  renderShooting();
+  setupMonthSelectors();
+  renderShootingComparison();
   renderBody();
   renderAgility();
-
-  setTimeout(function(){
-    drawShooting();
-    drawBody();
-    drawAgility();
-  },50);
+  setTimeout(function(){drawShooting();drawBody();drawAgility()},50);
 }
 
-function renderHome(){
-  const shooting=bundle.shooting||{};
-  const total=shooting.total||{};
-  const body=bundle.body||{};
-  const latestBody=body.latest||null;
-  const agility=bundle.agility||{};
-  const latestAgility=(agility.latest||[]);
-
-  text("homeShootRate",String(total.rate||0)+"%");
-  text("homeShootSub",String(total.made||0)+"本成功 / "+String(total.attempts||0)+"本中");
-  text("homeLatestDate",total.latestDate||"記録なし");
-
-  if(latestBody){
-    const bodyText=[
-      latestBody.height!==null&&latestBody.height!==undefined ? fmt(latestBody.height)+"cm" : "",
-      latestBody.weight!==null&&latestBody.weight!==undefined ? fmt(latestBody.weight)+"kg" : ""
-    ].filter(Boolean).join(" / ");
-
-    text("homeBodyMain",bodyText||"記録なし");
-    text("homeBodySub",latestBody.month||"");
-  }else{
-    text("homeBodyMain","記録なし");
-    text("homeBodySub","");
-  }
-
-  if(latestAgility.length){
-    const first=latestAgility[0];
-    text("homeAgilityMain",first.type);
-    text("homeAgilitySub",fmt(first.value)+(first.unit||"")+" / "+(first.month||""));
-  }else{
-    text("homeAgilityMain","記録なし");
-    text("homeAgilitySub","");
-  }
-
-  const summaries=[];
-
-  if(Number(total.attempts||0)>0){
-    summaries.push(
-      '<div class="summary-box"><div class="kpi-label">シュート</div>'+
-      '<div class="kpi-value">'+esc(total.rate||0)+'%</div>'+
-      '<div class="kpi-note">'+esc(total.made||0)+'本成功 / '+esc(total.attempts||0)+'本中</div></div>'
-    );
-  }
-
-  if(latestBody){
-    summaries.push(
-      '<div class="summary-box"><div class="kpi-label">身体成長</div>'+
-      '<div class="kpi-value">'+
-      (latestBody.height!==null?esc(fmt(latestBody.height))+'cm':'－')+
-      ' / '+
-      (latestBody.weight!==null?esc(fmt(latestBody.weight))+'kg':'－')+
-      '</div><div class="kpi-note">'+esc(latestBody.month||"")+'</div></div>'
-    );
-  }
-
-  latestAgility.forEach(function(r){
-    summaries.push(
-      '<div class="summary-box"><div class="kpi-label">'+esc(r.type)+'</div>'+
-      '<div class="kpi-value">'+esc(fmt(r.value))+esc(r.unit||"")+'</div>'+
-      '<div class="kpi-note">'+esc(r.month||"")+'</div></div>'
-    );
+function monthRows(){
+  return ((bundle&&bundle.shooting&&bundle.shooting.monthly)||[]).slice().sort(function(a,b){
+    return String(a.month).localeCompare(String(b.month));
   });
-
-  document.getElementById("growthSummary").innerHTML=summaries.length
-    ?summaries.join("")
-    :'<div class="empty">まだ成長記録がありません。</div>';
+}
+function setupMonthSelectors(){
+  const rows=monthRows();
+  const months=rows.map(function(r){return r.month});
+  const current=document.getElementById("currentMonthSelect");
+  const compare=document.getElementById("compareMonthSelect");
+  const previousCurrent=current.value;
+  const previousCompare=compare.value;
+  const options=months.length
+    ?months.slice().reverse().map(function(m){return '<option value="'+esc(m)+'">'+esc(m)+'</option>'}).join("")
+    :'<option value="">記録なし</option>';
+  current.innerHTML=options;
+  compare.innerHTML=options;
+  current.value=months.includes(previousCurrent)?previousCurrent:(months[months.length-1]||"");
+  const defaultCompare=months.length>=2?months[months.length-2]:(months[months.length-1]||"");
+  compare.value=months.includes(previousCompare)?previousCompare:defaultCompare;
 }
 
-function renderShooting(){
-  const s=bundle.shooting||{};
-  const total=s.total||{};
-
-  text("shootMade",String(total.made||0));
-  text("shootAttempts",String(total.attempts||0));
-  text("shootRate",String(total.rate||0)+"%");
-
-  const types=s.byType||[];
-
-  document.getElementById("shootTypes").innerHTML=types.length
-    ?types.map(function(x){
-      return '<div class="item"><b>'+esc(x.type)+'</b><br><span class="value">'+x.rate+'%</span>　'+x.made+' / '+x.attempts+'</div>';
-    }).join("")
-    :'<div class="empty">まだ記録がありません。</div>';
-
-  const positions=(s.byPosition||[]).filter(function(x){
-    return Number(x.attempts)>0;
+function getMonthData(month){
+  const s=(bundle&&bundle.shooting)||{};
+  const row=(s.monthly||[]).find(function(x){return x.month===month})||{month:month,made:0,attempts:0,rate:0};
+  return {
+    month:month,made:Number(row.made||0),attempts:Number(row.attempts||0),rate:Number(row.rate||0),
+    byType:(s.monthlyByType&&s.monthlyByType[month])||[],
+    byPosition:(s.monthlyByPosition&&s.monthlyByPosition[month])||[]
+  };
+}
+function renderShootingComparison(){
+  const currentMonth=document.getElementById("currentMonthSelect").value;
+  const compareMonth=document.getElementById("compareMonthSelect").value;
+  const current=getMonthData(currentMonth);
+  const compare=getMonthData(compareMonth);
+  const cards=[
+    metricCompareCard("成功率",current.rate,compare.rate,"%"),
+    metricCompareCard("成功数",current.made,compare.made,"本"),
+    metricCompareCard("試投数",current.attempts,compare.attempts,"本")
+  ];
+  document.getElementById("shootCompareCards").innerHTML=cards.join("");
+  document.getElementById("typeCurrentHead").textContent=currentMonth||"今月";
+  document.getElementById("typeCompareHead").textContent=compareMonth||"比較月";
+  renderTypeComparison(current,compare);
+  renderShotCourt(current,compare);
+}
+function metricCompareCard(label,current,compare,unit){
+  const diff=Number(current)-Number(compare);
+  const cls=diff>0?"up":diff<0?"down":"same";
+  const diffText=(diff>0?"+":"")+fmt(diff)+unit;
+  return '<div class="compare-card"><div class="compare-label">'+esc(label)+'</div>'+
+    '<div class="compare-main">'+fmt(current)+esc(unit)+'</div>'+
+    '<div class="compare-sub">比較月 '+fmt(compare)+esc(unit)+'</div>'+
+    '<div class="delta '+cls+'">'+diffText+'</div></div>';
+}
+function renderTypeComparison(current,compare){
+  const map={};
+  current.byType.forEach(function(x){map[x.type]={type:x.type,current:x,compare:null}});
+  compare.byType.forEach(function(x){
+    if(!map[x.type])map[x.type]={type:x.type,current:null,compare:x};
+    else map[x.type].compare=x;
   });
+  const rows=Object.values(map).sort(function(a,b){return a.type.localeCompare(b.type,"ja")});
+  document.getElementById("shootTypeCompare").innerHTML=rows.length?rows.map(function(r){
+    const c=r.current||{made:0,attempts:0,rate:0};
+    const p=r.compare||{made:0,attempts:0,rate:0};
+    const diff=Number(c.rate)-Number(p.rate);
+    return '<tr><td><b>'+esc(r.type)+'</b></td>'+
+      '<td>'+fmt(c.rate)+'%<br><span class="small">'+c.made+'/'+c.attempts+'</span></td>'+
+      '<td>'+fmt(p.rate)+'%<br><span class="small">'+p.made+'/'+p.attempts+'</span></td>'+
+      '<td class="'+(diff>0?"status-good":diff<0?"status-warn":"")+'">'+(diff>0?"+":"")+fmt(diff)+'%</td></tr>';
+  }).join(""):'<tr><td colspan="4">月別種目データがありません。Apps Scriptを月比較対応版へ更新してください。</td></tr>';
+}
 
-  document.getElementById("shootPositions").innerHTML=positions.length
-    ?positions.map(function(x){
-      return '<div class="item"><b>'+esc(x.type)+' / '+esc(x.position)+'</b><br><span class="value">'+x.rate+'%</span>　'+x.made+' / '+x.attempts+'</div>';
-    }).join("")
-    :'<div class="empty">まだ記録がありません。</div>';
+function normalizePositionName(name){
+  return String(name||"").normalize("NFKC").replace(/\s+/g,"").replace(/[（(].*?[）)]/g,"");
+}
+function courtPosition(name,type){
+  const n=normalizePositionName(name);
+  const is3=String(type).includes("3P");
+  const map=[
+    {keys:["右0度","右コーナー","右底角"],x:is3?94:76,y:82},
+    {keys:["左0度","左コーナー","左底角"],x:is3?6:24,y:82},
+    {keys:["右45度","右ウィング"],x:is3?87:70,y:is3?52:66},
+    {keys:["左45度","左ウィング"],x:is3?13:30,y:is3?52:66},
+    {keys:["90度","トップ","正面"],x:50,y:is3?37:59},
+    {keys:["右エルボー"],x:61,y:69},{keys:["左エルボー"],x:39,y:69},
+    {keys:["フリースロー","FT"],x:50,y:67},{keys:["マイカン","ゴール下"],x:50,y:91}
+  ];
+  return map.find(function(m){return m.keys.some(function(k){return n.includes(k)})})||{x:50,y:is3?37:66};
+}
+function shotRank(rate){
+  const r=Number(rate||0);
+  if(r<=20)return"rank-red";if(r<=35)return"rank-yellow";if(r<=45)return"rank-green";if(r<=60)return"rank-silver";return"rank-gold";
+}
+function renderShotCourt(current,compare){
+  const holder=document.getElementById("shotMarkers");
+  const detail=document.getElementById("courtDetail");
+  const map={};
+  current.byPosition.forEach(function(x){map[x.type+"|||"+x.position]={type:x.type,position:x.position,current:x,compare:null}});
+  compare.byPosition.forEach(function(x){
+    const key=x.type+"|||"+x.position;
+    if(!map[key])map[key]={type:x.type,position:x.position,current:null,compare:x};
+    else map[key].compare=x;
+  });
+  const rows=Object.values(map).filter(function(r){
+    return Number((r.current&&r.current.attempts)||0)>0||Number((r.compare&&r.compare.attempts)||0)>0;
+  });
+  if(!rows.length){
+    holder.innerHTML="";
+    detail.innerHTML='<h3>月別ポジションデータなし</h3><div class="small">Apps Scriptを月比較対応版へ更新すると表示されます。</div>';
+    return;
+  }
+  holder.innerHTML=rows.map(function(r,i){
+    const c=r.current||{made:0,attempts:0,rate:0};
+    const pos=courtPosition(r.position,r.type);
+    return '<button type="button" class="shot-marker '+shotRank(c.rate)+'" style="left:'+pos.x+'%;top:'+pos.y+'%" data-index="'+i+'">'+
+      '<strong>'+fmt(c.rate)+'%</strong><span>'+esc(r.type)+'<br>'+c.attempts+'本</span></button>';
+  }).join("");
+  holder.querySelectorAll(".shot-marker").forEach(function(btn){
+    btn.addEventListener("click",function(){showCourtDetail(rows[Number(btn.dataset.index)],current.month,compare.month)});
+  });
+  showCourtDetail(rows.slice().sort(function(a,b){
+    return Number((b.current&&b.current.attempts)||0)-Number((a.current&&a.current.attempts)||0);
+  })[0],current.month,compare.month);
+}
+function showCourtDetail(row,currentMonth,compareMonth){
+  const c=row.current||{made:0,attempts:0,rate:0};
+  const p=row.compare||{made:0,attempts:0,rate:0};
+  document.getElementById("courtDetail").innerHTML=
+    '<h3>'+esc(row.position)+'</h3><div class="small">'+esc(row.type)+'</div>'+
+    '<div class="detail-rate">'+fmt(c.rate)+'%</div><div class="small">'+esc(currentMonth)+'</div>'+
+    '<div class="detail-grid"><div><small>成功</small><b>'+c.made+'本</b></div><div><small>試投</small><b>'+c.attempts+'本</b></div></div>'+
+    '<hr style="border:0;border-top:1px solid var(--line);margin:13px 0">'+
+    '<div class="small">'+esc(compareMonth)+'：'+fmt(p.rate)+'%</div>'+
+    '<div class="detail-grid"><div><small>成功</small><b>'+p.made+'本</b></div><div><small>試投</small><b>'+p.attempts+'本</b></div></div>';
 }
 
 function renderBody(){
-  const b=bundle.body||{};
-  const rows=(b.records||[]).slice();
-
-  const heightRecords=rows.filter(function(r){
-    return r.height!==null&&r.height!==undefined&&Number.isFinite(Number(r.height));
-  });
-
-  const weightRecords=rows.filter(function(r){
-    return r.weight!==null&&r.weight!==undefined&&Number.isFinite(Number(r.weight));
-  });
-
+  const rows=((bundle.body||{}).records||[]).slice();
+  const height=rows.filter(function(r){return r.height!==null&&r.height!==undefined&&Number.isFinite(Number(r.height))});
+  const weight=rows.filter(function(r){return r.weight!==null&&r.weight!==undefined&&Number.isFinite(Number(r.weight))});
   document.getElementById("bodyComparison").innerHTML=[
-    buildBodyComparisonCard("身長",heightRecords,"height","cm"),
-    buildBodyComparisonCard("体重",weightRecords,"weight","kg")
+    buildBodyCard("身長",height,"height","cm"),buildBodyCard("体重",weight,"weight","kg")
   ].join("");
-
-  const displayRows=rows.slice().reverse();
-
-  document.getElementById("bodyList").innerHTML=displayRows.length
-    ?displayRows.map(function(r){
-      return '<div class="item"><b>'+esc(r.month)+'</b><br>身長：<span class="value">'+
-        (r.height===null?"－":fmt(r.height)+"cm")+
-        '</span>　体重：<span class="value">'+
-        (r.weight===null?"－":fmt(r.weight)+"kg")+
-        '</span></div>';
-    }).join("")
-    :'<div class="empty">まだ記録がありません。</div>';
+  document.getElementById("bodyList").innerHTML=rows.length?rows.slice().reverse().map(function(r){
+    return '<div class="item"><b>'+esc(r.month)+'</b><br>身長：<span class="value">'+
+      (r.height==null?"－":fmt(r.height)+"cm")+'</span>　体重：<span class="value">'+
+      (r.weight==null?"－":fmt(r.weight)+"kg")+'</span></div>';
+  }).join(""):'<div class="empty">まだ記録がありません。</div>';
 }
-
-function buildBodyComparisonCard(label,records,key,unit){
-  if(!records.length){
-    return '<div class="item"><b>'+esc(label)+'</b><div class="empty">記録がありません。</div></div>';
-  }
-
-  const first=records[0];
-  const latest=records[records.length-1];
-  const previous=records.length>=2?records[records.length-2]:null;
-
-  const firstDiff=Number(latest[key])-Number(first[key]);
-  const previousDiff=previous?Number(latest[key])-Number(previous[key]):null;
-
-  return '<div class="item">'+
-    '<b>'+esc(label)+'</b>'+
-    '<div class="grid three" style="margin-top:10px">'+
-      '<div class="stat"><span class="muted">初回</span><b>'+fmt(first[key])+esc(unit)+'</b><div class="small">'+esc(first.month||"")+'</div></div>'+
-      '<div class="stat"><span class="muted">前回</span><b>'+(previous?fmt(previous[key])+esc(unit):"－")+'</b><div class="small">'+(previous?esc(previous.month||""):"比較なし")+'</div></div>'+
-      '<div class="stat"><span class="muted">最新</span><b>'+fmt(latest[key])+esc(unit)+'</b><div class="small">'+esc(latest.month||"")+'</div></div>'+
-    '</div>'+
-    '<div class="grid" style="margin-top:10px">'+
-      comparisonBox("初回比",firstDiff,unit,true)+
-      comparisonBox("前回比",previousDiff,unit,true)+
-    '</div>'+
-  '</div>';
+function buildBodyCard(label,rows,key,unit){
+  if(!rows.length)return'<div class="item"><b>'+esc(label)+'</b><div class="empty">記録がありません。</div></div>';
+  const first=rows[0],latest=rows[rows.length-1],previous=rows.length>=2?rows[rows.length-2]:null;
+  return '<div class="item"><b>'+esc(label)+'</b><div class="grid three" style="margin-top:10px">'+
+    statHtml("初回",first[key],unit,first.month)+statHtml("前回",previous?previous[key]:null,unit,previous?previous.month:"比較なし")+
+    statHtml("最新",latest[key],unit,latest.month)+'</div><div class="grid" style="margin-top:10px">'+
+    comparisonBox("初回比",Number(latest[key])-Number(first[key]),unit,true)+
+    comparisonBox("前回比",previous?Number(latest[key])-Number(previous[key]):null,unit,true)+'</div></div>';
+}
+function statHtml(label,value,unit,sub){
+  return '<div class="stat"><span class="muted">'+esc(label)+'</span><b>'+(value==null?"－":fmt(value)+esc(unit))+
+    '</b><div class="small">'+esc(sub||"")+'</div></div>';
 }
 
 function renderAgility(){
-  const a=bundle.agility||{};
-  const rows=(a.records||[]).slice();
-  const groups={};
-
-  rows.forEach(function(r){
-    if(!groups[r.type]){
-      groups[r.type]=[];
-    }
-    groups[r.type].push(r);
-  });
-
-  const preferredOrder=[
-    "20mシャトルラン",
-    "反復横跳び",
-    "L字コーン",
-    "垂直跳び",
-    "120回ハンドリング"
-  ];
-
+  const rows=((bundle.agility||{}).records||[]).slice(),groups={};
+  rows.forEach(function(r){if(!groups[r.type])groups[r.type]=[];groups[r.type].push(r)});
+  const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング"];
   const types=Object.keys(groups).sort(function(a,b){
-    const ai=preferredOrder.indexOf(a);
-    const bi=preferredOrder.indexOf(b);
-    if(ai===-1&&bi===-1)return a.localeCompare(b,"ja");
-    if(ai===-1)return 1;
-    if(bi===-1)return -1;
-    return ai-bi;
+    const ai=order.indexOf(a),bi=order.indexOf(b);if(ai<0&&bi<0)return a.localeCompare(b,"ja");if(ai<0)return 1;if(bi<0)return-1;return ai-bi;
   });
-
-  document.getElementById("agilityComparison").innerHTML=types.length
-    ?types.map(function(type){
-      return buildAgilityComparisonCard(type,groups[type]);
-    }).join("")
-    :'<div class="empty">まだ記録がありません。</div>';
-
-  const displayRows=rows.slice().reverse();
-
-  document.getElementById("agilityList").innerHTML=displayRows.length
-    ?displayRows.map(function(r){
-      return '<div class="item"><b>'+esc(r.type)+'</b>　<span class="value">'+
-        fmt(r.value)+esc(r.unit||"")+
-        '</span><br><span class="muted">'+esc(r.month)+'</span></div>';
-    }).join("")
-    :'<div class="empty">まだ記録がありません。</div>';
+  document.getElementById("agilityComparison").innerHTML=types.length?types.map(function(t){return buildAgilityCard(t,groups[t])}).join(""):'<div class="empty">まだ記録がありません。</div>';
+  document.getElementById("agilityList").innerHTML=rows.length?rows.slice().reverse().map(function(r){
+    return '<div class="item"><b>'+esc(r.type)+'</b>　<span class="value">'+fmt(r.value)+esc(r.unit||"")+
+      '</span><br><span class="muted">'+esc(r.month)+'</span></div>';
+  }).join(""):'<div class="empty">まだ記録がありません。</div>';
 }
-
-function buildAgilityComparisonCard(type,records){
-  const valid=records.filter(function(r){
-    return Number.isFinite(Number(r.value));
-  });
-
-  if(!valid.length){
-    return '<div class="item"><b>'+esc(type)+'</b><div class="empty">記録がありません。</div></div>';
-  }
-
-  const first=valid[0];
-  const latest=valid[valid.length-1];
-  const previous=valid.length>=2?valid[valid.length-2]:null;
-  const lowerIsBetter=isLowerBetter(type);
-
-  const best=valid.reduce(function(bestRecord,current){
-    if(!bestRecord)return current;
-
-    return lowerIsBetter
-      ?Number(current.value)<Number(bestRecord.value)?current:bestRecord
-      :Number(current.value)>Number(bestRecord.value)?current:bestRecord;
-  },null);
-
-  const firstDiff=Number(latest.value)-Number(first.value);
-  const previousDiff=previous?Number(latest.value)-Number(previous.value):null;
+function buildAgilityCard(type,records){
+  const valid=records.filter(function(r){return Number.isFinite(Number(r.value))});
+  if(!valid.length)return'<div class="item"><b>'+esc(type)+'</b><div class="empty">記録がありません。</div></div>';
+  const first=valid[0],latest=valid[valid.length-1],previous=valid.length>=2?valid[valid.length-2]:null,lower=isLowerBetter(type);
+  const best=valid.reduce(function(a,b){return lower?Number(b.value)<Number(a.value)?b:a:Number(b.value)>Number(a.value)?b:a});
   const unit=latest.unit||first.unit||"";
-
-  return '<div class="item">'+
-    '<b>'+esc(type)+'</b>'+
-    '<div class="grid three" style="margin-top:10px">'+
-      '<div class="stat"><span class="muted">初回</span><b>'+fmt(first.value)+esc(unit)+'</b><div class="small">'+esc(first.month||"")+'</div></div>'+
-      '<div class="stat"><span class="muted">前回</span><b>'+(previous?fmt(previous.value)+esc(unit):"－")+'</b><div class="small">'+(previous?esc(previous.month||""):"比較なし")+'</div></div>'+
-      '<div class="stat"><span class="muted">最新</span><b>'+fmt(latest.value)+esc(unit)+'</b><div class="small">'+esc(latest.month||"")+'</div></div>'+
-    '</div>'+
-    '<div class="grid" style="margin-top:10px">'+
-      comparisonBox("初回比",firstDiff,unit,!lowerIsBetter)+
-      comparisonBox("前回比",previousDiff,unit,!lowerIsBetter)+
-    '</div>'+
-    '<div class="summary-box" style="margin-top:10px">'+
-      '<div class="kpi-label">ベスト記録</div>'+
-      '<div class="kpi-value">'+fmt(best.value)+esc(best.unit||unit)+'</div>'+
-      '<div class="kpi-note">'+esc(best.month||"")+'</div>'+
-    '</div>'+
-  '</div>';
+  return '<div class="item"><b>'+esc(type)+'</b><div class="grid three" style="margin-top:10px">'+
+    statHtml("初回",first.value,unit,first.month)+statHtml("前回",previous?previous.value:null,unit,previous?previous.month:"比較なし")+
+    statHtml("最新",latest.value,unit,latest.month)+'</div><div class="grid" style="margin-top:10px">'+
+    comparisonBox("初回比",Number(latest.value)-Number(first.value),unit,!lower)+
+    comparisonBox("前回比",previous?Number(latest.value)-Number(previous.value):null,unit,!lower)+'</div>'+
+    '<div class="summary-box" style="margin-top:10px"><div class="kpi-label">ベスト記録</div><div class="kpi-value">'+
+    fmt(best.value)+esc(best.unit||unit)+'</div><div class="kpi-note">'+esc(best.month||"")+'</div></div></div>';
 }
-
 function comparisonBox(label,diff,unit,higherIsBetter){
-  if(diff===null||diff===undefined||!Number.isFinite(Number(diff))){
-    return '<div class="summary-box"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-value">－</div><div class="kpi-note">比較できる記録がありません</div></div>';
-  }
-
-  const n=Number(diff);
-  const improved=n===0?null:(higherIsBetter?n>0:n<0);
-  const className=improved===true?"status-good":improved===false?"status-warn":"";
-  const note=improved===true?"改善":improved===false?"変化あり":"変化なし";
-
-  return '<div class="summary-box">'+
-    '<div class="kpi-label">'+esc(label)+'</div>'+
-    '<div class="kpi-value '+className+'">'+(n>0?"+":"")+fmt(n)+esc(unit)+'</div>'+
-    '<div class="kpi-note '+className+'">'+note+'</div>'+
-  '</div>';
+  if(diff==null||!Number.isFinite(Number(diff)))return'<div class="summary-box"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-value">－</div><div class="kpi-note">比較できる記録がありません</div></div>';
+  const n=Number(diff),improved=n===0?null:(higherIsBetter?n>0:n<0),cls=improved===true?"status-good":improved===false?"status-warn":"";
+  return '<div class="summary-box"><div class="kpi-label">'+esc(label)+'</div><div class="kpi-value '+cls+'">'+
+    (n>0?"+":"")+fmt(n)+esc(unit)+'</div><div class="kpi-note '+cls+'">'+(improved===true?"改善":improved===false?"変化あり":"変化なし")+'</div></div>';
 }
-
-function isLowerBetter(type){
-  return type==="L字コーン"||type==="120回ハンドリング";
-}
+function isLowerBetter(type){return type==="L字コーン"||type==="120回ハンドリング"}
 
 function showView(name){
-  document.querySelectorAll(".view").forEach(function(view){
-    view.classList.remove("active");
-  });
-
-  document.querySelectorAll(".tabs button").forEach(function(button){
-    button.classList.remove("active");
-  });
-
+  document.querySelectorAll(".view").forEach(function(v){v.classList.remove("active")});
+  document.querySelectorAll(".tabs button").forEach(function(b){b.classList.remove("active")});
   document.getElementById(name+"View").classList.add("active");
-  document.getElementById(
-    "tab"+name.charAt(0).toUpperCase()+name.slice(1)
-  ).classList.add("active");
-
-  setTimeout(function(){
-    if(name==="shooting")drawShooting();
-    if(name==="body")drawBody();
-    if(name==="agility")drawAgility();
-  },30);
+  document.getElementById("tab"+name.charAt(0).toUpperCase()+name.slice(1)).classList.add("active");
+  setTimeout(function(){if(name==="shooting")drawShooting();if(name==="body")drawBody();if(name==="agility")drawAgility()},30);
 }
-
 function drawShooting(){
-  const rows=(bundle.shooting&&bundle.shooting.monthly)||[];
-
-  drawLines("shootChart",[
-    {
-      label:"成功率",
-      points:rows.map(function(r){
-        return {label:r.month,value:Number(r.rate)};
-      }),
-      min:0,
-      max:100
-    }
-  ]);
+  drawLines("shootChart",[{label:"成功率",points:monthRows().map(function(r){return{label:r.month,value:Number(r.rate)}}),min:0,max:100}]);
 }
-
 function drawBody(){
-  const rows=(bundle.body&&bundle.body.records)||[];
-
+  const rows=((bundle.body||{}).records||[]);
   drawLines("bodyChart",[
-    {
-      label:"身長",
-      points:rows
-        .filter(function(r){return r.height!==null;})
-        .map(function(r){return {label:r.month,value:Number(r.height)};})
-    },
-    {
-      label:"体重",
-      points:rows
-        .filter(function(r){return r.weight!==null;})
-        .map(function(r){return {label:r.month,value:Number(r.weight)};})
-    }
+    {label:"身長",points:rows.filter(function(r){return r.height!==null}).map(function(r){return{label:r.month,value:Number(r.height)}})},
+    {label:"体重",points:rows.filter(function(r){return r.weight!==null}).map(function(r){return{label:r.month,value:Number(r.weight)}})}
   ]);
 }
-
 function drawAgility(){
-  const rows=(bundle.agility&&bundle.agility.records)||[];
-  const groups={};
-
-  rows.forEach(function(r){
-    if(!groups[r.type]){
-      groups[r.type]=[];
-    }
-
-    groups[r.type].push(r);
-  });
-
-  drawLines(
-    "agilityChart",
-    Object.keys(groups).map(function(type){
-      return {
-        label:type,
-        points:groups[type].map(function(r){
-          return {label:r.month,value:Number(r.value)};
-        })
-      };
-    })
-  );
+  const rows=((bundle.agility||{}).records||[]),groups={};
+  rows.forEach(function(r){if(!groups[r.type])groups[r.type]=[];groups[r.type].push(r)});
+  drawLines("agilityChart",Object.keys(groups).map(function(t){return{label:t,points:groups[t].map(function(r){return{label:r.month,value:Number(r.value)}})}}));
 }
-
 function drawLines(canvasId,series){
-  const canvas=document.getElementById(canvasId);
-  const ctx=canvas.getContext("2d");
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  const active=series.filter(function(s){
-    return s.points&&s.points.length;
+  const canvas=document.getElementById(canvasId),ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height);
+  const active=series.filter(function(s){return s.points&&s.points.length});
+  const all=active.flatMap(function(s){return s.points.map(function(p){return p.value})}).filter(Number.isFinite);
+  if(!all.length){ctx.fillStyle="#a7bad2";ctx.font="20px sans-serif";ctx.textAlign="center";ctx.fillText("記録がありません",canvas.width/2,canvas.height/2);ctx.textAlign="left";return}
+  const left=55,right=20,top=42,bottom=48,width=canvas.width-left-right,height=canvas.height-top-bottom;
+  let min=Math.min.apply(null,all),max=Math.max.apply(null,all);
+  if(active.some(function(s){return s.min===0}))min=0;if(active.some(function(s){return s.max===100}))max=100;
+  if(min===max){min-=1;max+=1}const pad=(max-min)*.1;if(!active.some(function(s){return s.min===0}))min-=pad;if(!active.some(function(s){return s.max===100}))max+=pad;
+  ctx.strokeStyle="#29496d";ctx.fillStyle="#a7bad2";ctx.font="12px sans-serif";
+  for(let i=0;i<=4;i++){const y=top+i*height/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(canvas.width-right,y);ctx.stroke();ctx.fillText(fmt(max-(max-min)*i/4),5,y+4)}
+  const colors=["#42a5f5","#77c4ff","#ff7373","#ffb35c","#ad7cff","#44d8e8"];
+  active.forEach(function(s,si){
+    const color=colors[si%colors.length],pts=s.points.map(function(p,i){return{x:left+i*(width/Math.max(1,s.points.length-1)),y:top+(max-p.value)*height/(max-min),label:p.label,value:p.value}});
+    ctx.beginPath();pts.forEach(function(p,i){i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});ctx.strokeStyle=color;ctx.lineWidth=4;ctx.stroke();
+    pts.forEach(function(p){ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill()});
+    ctx.fillStyle=color;ctx.fillRect(left+(si%3)*190,10,15,5);ctx.fillStyle="#f5f9ff";ctx.fillText(s.label,left+22+(si%3)*190,17);
   });
-
-  const all=active
-    .flatMap(function(s){
-      return s.points.map(function(p){return p.value;});
-    })
-    .filter(Number.isFinite);
-
-  if(!all.length){
-    ctx.fillStyle="#a9c5b3";
-    ctx.font="20px sans-serif";
-    ctx.textAlign="center";
-    ctx.fillText("記録がありません",canvas.width/2,canvas.height/2);
-    ctx.textAlign="left";
-    return;
-  }
-
-  const left=55;
-  const right=20;
-  const top=42;
-  const bottom=48;
-  const width=canvas.width-left-right;
-  const height=canvas.height-top-bottom;
-
-  let min=Math.min.apply(null,all);
-  let max=Math.max.apply(null,all);
-
-  if(active.some(function(s){return s.min===0;})){
-    min=0;
-  }
-
-  if(active.some(function(s){return s.max===100;})){
-    max=100;
-  }
-
-  if(min===max){
-    min-=1;
-    max+=1;
-  }
-
-  const padding=(max-min)*0.1;
-
-  if(!active.some(function(s){return s.min===0;})){
-    min-=padding;
-  }
-
-  if(!active.some(function(s){return s.max===100;})){
-    max+=padding;
-  }
-
-  ctx.strokeStyle="#28513b";
-  ctx.fillStyle="#a9c5b3";
-  ctx.font="12px sans-serif";
-
-  for(let i=0;i<=4;i++){
-    const y=top+i*height/4;
-    ctx.beginPath();
-    ctx.moveTo(left,y);
-    ctx.lineTo(canvas.width-right,y);
-    ctx.stroke();
-    ctx.fillText(fmt(max-(max-min)*i/4),5,y+4);
-  }
-
-  const colors=["#27d77d","#69a7ff","#ff7676","#ffd45c","#ad7cff","#44d8e8"];
-
-  active.forEach(function(s,seriesIndex){
-    const color=colors[seriesIndex%colors.length];
-
-    const points=s.points.map(function(p,index){
-      return {
-        x:left+index*(width/Math.max(1,s.points.length-1)),
-        y:top+(max-p.value)*height/(max-min),
-        label:p.label,
-        value:p.value
-      };
-    });
-
-    ctx.beginPath();
-
-    points.forEach(function(p,index){
-      if(index===0){
-        ctx.moveTo(p.x,p.y);
-      }else{
-        ctx.lineTo(p.x,p.y);
-      }
-    });
-
-    ctx.strokeStyle=color;
-    ctx.lineWidth=4;
-    ctx.stroke();
-
-    points.forEach(function(p){
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,5,0,Math.PI*2);
-      ctx.fillStyle=color;
-      ctx.fill();
-    });
-
-    ctx.fillStyle=color;
-    ctx.fillRect(left+(seriesIndex%3)*190,10,15,5);
-    ctx.fillStyle="#f5fff8";
-    ctx.fillText(s.label,left+22+(seriesIndex%3)*190,17);
-  });
-
-  const labels=active[0].points;
-
-  ctx.fillStyle="#a9c5b3";
-  ctx.font="11px sans-serif";
-  ctx.textAlign="center";
-
-  labels.forEach(function(p,index){
-    if(
-      labels.length>6 &&
-      index%Math.ceil(labels.length/6)!==0 &&
-      index!==labels.length-1
-    ){
-      return;
-    }
-
-    const x=left+index*(width/Math.max(1,labels.length-1));
-
-    ctx.fillText(
-      String(p.label).replace(/^\d{4}\//,""),
-      x,
-      canvas.height-16
-    );
-  });
-
-  ctx.textAlign="left";
+  const labels=active[0].points;ctx.fillStyle="#a7bad2";ctx.font="11px sans-serif";ctx.textAlign="center";
+  labels.forEach(function(p,i){if(labels.length>6&&i%Math.ceil(labels.length/6)!==0&&i!==labels.length-1)return;const x=left+i*(width/Math.max(1,labels.length-1));ctx.fillText(String(p.label).replace(/^\d{4}\//,""),x,canvas.height-16)});ctx.textAlign="left";
 }
 
 function jsonp(params,timeoutMs){
   timeoutMs=timeoutMs||25000;
-
   return new Promise(function(resolve,reject){
-    const callback=
-      "__ninjaGrowth_"+Date.now()+"_"+
-      Math.random().toString(36).slice(2);
-
-    const script=document.createElement("script");
-
-    const timer=setTimeout(function(){
-      cleanup(new Error("Apps Scriptとの通信がタイムアウトしました。"));
-    },timeoutMs);
-
-    function cleanup(error,data){
-      clearTimeout(timer);
-
-      try{
-        delete window[callback];
-      }catch(_){}
-
-      if(script.parentNode){
-        script.remove();
-      }
-
-      error?reject(error):resolve(data);
-    }
-
-    window[callback]=function(data){
-      cleanup(null,data);
-    };
-
-    script.src=
-      GAS_URL+"?"+
-      new URLSearchParams(
-        Object.assign(
-          {},
-          params,
-          {
-            callback:callback,
-            _:Date.now()
-          }
-        )
-      ).toString();
-
-    script.onerror=function(){
-      cleanup(new Error("Apps Scriptへ接続できませんでした。"));
-    };
-
+    const callback="__ninjaGrowth_"+Date.now()+"_"+Math.random().toString(36).slice(2),script=document.createElement("script");
+    const timer=setTimeout(function(){cleanup(new Error("Apps Scriptとの通信がタイムアウトしました。"))},timeoutMs);
+    function cleanup(error,data){clearTimeout(timer);try{delete window[callback]}catch(_){}if(script.parentNode)script.remove();error?reject(error):resolve(data)}
+    window[callback]=function(data){cleanup(null,data)};
+    script.src=GAS_URL+"?"+new URLSearchParams(Object.assign({},params,{callback:callback,_:Date.now()})).toString();
+    script.onerror=function(){cleanup(new Error("Apps Scriptへ接続できませんでした。"))};
     document.head.appendChild(script);
   });
 }
-
-function setLoading(value){
-  text("loadingText",value);
-}
-
-function showError(error){
-  hide("loading");
-  hide("app");
-
-  const box=document.getElementById("message");
-
-  box.textContent=
-    error&&error.message
-      ?error.message
-      :String(error);
-
-  box.className="notice error";
-  show("message");
-}
-
-function changeText(value,unit){
-  if(value===null||value===undefined){
-    return "比較できる記録がありません";
-  }
-
-  return "初回から "+(value>0?"+":"")+fmt(value)+unit;
-}
-
-function show(id){
-  document.getElementById(id).classList.remove("hidden");
-}
-
-function hide(id){
-  document.getElementById(id).classList.add("hidden");
-}
-
-function text(id,value){
-  const element=document.getElementById(id);
-
-  if(element){
-    element.textContent=value==null?"":value;
-  }
-}
-
-function fmt(value){
-  const number=Number(value);
-
-  return Number.isFinite(number)
-    ?String(Math.round(number*10)/10)
-    :"－";
-}
-
-function esc(value){
-  return String(value==null?"":value).replace(
-    /[&<>"']/g,
-    function(character){
-      return {
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#39;"
-      }[character];
-    }
-  );
-}
+function setLoading(v){text("loadingText",v)}
+function showError(error){hide("loading");hide("app");const box=document.getElementById("message");box.textContent=error&&error.message?error.message:String(error);box.className="notice error";show("message")}
+function show(id){document.getElementById(id).classList.remove("hidden")}
+function hide(id){document.getElementById(id).classList.add("hidden")}
+function text(id,v){const e=document.getElementById(id);if(e)e.textContent=v==null?"":v}
+function fmt(v){const n=Number(v);return Number.isFinite(n)?String(Math.round(n*10)/10):"－"}
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 </script>
 </body>
 </html>
