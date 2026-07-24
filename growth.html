@@ -623,6 +623,14 @@ function statHtml(label,value,unit,sub){
     '</b><div class="small">'+esc(sub||"")+'</div></div>';
 }
 
+
+function isLowerBetter(type){
+  const value=String(type||"").normalize("NFKC");
+  return value.indexOf("L字")>=0 ||
+    value.indexOf("l字")>=0 ||
+    value.indexOf("ハンドリング")>=0;
+}
+
 function normalizeAgilityType(type){
   const value=String(type||"").normalize("NFKC").replace(/\s+/g,"");
   if(value.includes("シャトル"))return "20mシャトルラン";
