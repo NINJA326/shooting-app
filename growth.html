@@ -260,11 +260,248 @@ body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
 }
 </style>
 
+
+<style id="reference-design-alignment">
+/* Reference-image-aligned dashboard: black base, compact cards, left metrics + right graph. */
+.legacy-profile-header{display:none!important}
+body{
+  background:#020406;
+  color:#fff;
+}
+.wrap{
+  width:100%;
+  max-width:860px;
+  padding:18px 14px calc(34px + env(safe-area-inset-bottom));
+}
+.dashboard-view{gap:14px}
+.dashboard-head{
+  min-height:94px;
+  padding:4px 5px 8px;
+  align-items:center;
+}
+.dashboard-head::before{
+  content:"N";
+  display:grid;
+  place-items:center;
+  flex:0 0 58px;
+  width:58px;
+  height:58px;
+  margin-right:12px;
+  border-radius:18px;
+  border:2px solid #ff2752;
+  color:#fff;
+  font-size:28px;
+  font-weight:1000;
+  font-style:italic;
+  background:
+    radial-gradient(circle at 25% 75%,rgba(0,170,255,.7),transparent 43%),
+    radial-gradient(circle at 75% 25%,rgba(255,0,103,.72),transparent 44%),
+    #05070a;
+  box-shadow:0 0 18px rgba(255,38,82,.18);
+}
+.dashboard-head>div:first-of-type{margin-right:auto}
+.dashboard-kicker{
+  color:#fff;
+  font-size:21px;
+  letter-spacing:.2px;
+  line-height:1.1;
+}
+.dashboard-head h1{
+  font-size:20px;
+  font-weight:850;
+  margin-top:8px;
+}
+.icon-button{
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  background:#0a1017;
+  border:1px solid #33404f;
+  font-size:27px;
+}
+.dashboard-card{
+  min-height:292px;
+  grid-template-columns:minmax(0,40%) minmax(0,60%);
+  align-items:stretch;
+  gap:18px;
+  padding:22px 20px 20px 28px;
+  border-radius:18px;
+  border:1px solid #2b3541;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.018),transparent 48%),
+    #070b10;
+  box-shadow:0 14px 35px rgba(0,0,0,.28);
+}
+.dashboard-card::before{width:3px}
+.dashboard-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(110deg,transparent 55%,rgba(255,255,255,.018));
+}
+.dashboard-card-left{
+  position:relative;
+  z-index:1;
+  gap:10px;
+  justify-content:flex-start;
+}
+.dashboard-icon{
+  width:66px;
+  height:66px;
+  margin-bottom:2px;
+}
+.dashboard-icon svg{
+  width:100%;
+  height:100%;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:4;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:drop-shadow(0 0 7px currentColor);
+}
+.dashboard-icon svg .speed{stroke-width:3}
+.dashboard-title{
+  font-size:25px;
+  line-height:1.15;
+  letter-spacing:.3px;
+}
+.dashboard-sub{
+  font-size:11px;
+  line-height:1.45;
+  margin-top:4px;
+}
+.dashboard-primary{margin-top:auto}
+.dashboard-primary small,.dashboard-pair small{
+  color:#b6c0cc;
+  font-size:11px;
+  font-weight:700;
+}
+.dashboard-primary strong{
+  font-size:42px;
+  letter-spacing:-1px;
+}
+.dashboard-primary span,.dashboard-delta{
+  font-size:12px;
+  line-height:1.4;
+}
+.dashboard-pair{
+  margin-top:auto;
+  gap:10px;
+}
+.dashboard-pair strong{
+  font-size:25px;
+  line-height:1.15;
+  letter-spacing:-.5px;
+}
+.mini-chart-box{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+}
+.mini-chart-title{
+  font-size:14px;
+  margin:0 0 8px 2px;
+}
+.mini-chart-box canvas{
+  width:100%!important;
+  height:220px!important;
+  min-height:220px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.dashboard-ranking{
+  min-height:112px;
+  grid-template-columns:1fr;
+  padding-top:18px;
+  padding-bottom:18px;
+}
+.dashboard-ranking .dashboard-icon{
+  width:52px;
+  height:52px;
+  margin:0;
+}
+.ranking-left{gap:16px}
+.dashboard-refresh{
+  background:#0c151f;
+  border-color:#2a3948;
+}
+.detail-shell .card{
+  background:#080d13;
+  border-color:#2a3541;
+}
+.detail-symbol{color:#45aaff}
+
+/* Keep the same visual structure on phones instead of stacking cards vertically. */
+@media(max-width:700px){
+  .wrap{padding:12px 10px calc(28px + env(safe-area-inset-bottom))}
+  .dashboard-head{
+    min-height:82px;
+    padding:2px 3px 7px;
+  }
+  .dashboard-head::before{
+    width:48px;height:48px;flex-basis:48px;border-radius:15px;
+    font-size:23px;margin-right:9px;
+  }
+  .dashboard-kicker{font-size:18px}
+  .dashboard-head h1{font-size:18px;margin-top:6px}
+  .icon-button{width:43px;height:43px;flex-basis:43px}
+  .dashboard-card{
+    grid-template-columns:minmax(0,42%) minmax(0,58%);
+    min-height:250px;
+    gap:10px;
+    padding:18px 12px 16px 19px;
+    border-radius:17px;
+  }
+  .dashboard-icon{width:50px;height:50px}
+  .dashboard-title{font-size:20px}
+  .dashboard-sub{font-size:9px}
+  .dashboard-primary strong{font-size:33px}
+  .dashboard-primary small,.dashboard-pair small{font-size:9px}
+  .dashboard-primary span,.dashboard-delta{font-size:9px}
+  .dashboard-pair{grid-template-columns:1fr;gap:6px}
+  .dashboard-pair strong{font-size:21px}
+  .mini-chart-title{font-size:11px;margin-bottom:4px}
+  .mini-chart-box canvas{
+    height:190px!important;
+    min-height:190px;
+  }
+  .dashboard-ranking{
+    grid-template-columns:1fr;
+    min-height:96px;
+    padding:15px 14px 14px 19px;
+  }
+  .dashboard-ranking .dashboard-icon{width:43px;height:43px}
+  .ranking-left{gap:11px}
+}
+@media(max-width:390px){
+  .dashboard-card{
+    grid-template-columns:minmax(0,43%) minmax(0,57%);
+    min-height:232px;
+    padding-left:16px;
+    gap:8px;
+  }
+  .dashboard-title{font-size:18px}
+  .dashboard-icon{width:45px;height:45px}
+  .dashboard-primary strong{font-size:29px}
+  .dashboard-pair strong{font-size:18px}
+  .mini-chart-box canvas{
+    height:172px!important;
+    min-height:172px;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="wrap">
-  <header class="header">
-    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260725-0935</span></div>
+  <header class="header legacy-profile-header">
+    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260725-1015</span></div>
     <div id="profile" class="hidden">
       <div id="playerName" class="name"></div>
       <div id="playerMeta" class="muted"></div>
@@ -291,7 +528,9 @@ body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
 
       <button class="dashboard-card dashboard-shooting" type="button" onclick="openDetail('shooting')">
         <div class="dashboard-card-left">
-          <div class="dashboard-icon">🏀</div>
+          <div class="dashboard-icon icon-shoot" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><circle cx="34" cy="32" r="22"/><path d="M13 32h43M34 10c-7 7-10 14-10 22s3 15 10 22M34 10c7 7 10 14 10 22s-3 15-10 22M18 17c10 5 18 14 23 28M50 17c-10 5-18 14-23 28"/><path class="speed" d="M2 22h13M0 32h14M3 42h12"/></svg>
+    </div>
           <div>
             <div class="dashboard-title">シュート <span>›</span></div>
             <div class="dashboard-sub">成功率・成功数・試投数の詳細</div>
@@ -310,7 +549,9 @@ body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
 
       <button class="dashboard-card dashboard-body" type="button" onclick="openDetail('body')">
         <div class="dashboard-card-left">
-          <div class="dashboard-icon">📏</div>
+          <div class="dashboard-icon icon-body" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><rect x="8" y="8" width="12" height="48" rx="2"/><path d="M12 14h8M12 21h5M12 28h8M12 35h5M12 42h8M12 49h5"/><circle cx="42" cy="17" r="7"/><path d="M31 34c0-7 5-12 11-12s11 5 11 12v8H49v14h-6V43h-2v13h-6V42h-4z"/></svg>
+    </div>
           <div>
             <div class="dashboard-title">身体測定 <span>›</span></div>
             <div class="dashboard-sub">身長・体重の推移と記録一覧</div>
@@ -329,7 +570,9 @@ body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
 
       <button class="dashboard-card dashboard-agility" type="button" onclick="openDetail('agility')">
         <div class="dashboard-card-left">
-          <div class="dashboard-icon">⏱</div>
+          <div class="dashboard-icon icon-agility" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><circle cx="34" cy="35" r="20"/><path d="M34 15V8M27 8h14M48 20l5-5M34 35l10-9M34 35h-1"/><path class="speed" d="M2 26h15M0 35h14M3 44h14"/></svg>
+    </div>
           <div>
             <div class="dashboard-title">アジリティ <span>›</span></div>
             <div class="dashboard-sub">5種目から選んで詳細確認</div>
@@ -348,7 +591,9 @@ body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
 
       <div id="rankingDashboardCard" class="dashboard-card dashboard-ranking ranking-disabled">
         <div class="ranking-left">
-          <div class="dashboard-icon">🏆</div>
+          <div class="dashboard-icon icon-rank" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><path d="M21 10h22v9c0 12-6 20-11 20s-11-8-11-20z"/><path d="M21 15H10v5c0 8 5 13 13 14M43 15h11v5c0 8-5 13-13 14M32 39v8M22 54h20M26 47h12"/><path d="m32 16 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+    </div>
           <div>
             <div class="dashboard-title">ランキング</div>
             <div id="rankingStatus" class="dashboard-sub">ランキングデータは現在のAPIに含まれていません</div>
@@ -367,7 +612,7 @@ body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
 
       <section id="shootingView" class="detail-view hidden">
         <div class="detail-page-title">
-          <span>🏀</span>
+          <span class="detail-symbol">●</span>
           <div><h2>シュート詳細</h2><p>月比較、ポジション別、種目別、月別推移</p></div>
         </div>
 
@@ -425,7 +670,7 @@ body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
 
       <section id="bodyView" class="detail-view hidden">
         <div class="detail-page-title">
-          <span>📏</span>
+          <span class="detail-symbol">▥</span>
           <div><h2>身体測定詳細</h2><p>身長・体重の最新値、比較、推移、記録一覧</p></div>
         </div>
 
@@ -446,7 +691,7 @@ body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
 
       <section id="agilityView" class="detail-view hidden">
         <div class="detail-page-title">
-          <span>⏱</span>
+          <span class="detail-symbol">◷</span>
           <div><h2>アジリティ詳細</h2><p>種目選択、初回・前回・最新・ベスト、推移グラフ</p></div>
         </div>
 
