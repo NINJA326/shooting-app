@@ -606,7 +606,7 @@ body{
 <body>
 <div class="wrap">
   <header class="header legacy-profile-header">
-    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260725-1045</span></div>
+    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260725-1105</span></div>
     <div id="profile" class="hidden">
       <div id="playerName" class="name"></div>
       <div id="playerMeta" class="muted"></div>
@@ -1319,6 +1319,17 @@ function formatBodyMonth(value){
   const match=text.match(/^(\d{4})\/(\d{1,2})/);
   if(!match)return text;
   return String(match[1]).slice(-2)+"."+Number(match[2]);
+}
+
+
+function formatYearMonthLabel(value){
+  const raw=String(value??"").trim();
+  if(!raw)return "－";
+  const match=raw.match(/^(\d{4})[\/.\-](\d{1,2})(?:[\/.\-]\d{1,2})?/);
+  if(match)return match[1]+"."+Number(match[2]);
+  const date=new Date(raw);
+  if(!Number.isNaN(date.getTime()))return date.getFullYear()+"."+(date.getMonth()+1);
+  return raw;
 }
 
 function renderBody(){
