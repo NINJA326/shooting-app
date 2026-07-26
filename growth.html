@@ -270,6 +270,119 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
   opacity:.55;
 }
 
+
+.ranking-page-controls{
+  display:grid;
+  gap:10px;
+  margin-bottom:12px;
+}
+.ranking-mode-tabs,.ranking-scope-tabs{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.ranking-mode-tabs button,.ranking-scope-tabs button{
+  min-height:44px;
+  border:1px solid #3a4653;
+  border-radius:12px;
+  background:#0b1117;
+  color:#b8c4d0;
+  font-weight:900;
+  padding:9px;
+}
+.ranking-mode-tabs button.active,.ranking-scope-tabs button.active{
+  color:#fff;
+  border-color:#9a55ff;
+  background:#2c1745;
+}
+.ranking-filter-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.ranking-filter-grid label{
+  display:grid;
+  gap:5px;
+  color:#aab6c2;
+  font-size:11px;
+  font-weight:800;
+}
+.ranking-filter-grid select{
+  width:100%;
+  min-height:43px;
+  border:1px solid #33404c;
+  border-radius:12px;
+  background:#09131d;
+  color:#fff;
+  padding:9px 11px;
+  font-weight:850;
+}
+.ranking-note{
+  font-size:11px;
+  color:#aab6c2;
+  line-height:1.6;
+}
+.ranking-list{
+  display:grid;
+  gap:8px;
+}
+.ranking-row{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  border:1px solid #293542;
+  border-radius:14px;
+  background:#0a1016;
+  padding:11px 12px;
+}
+.ranking-position{
+  font-size:18px;
+  font-weight:950;
+  color:#bd8cff;
+  text-align:center;
+}
+.ranking-player{
+  min-width:0;
+}
+.ranking-player strong{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:14px;
+}
+.ranking-player span{
+  display:block;
+  margin-top:3px;
+  color:#91a0af;
+  font-size:10px;
+}
+.ranking-value{
+  text-align:right;
+  font-size:16px;
+  font-weight:950;
+}
+.ranking-value small{
+  display:block;
+  color:#91a0af;
+  font-size:9px;
+  margin-top:3px;
+}
+.ranking-current{
+  border-color:#9a55ff;
+  box-shadow:0 0 0 1px rgba(154,85,255,.35) inset;
+}
+.ranking-empty{
+  text-align:center;
+  color:#91a0af;
+  padding:24px 10px;
+}
+@media(max-width:520px){
+  .ranking-filter-grid{grid-template-columns:1fr}
+  .ranking-row{grid-template-columns:42px minmax(0,1fr) auto;padding:10px}
+}
+
 </style>
 
 <style id="dashboard-layout">
@@ -702,7 +815,7 @@ body{
 <body>
 <div class="wrap">
   <header class="header legacy-profile-header">
-    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260726-2345</span></div>
+    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260727-0015</span></div>
     <div id="profile" class="hidden">
       <div id="playerName" class="name"></div>
       <div id="playerMeta" class="muted"></div>
@@ -842,7 +955,7 @@ body{
         </div>
       </button>
 
-      <div id="rankingDashboardCard" class="dashboard-card dashboard-ranking ranking-disabled">
+      <button id="rankingDashboardCard" class="dashboard-card dashboard-ranking ranking-disabled" type="button" onclick="openDetail('ranking')">
         <div class="ranking-left">
           <div class="dashboard-icon icon-rank" aria-hidden="true">
       <svg viewBox="0 0 64 64"><path d="M21 10h22v9c0 12-6 20-11 20s-11-8-11-20z"/><path d="M21 15H10v5c0 8 5 13 13 14M43 15h11v5c0 8-5 13-13 14M32 39v8M22 54h20M26 47h12"/><path d="m32 16 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
@@ -852,7 +965,7 @@ body{
             <div id="rankingStatus" class="dashboard-sub">ランキングデータは現在のAPIに含まれていません</div>
           </div>
         </div>
-      </div>
+      </button>
 
       <button class="refresh dashboard-refresh" onclick="loadBundle()">最新情報に更新</button>
 
@@ -984,6 +1097,65 @@ body{
           <div id="agilityListPanel" class="collapsible">
             <div id="selectedAgilityList" class="list"></div>
           </div>
+        </div>
+      </section>
+
+      <section id="rankingView" class="detail-view hidden">
+        <div class="detail-page-title">
+          <span class="detail-symbol">♛</span>
+          <div><h2>ランキング</h2><p>シュート・アジリティの男女別、カテゴリー別順位</p></div>
+        </div>
+
+        <div class="card">
+          <div class="ranking-page-controls">
+            <div class="ranking-mode-tabs">
+              <button id="rankModeShooting" class="active" type="button" onclick="setRankingMode('shooting')">シュート</button>
+              <button id="rankModeAgility" type="button" onclick="setRankingMode('agility')">アジリティ</button>
+            </div>
+
+            <div class="ranking-scope-tabs">
+              <button id="rankScopeOverall" class="active" type="button" onclick="setRankingScope('overall')">男女別順位</button>
+              <button id="rankScopeCategory" type="button" onclick="setRankingScope('category')">カテゴリー別順位</button>
+            </div>
+
+            <div class="ranking-filter-grid">
+              <label>性別
+                <select id="rankingGender" onchange="renderRankingPage()">
+                  <option value="男子">男子</option>
+                  <option value="女子">女子</option>
+                </select>
+              </label>
+
+              <label id="rankingCategoryLabel" class="hidden">カテゴリー
+                <select id="rankingCategory" onchange="renderRankingPage()"></select>
+              </label>
+
+              <label id="rankingShootMetricLabel">ランキング項目
+                <select id="rankingShootMetric" onchange="renderRankingPage()">
+                  <option value="totalAttempts">総投数</option>
+                  <option value="totalMade">成功数</option>
+                  <option value="successRate">成功率</option>
+                </select>
+              </label>
+
+              <label id="rankingAgilityTypeLabel" class="hidden">アジリティ種目
+                <select id="rankingAgilityType" onchange="renderRankingPage()">
+                  <option value="20mシャトルラン">20mシャトルラン</option>
+                  <option value="反復横跳び">反復横跳び</option>
+                  <option value="L字コーン">L字コーン</option>
+                  <option value="垂直跳び">垂直跳び</option>
+                  <option value="120回ハンドリング">120回ハンドリング</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="rankingRuleNote" class="ranking-note"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 id="rankingListTitle" class="title">ランキング一覧</h2>
+          <div id="rankingList" class="ranking-list"></div>
         </div>
       </section>
     </section>
@@ -1153,10 +1325,175 @@ async function unlinkGrowthAccount(){
   }
 }
 
+
+let rankingMode="shooting";
+let rankingScope="overall";
+
+function setupRankingPage(){
+  const ranking=bundle&&bundle.ranking;
+  const categorySelect=document.getElementById("rankingCategory");
+  const genderSelect=document.getElementById("rankingGender");
+
+  if(!ranking||!categorySelect||!genderSelect)return;
+
+  const currentCategory=String(ranking.currentCategory||"");
+  const currentGender=currentCategory.includes("女子")?"女子":"男子";
+  genderSelect.value=currentGender;
+
+  const categories=new Set();
+  const sources=[
+    ...(((ranking.shooting||{}).totalAttempts)||[]),
+    ...Object.values(ranking.agility||{}).flatMap(function(group){
+      return group&&Array.isArray(group.rows)?group.rows:[];
+    })
+  ];
+
+  sources.forEach(function(row){
+    if(row&&row.categoryKey)categories.add(row.categoryKey);
+  });
+
+  const sorted=Array.from(categories).sort(function(a,b){
+    const an=Number(String(a).replace(/\D/g,""))||999;
+    const bn=Number(String(b).replace(/\D/g,""))||999;
+    return an-bn||String(a).localeCompare(String(b),"ja");
+  });
+
+  categorySelect.innerHTML=sorted.map(function(category){
+    return '<option value="'+esc(category)+'">'+esc(category)+'</option>';
+  }).join("");
+
+  const currentKey=(currentCategory.match(/U\s*(\d{1,2})/i)||[])[1];
+  if(currentKey&&sorted.includes("U"+currentKey)){
+    categorySelect.value="U"+currentKey;
+  }
+}
+
+function setRankingMode(mode){
+  rankingMode=mode;
+  document.getElementById("rankModeShooting").classList.toggle("active",mode==="shooting");
+  document.getElementById("rankModeAgility").classList.toggle("active",mode==="agility");
+  document.getElementById("rankingShootMetricLabel").classList.toggle("hidden",mode!=="shooting");
+  document.getElementById("rankingAgilityTypeLabel").classList.toggle("hidden",mode!=="agility");
+  renderRankingPage();
+}
+
+function setRankingScope(scope){
+  rankingScope=scope;
+  document.getElementById("rankScopeOverall").classList.toggle("active",scope==="overall");
+  document.getElementById("rankScopeCategory").classList.toggle("active",scope==="category");
+  document.getElementById("rankingCategoryLabel").classList.toggle("hidden",scope!=="category");
+  renderRankingPage();
+}
+
+function renderRankingPage(){
+  const ranking=bundle&&bundle.ranking;
+  const list=document.getElementById("rankingList");
+  const title=document.getElementById("rankingListTitle");
+  const note=document.getElementById("rankingRuleNote");
+  if(!ranking||!list||!title||!note)return;
+
+  const gender=document.getElementById("rankingGender").value;
+  const category=document.getElementById("rankingCategory").value;
+  let rows=[];
+  let valueLabel="";
+  let unit="";
+  let subValue=function(){return""};
+
+  if(rankingMode==="shooting"){
+    const metric=document.getElementById("rankingShootMetric").value;
+    const shooting=ranking.shooting||{};
+    rows=(shooting[metric]||[]).slice();
+
+    if(metric==="totalAttempts"){
+      valueLabel="総投数";
+      unit="本";
+      subValue=function(r){return "成功 "+fmt(r.made)+"本 / 成功率 "+fmt(r.rate)+"%";};
+      note.textContent="保存済みの有効な全シュート記録を選手ごとに合計しています。";
+    }else if(metric==="totalMade"){
+      valueLabel="成功数";
+      unit="本";
+      subValue=function(r){return "総投数 "+fmt(r.attempts)+"本 / 成功率 "+fmt(r.rate)+"%";};
+      note.textContent="保存済みの有効な全シュート記録を選手ごとに合計しています。";
+    }else{
+      valueLabel="成功率";
+      unit="%";
+      subValue=function(r){return "成功 "+fmt(r.made)+"本 / 総投数 "+fmt(r.attempts)+"本";};
+      note.textContent="成功率ランキングは総投数500本以上の選手のみ対象です。";
+    }
+  }else{
+    const type=document.getElementById("rankingAgilityType").value;
+    const group=(ranking.agility||{})[type]||{rows:[],unit:"",lowerIsBetter:false};
+    rows=(group.rows||[]).slice();
+    valueLabel=type;
+    unit=group.unit||"";
+    subValue=function(r){return r.date?"ベスト記録 "+formatYearMonthLabel(r.date):"個人ベスト";};
+    note.textContent=group.lowerIsBetter
+      ?"全期間の個人ベストで順位を算出しています。秒数が小さい選手が上位です。"
+      :"全期間の個人ベストで順位を算出しています。数値が大きい選手が上位です。";
+  }
+
+  rows=rows.filter(function(row){
+    if(row.gender!==gender)return false;
+    if(rankingScope==="category"&&row.categoryKey!==category)return false;
+    return true;
+  });
+
+  rows=rerankVisibleRows(rows,rankingMode==="agility"
+    ?((ranking.agility||{})[document.getElementById("rankingAgilityType").value]||{}).lowerIsBetter
+    :false,
+    rankingMode==="shooting"?document.getElementById("rankingShootMetric").value:"value");
+
+  const scopeText=rankingScope==="category"
+    ?gender+" "+category
+    :gender+"総合";
+  title.textContent=scopeText+"・"+valueLabel+"ランキング";
+
+  if(!rows.length){
+    list.innerHTML='<div class="ranking-empty">対象となる記録がありません。</div>';
+    return;
+  }
+
+  list.innerHTML=rows.map(function(row){
+    const value=rankingMode==="shooting"
+      ?(document.getElementById("rankingShootMetric").value==="totalAttempts"
+          ?row.attempts
+          :document.getElementById("rankingShootMetric").value==="totalMade"
+            ?row.made
+            :row.rate)
+      :row.value;
+
+    return '<div class="ranking-row '+(row.playerId===ranking.currentPlayerId?"ranking-current":"")+'">'+
+      '<div class="ranking-position">'+row.visibleRank+'位</div>'+
+      '<div class="ranking-player"><strong>'+esc(row.name)+'</strong>'+
+      '<span>'+esc(row.category||row.categoryKey||"")+'</span></div>'+
+      '<div class="ranking-value">'+fmt(value)+esc(unit)+
+      '<small>'+esc(subValue(row))+'</small></div></div>';
+  }).join("");
+}
+
+function rerankVisibleRows(rows,lowerIsBetter,valueKey){
+  const sorted=rows.slice().sort(function(a,b){
+    const av=Number(valueKey==="totalAttempts"?a.attempts:valueKey==="totalMade"?a.made:valueKey==="successRate"?a.rate:a[valueKey]);
+    const bv=Number(valueKey==="totalAttempts"?b.attempts:valueKey==="totalMade"?b.made:valueKey==="successRate"?b.rate:b[valueKey]);
+    if(av!==bv)return lowerIsBetter?av-bv:bv-av;
+    return String(a.name).localeCompare(String(b.name),"ja");
+  });
+
+  let last=null,lastRank=0;
+  return sorted.map(function(row,index){
+    const value=Number(valueKey==="totalAttempts"?row.attempts:valueKey==="totalMade"?row.made:valueKey==="successRate"?row.rate:row[valueKey]);
+    const copy=Object.assign({},row);
+    copy.visibleRank=(last!==null&&value===last)?lastRank:index+1;
+    last=value;
+    lastRank=copy.visibleRank;
+    return copy;
+  });
+}
+
 function openDetail(name){
   hide("dashboardView");
   show("detailShell");
-  ["shooting","body","agility"].forEach(function(key){
+  ["shooting","body","agility","ranking"].forEach(function(key){
     const el=document.getElementById(key+"View");
     if(el)el.classList.toggle("hidden",key!==name);
   });
@@ -1165,6 +1502,7 @@ function openDetail(name){
     if(name==="shooting"){renderShootingComparison();drawShooting()}
     if(name==="body"){renderBody();drawBody()}
     if(name==="agility"){renderSelectedAgility()}
+    if(name==="ranking"){setupRankingPage();renderRankingPage()}
   },40);
 }
 
@@ -1339,23 +1677,28 @@ function renderRankingDashboard(){
   if(!card||!status)return;
 
   if(!ranking){
-    status.textContent="ランキングデータは現在のAPIに含まれていません";
+    status.textContent="ランキングデータを取得できません";
     card.classList.add("ranking-disabled");
-    card.removeAttribute("role");
-    card.onclick=null;
+    card.disabled=true;
     return;
   }
 
-  const rows=Array.isArray(ranking)?ranking:(ranking.rows||[]);
-  if(!rows.length){
-    status.textContent="ランキング対象の記録がありません";
-    card.classList.add("ranking-disabled");
-    return;
-  }
+  card.classList.remove("ranking-disabled");
+  card.disabled=false;
 
-  status.textContent=rows.slice(0,2).map(function(r){
-    return (r.label||r.type||"ランキング")+" "+(r.rank||"－")+"位 / "+(r.total||"－")+"人中";
-  }).join("　");
+  const playerId=ranking.currentPlayerId;
+  const attempts=((ranking.shooting||{}).totalAttempts||[]);
+  const rate=((ranking.shooting||{}).successRate||[]);
+  const attemptRow=attempts.find(function(r){return r.playerId===playerId});
+  const rateRow=rate.find(function(r){return r.playerId===playerId});
+  const parts=[];
+
+  if(attemptRow)parts.push("総投数 "+attemptRow.rank+"位");
+  if(rateRow)parts.push("成功率 "+rateRow.rank+"位");
+
+  status.textContent=parts.length
+    ?parts.join("　")+"　タップして一覧表示"
+    :"タップして男女別・カテゴリー別順位を確認";
 }
 
 function renderAll(){
@@ -1364,6 +1707,7 @@ function renderAll(){
   renderBody();
   setupAgilitySelector();
   renderSelectedAgility();
+  setupRankingPage();
   hide("detailShell");
   show("dashboardView");
   setTimeout(function(){
