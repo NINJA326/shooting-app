@@ -250,6 +250,26 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
   white-space:pre-wrap;
 }
 
+
+.account-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:4px;
+}
+.unlink-button{
+  min-height:40px;
+  border:1px solid #3b4652;
+  border-radius:12px;
+  background:#0b1117;
+  color:#c4ced8;
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:850;
+}
+.unlink-button:disabled{
+  opacity:.55;
+}
+
 </style>
 
 <style id="dashboard-layout">
@@ -682,7 +702,7 @@ body{
 <body>
 <div class="wrap">
   <header class="header legacy-profile-header">
-    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260726-2315</span></div>
+    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260726-2345</span></div>
     <div id="profile" class="hidden">
       <div id="playerName" class="name"></div>
       <div id="playerMeta" class="muted"></div>
@@ -835,6 +855,17 @@ body{
       </div>
 
       <button class="refresh dashboard-refresh" onclick="loadBundle()">最新情報に更新</button>
+
+      <div class="account-actions">
+        <button
+          id="unlinkButton"
+          class="unlink-button"
+          type="button"
+          onclick="unlinkGrowthAccount()"
+        >
+          選手連携を解除
+        </button>
+      </div>
     </section>
 
     <section id="detailShell" class="detail-shell hidden">
@@ -1064,6 +1095,61 @@ async function submitGrowthLink(event){
   }finally{
     button.disabled=false;
     button.textContent="ログインして連携する";
+  }
+}
+
+
+async function unlinkGrowthAccount(){
+  const confirmed=window.confirm(
+    "このLINEアカウントと選手IDの連携を解除します。\n\n" +
+    "解除後は、選手IDとパスワードで再ログインが必要です。\n" +
+    "成長記録や入力済みデータは削除されません。\n\n" +
+    "連携を解除しますか？"
+  );
+
+  if(!confirmed)return;
+
+  const button=document.getElementById("unlinkButton");
+  if(button){
+    button.disabled=true;
+    button.textContent="連携を解除しています…";
+  }
+
+  try{
+    const result=await jsonp({
+      action:"growthUnlink",
+      idToken:idToken
+    });
+
+    if(!result||result.status!=="ok"){
+      throw new Error(
+        result&&result.message
+          ? result.message
+          : "選手連携を解除できませんでした。"
+      );
+    }
+
+    bundle=null;
+    hide("app");
+    hide("profile");
+    hide("message");
+    hide("loading");
+
+    document.getElementById("linkPlayerId").value="";
+    document.getElementById("linkPassword").value="";
+    hide("linkLoginError");
+    show("linkLogin");
+
+    window.scrollTo({top:0,behavior:"instant"});
+
+  }catch(error){
+    showError(error);
+
+  }finally{
+    if(button){
+      button.disabled=false;
+      button.textContent="選手連携を解除";
+    }
   }
 }
 
