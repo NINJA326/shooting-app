@@ -383,6 +383,28 @@ canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid 
   .ranking-row{grid-template-columns:42px minmax(0,1fr) auto;padding:10px}
 }
 
+
+.ranking-no-record{
+  opacity:.8;
+  background:#080c11;
+}
+.ranking-no-record .ranking-position{
+  color:#7f8b98;
+  font-size:12px;
+}
+.ranking-no-record .ranking-value{
+  color:#a5b0bb;
+  font-size:13px;
+}
+.ranking-ineligible{
+  opacity:.88;
+  background:#0b0f14;
+}
+.ranking-ineligible .ranking-position{
+  color:#d2a95f;
+  font-size:11px;
+}
+
 </style>
 
 <style id="dashboard-layout">
@@ -815,7 +837,7 @@ body{
 <body>
 <div class="wrap">
   <header class="header legacy-profile-header">
-    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260727-0015</span></div>
+    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260727-0045</span></div>
     <div id="profile" class="hidden">
       <div id="playerName" class="name"></div>
       <div id="playerMeta" class="muted"></div>
@@ -1398,38 +1420,60 @@ function renderRankingPage(){
   let valueLabel="";
   let unit="";
   let subValue=function(){return""};
+  let metricKey="";
 
   if(rankingMode==="shooting"){
     const metric=document.getElementById("rankingShootMetric").value;
+    metricKey=metric;
     const shooting=ranking.shooting||{};
     rows=(shooting[metric]||[]).slice();
 
     if(metric==="totalAttempts"){
       valueLabel="総投数";
       unit="本";
-      subValue=function(r){return "成功 "+fmt(r.made)+"本 / 成功率 "+fmt(r.rate)+"%";};
-      note.textContent="保存済みの有効な全シュート記録を選手ごとに合計しています。";
+      subValue=function(r){
+        return r.status==="no_record"
+          ?"シュート記録がありません"
+          :"成功 "+fmt(r.made)+"本 / 成功率 "+fmt(r.rate)+"%";
+      };
+      note.textContent="保存済みの有効な全シュート記録を選手ごとに合計しています。未入力の選手も「記録なし」で表示します。";
     }else if(metric==="totalMade"){
       valueLabel="成功数";
       unit="本";
-      subValue=function(r){return "総投数 "+fmt(r.attempts)+"本 / 成功率 "+fmt(r.rate)+"%";};
-      note.textContent="保存済みの有効な全シュート記録を選手ごとに合計しています。";
+      subValue=function(r){
+        return r.status==="no_record"
+          ?"シュート記録がありません"
+          :"総投数 "+fmt(r.attempts)+"本 / 成功率 "+fmt(r.rate)+"%";
+      };
+      note.textContent="保存済みの有効な全シュート記録を選手ごとに合計しています。未入力の選手も「記録なし」で表示します。";
     }else{
       valueLabel="成功率";
       unit="%";
-      subValue=function(r){return "成功 "+fmt(r.made)+"本 / 総投数 "+fmt(r.attempts)+"本";};
-      note.textContent="成功率ランキングは総投数500本以上の選手のみ対象です。";
+      subValue=function(r){
+        if(r.status==="no_record")return "シュート記録がありません";
+        if(r.status==="ineligible")return "総投数 "+fmt(r.attempts)+"本 / 500本未満";
+        return "成功 "+fmt(r.made)+"本 / 総投数 "+fmt(r.attempts)+"本";
+      };
+      note.textContent="成功率ランキングは総投数500本以上のみ順位対象です。500本未満は「対象外」、未入力は「記録なし」で表示します。";
     }
   }else{
     const type=document.getElementById("rankingAgilityType").value;
     const group=(ranking.agility||{})[type]||{rows:[],unit:"",lowerIsBetter:false};
     rows=(group.rows||[]).slice();
+    metricKey="value";
     valueLabel=type;
     unit=group.unit||"";
-    subValue=function(r){return r.date?"ベスト記録 "+formatYearMonthLabel(r.date):"個人ベスト";};
-    note.textContent=group.lowerIsBetter
+    subValue=function(r){
+      return r.status==="no_record"
+        ?"測定記録がありません"
+        :r.date
+          ?"ベスト記録 "+formatYearMonthLabel(r.date)
+          :"個人ベスト";
+    };
+    note.textContent=(group.lowerIsBetter
       ?"全期間の個人ベストで順位を算出しています。秒数が小さい選手が上位です。"
-      :"全期間の個人ベストで順位を算出しています。数値が大きい選手が上位です。";
+      :"全期間の個人ベストで順位を算出しています。数値が大きい選手が上位です。"
+    )+" 未測定の選手も「記録なし」で表示します。";
   }
 
   rows=rows.filter(function(row){
@@ -1438,10 +1482,33 @@ function renderRankingPage(){
     return true;
   });
 
-  rows=rerankVisibleRows(rows,rankingMode==="agility"
+  const validRows=rows.filter(function(row){
+    return !row.status;
+  });
+
+  const invalidRows=rows.filter(function(row){
+    return row.status;
+  });
+
+  const lowerIsBetter=rankingMode==="agility"
     ?((ranking.agility||{})[document.getElementById("rankingAgilityType").value]||{}).lowerIsBetter
-    :false,
-    rankingMode==="shooting"?document.getElementById("rankingShootMetric").value:"value");
+    :false;
+
+  const reranked=rerankVisibleRows(
+    validRows,
+    lowerIsBetter,
+    metricKey
+  );
+
+  const statusOrder={ineligible:1,no_record:2};
+  invalidRows.sort(function(a,b){
+    const sa=statusOrder[a.status]||9;
+    const sb=statusOrder[b.status]||9;
+    if(sa!==sb)return sa-sb;
+    return String(a.name).localeCompare(String(b.name),"ja");
+  });
+
+  rows=reranked.concat(invalidRows);
 
   const scopeText=rankingScope==="category"
     ?gender+" "+category
@@ -1449,24 +1516,39 @@ function renderRankingPage(){
   title.textContent=scopeText+"・"+valueLabel+"ランキング";
 
   if(!rows.length){
-    list.innerHTML='<div class="ranking-empty">対象となる記録がありません。</div>';
+    list.innerHTML='<div class="ranking-empty">対象となる選手がいません。</div>';
     return;
   }
 
   list.innerHTML=rows.map(function(row){
-    const value=rankingMode==="shooting"
-      ?(document.getElementById("rankingShootMetric").value==="totalAttempts"
-          ?row.attempts
-          :document.getElementById("rankingShootMetric").value==="totalMade"
-            ?row.made
-            :row.rate)
-      :row.value;
+    const isNoRecord=row.status==="no_record";
+    const isIneligible=row.status==="ineligible";
+    let displayValue="記録なし";
+    let rankText="－";
 
-    return '<div class="ranking-row '+(row.playerId===ranking.currentPlayerId?"ranking-current":"")+'">'+
-      '<div class="ranking-position">'+row.visibleRank+'位</div>'+
+    if(isIneligible){
+      displayValue="対象外";
+      rankText="対象外";
+    }else if(!isNoRecord){
+      const value=rankingMode==="shooting"
+        ?(metricKey==="totalAttempts"
+            ?row.attempts
+            :metricKey==="totalMade"
+              ?row.made
+              :row.rate)
+        :row.value;
+      displayValue=fmt(value)+unit;
+      rankText=row.visibleRank+"位";
+    }
+
+    return '<div class="ranking-row '+
+      (row.playerId===ranking.currentPlayerId?"ranking-current ":"")+
+      (isNoRecord?"ranking-no-record ":"")+
+      (isIneligible?"ranking-ineligible ":"")+'">'+
+      '<div class="ranking-position">'+esc(rankText)+'</div>'+
       '<div class="ranking-player"><strong>'+esc(row.name)+'</strong>'+
       '<span>'+esc(row.category||row.categoryKey||"")+'</span></div>'+
-      '<div class="ranking-value">'+fmt(value)+esc(unit)+
+      '<div class="ranking-value">'+esc(displayValue)+
       '<small>'+esc(subValue(row))+'</small></div></div>';
   }).join("");
 }
