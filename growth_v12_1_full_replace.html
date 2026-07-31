@@ -1,0 +1,2389 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<base target="_top">
+<title>NINJA 成長記録</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+:root{
+  --bg:#071426;--bg2:#0b1b31;--panel:#10223b;--panel2:#162b47;--line:#29496d;
+  --text:#f5f9ff;--muted:#a7bad2;--blue:#42a5f5;--blue2:#77c4ff;
+  --orange:#ffb35c;--red:#ff7373;--silver:#c9d4e2;--court:#d7a86e
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2));
+  color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif
+}
+button,select{font:inherit}
+.wrap{max-width:780px;margin:auto;padding:12px 12px calc(30px + env(safe-area-inset-bottom))}
+.header,.card{
+  background:rgba(16,34,59,.96);border:1px solid var(--line);border-radius:20px;
+  padding:16px;margin-bottom:12px;box-shadow:0 10px 28px rgba(0,0,0,.12)
+}
+.header{background:linear-gradient(135deg,#17385f,#10233d)}
+.brand{font-size:12px;letter-spacing:1.7px;color:var(--blue2);font-weight:900}
+.name{font-size:25px;font-weight:900;margin:7px 0 3px}
+.muted,.small{font-size:12px;color:var(--muted)}
+.hidden{display:none!important}
+.loading{text-align:center;padding:54px 16px}
+.spinner{
+  width:38px;height:38px;border-radius:50%;border:4px solid var(--line);
+  border-top-color:var(--blue);margin:0 auto 14px;animation:spin .85s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.notice{border-radius:15px;padding:14px;margin-bottom:14px;background:#17345a;color:#e1f1ff;white-space:pre-wrap}
+.notice.error{background:#3b1d25;color:#ffd9df;border:1px solid #7c3947}
+.tabs{
+  position:sticky;top:0;z-index:20;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin:0 0 12px;padding:8px 0;background:linear-gradient(180deg,rgba(7,20,38,.99),rgba(7,20,38,.88))
+}
+.tabs button{
+  min-height:48px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);
+  border-radius:14px;padding:9px 5px;font-weight:900;font-size:13px
+}
+.tabs button.active{background:var(--blue);border-color:var(--blue);color:#06182a}
+.view{display:none}.view.active{display:block}
+.title{font-size:18px;font-weight:900;margin:0 0 12px}
+.section-lead{font-size:13px;color:var(--muted);margin:-4px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.grid.three{grid-template-columns:repeat(3,1fr)}
+.stat,.item,.summary-box{
+  background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:13px
+}
+.stat b{display:block;font-size:22px;margin-top:5px;word-break:break-word}
+.list{display:grid;gap:9px}.item{line-height:1.65}
+.value{color:var(--blue2);font-weight:900}
+.kpi-label{font-size:12px;color:var(--muted)}
+.kpi-value{font-size:22px;font-weight:900;margin-top:4px}
+.kpi-note{font-size:12px;color:var(--muted);margin-top:4px}
+.status-good{color:var(--blue2)}.status-warn{color:var(--orange)}
+.month-control{
+  display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;
+  background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:12px
+}
+.month-control label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.month-control select{
+  width:100%;background:#0b1a2d;color:var(--text);border:1px solid var(--line);
+  border-radius:12px;padding:11px
+}
+.compare-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.compare-card{background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:13px}
+.compare-label{font-size:12px;color:var(--muted)}
+.compare-main{font-size:25px;font-weight:900;margin-top:5px}
+.compare-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.delta{margin-top:7px;font-size:12px;font-weight:900}
+.delta.up{color:var(--blue2)}.delta.down{color:var(--orange)}.delta.same{color:var(--silver)}
+.court-wrap{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:12px;align-items:start}
+.shot-court{
+  position:relative;width:100%;max-width:590px;margin:auto;aspect-ratio:.92/1;
+  background:var(--court);border:4px solid #fff;border-radius:9px;overflow:hidden
+}
+.shot-court svg{position:absolute;inset:0;width:100%;height:100%}
+.shot-marker{
+  position:absolute;transform:translate(-50%,-50%);width:60px;height:60px;border:3px solid #fff;
+  border-radius:50%;display:grid;place-items:center;text-align:center;padding:3px;cursor:pointer;
+  box-shadow:0 3px 10px rgba(0,0,0,.35);color:#fff;background:#1f6fb2
+}
+.shot-marker strong{font-size:15px;line-height:1}.shot-marker span{font-size:9px;line-height:1.15}
+.rank-red{background:#b42318}.rank-yellow{background:#d4a017;color:#16120a}.rank-green{background:#1f8a4c}
+.rank-silver{background:linear-gradient(145deg,#f7f7f7,#9ea8b3 60%,#6e7882);color:#111}
+.rank-gold{background:linear-gradient(145deg,#fff3a6,#d4af37 55%,#8f6b00);color:#1a1400}
+.court-detail{background:#0b1a2d;border:1px solid var(--line);border-radius:15px;padding:14px;min-height:185px}
+.court-detail h3{margin:0 0 8px;font-size:16px}.detail-rate{font-size:32px;font-weight:900;margin:7px 0}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.detail-grid div{background:var(--panel2);border-radius:10px;padding:9px}
+.detail-grid small{display:block;color:var(--muted);margin-bottom:3px}
+.compare-table{width:100%;border-collapse:collapse;font-size:12px}
+.compare-table th,.compare-table td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left}
+.compare-table th{color:var(--muted)}
+canvas{display:block;width:100%;height:auto;background:#09182a;border:1px solid var(--line);border-radius:14px}
+.refresh{width:100%;border:1px solid var(--line);background:#1b4f80;color:#fff;border-radius:14px;padding:14px;font-weight:900}
+.agility-select-wrap{
+  background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:12px
+}
+.agility-select-wrap label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+.agility-select-wrap select{
+  width:100%;background:#0b1a2d;color:var(--text);border:1px solid var(--line);
+  border-radius:12px;padding:12px;font-weight:800
+}
+.toggle-list{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  border-radius:14px;padding:13px;font-weight:900
+}
+.toggle-icon{font-size:22px;line-height:1}
+.collapsible{display:none;margin-top:10px}
+.collapsible.open{display:block}
+
+.empty{color:var(--muted);text-align:center;padding:16px}
+@media(max-width:650px){
+  .grid,.grid.three,.compare-grid{grid-template-columns:1fr}
+  .court-wrap{grid-template-columns:1fr}
+  .month-control{grid-template-columns:1fr}
+  .shot-marker{width:55px;height:55px}
+}
+
+.body-compact-summary{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px
+}
+.body-compact-box{
+  border:1px solid var(--line);
+  background:var(--panel2);
+  border-radius:12px;
+  padding:10px
+}
+.body-compact-box .label{font-size:11px;color:var(--muted)}
+.body-compact-box .main{font-size:20px;font-weight:900;margin-top:2px}
+.body-compact-box .sub{font-size:11px;color:var(--muted);margin-top:3px}
+.body-table-wrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  margin-top:10px
+}
+.body-table{
+  border-collapse:separate;
+  border-spacing:0;
+  width:max-content;
+  min-width:100%;
+  font-size:13px
+}
+.body-table th,.body-table td{
+  min-width:72px;
+  padding:10px 8px;
+  text-align:center;
+  white-space:nowrap;
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line)
+}
+.body-table tr:first-child th{border-top:1px solid var(--line)}
+.body-table th:first-child,.body-table td:first-child{
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:70px;
+  background:var(--panel2);
+  font-weight:900;
+  border-left:1px solid var(--line)
+}
+.body-table th:first-child{border-top-left-radius:10px}
+.body-table tr:first-child th:last-child{border-top-right-radius:10px}
+
+.login-card{
+  max-width:520px;
+  margin:0 auto 14px;
+}
+.login-card h2{
+  margin:0 0 8px;
+  font-size:21px;
+}
+.login-card p{
+  margin:0 0 15px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.7;
+}
+.login-form{
+  display:grid;
+  gap:13px;
+}
+.login-field{
+  display:grid;
+  gap:6px;
+}
+.login-field label{
+  color:var(--muted);
+  font-size:12px;
+  font-weight:800;
+}
+.login-field input{
+  width:100%;
+  min-height:48px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:#09131d;
+  color:var(--text);
+  padding:12px 13px;
+  font-size:16px;
+  outline:none;
+}
+.login-field input:focus{
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(66,165,245,.14);
+}
+.login-submit{
+  width:100%;
+  min-height:50px;
+  border:0;
+  border-radius:14px;
+  background:var(--blue);
+  color:#06182a;
+  font-weight:950;
+  padding:13px;
+}
+.login-submit:disabled{
+  opacity:.55;
+}
+.login-help{
+  margin-top:12px;
+  padding:11px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--panel2);
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.65;
+}
+.login-error{
+  margin-top:10px;
+  border-radius:12px;
+  padding:11px 12px;
+  background:#3b1d25;
+  color:#ffd9df;
+  border:1px solid #7c3947;
+  white-space:pre-wrap;
+}
+
+
+.account-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:4px;
+}
+.unlink-button{
+  min-height:40px;
+  border:1px solid #3b4652;
+  border-radius:12px;
+  background:#0b1117;
+  color:#c4ced8;
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:850;
+}
+.unlink-button:disabled{
+  opacity:.55;
+}
+
+
+.ranking-page-controls{
+  display:grid;
+  gap:10px;
+  margin-bottom:12px;
+}
+.ranking-mode-tabs,.ranking-scope-tabs{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+.ranking-mode-tabs button,.ranking-scope-tabs button{
+  min-height:44px;
+  border:1px solid #3a4653;
+  border-radius:12px;
+  background:#0b1117;
+  color:#b8c4d0;
+  font-weight:900;
+  padding:9px;
+}
+.ranking-mode-tabs button.active,.ranking-scope-tabs button.active{
+  color:#fff;
+  border-color:#9a55ff;
+  background:#2c1745;
+}
+.ranking-filter-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:9px;
+}
+.ranking-filter-grid label{
+  display:grid;
+  gap:5px;
+  color:#aab6c2;
+  font-size:11px;
+  font-weight:800;
+}
+.ranking-filter-grid select{
+  width:100%;
+  min-height:43px;
+  border:1px solid #33404c;
+  border-radius:12px;
+  background:#09131d;
+  color:#fff;
+  padding:9px 11px;
+  font-weight:850;
+}
+.ranking-note{
+  font-size:11px;
+  color:#aab6c2;
+  line-height:1.6;
+}
+.ranking-list{
+  display:grid;
+  gap:8px;
+}
+.ranking-row{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+  border:1px solid #293542;
+  border-radius:14px;
+  background:#0a1016;
+  padding:11px 12px;
+}
+.ranking-position{
+  font-size:18px;
+  font-weight:950;
+  color:#bd8cff;
+  text-align:center;
+}
+.ranking-player{
+  min-width:0;
+}
+.ranking-player strong{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:14px;
+}
+.ranking-player span{
+  display:block;
+  margin-top:3px;
+  color:#91a0af;
+  font-size:10px;
+}
+.ranking-value{
+  text-align:right;
+  font-size:16px;
+  font-weight:950;
+}
+.ranking-value small{
+  display:block;
+  color:#91a0af;
+  font-size:9px;
+  margin-top:3px;
+}
+.ranking-current{
+  border-color:#9a55ff;
+  box-shadow:0 0 0 1px rgba(154,85,255,.35) inset;
+}
+.ranking-empty{
+  text-align:center;
+  color:#91a0af;
+  padding:24px 10px;
+}
+@media(max-width:520px){
+  .ranking-filter-grid{grid-template-columns:1fr}
+  .ranking-row{grid-template-columns:42px minmax(0,1fr) auto;padding:10px}
+}
+
+
+.ranking-no-record{
+  opacity:.8;
+  background:#080c11;
+}
+.ranking-no-record .ranking-position{
+  color:#7f8b98;
+  font-size:12px;
+}
+.ranking-no-record .ranking-value{
+  color:#a5b0bb;
+  font-size:13px;
+}
+.ranking-ineligible{
+  opacity:.88;
+  background:#0b0f14;
+}
+.ranking-ineligible .ranking-position{
+  color:#d2a95f;
+  font-size:11px;
+}
+
+</style>
+
+<style id="dashboard-layout">
+:root{
+  --dash-bg:#030507;
+  --dash-panel:#0a0f14;
+  --dash-panel2:#0d141b;
+  --dash-border:#26313c;
+  --shoot:#ff2638;
+  --body:#20d547;
+  --agility:#159eff;
+  --rank:#9a55ff;
+}
+body{background:linear-gradient(180deg,#020304,#07101a);color:#fff}
+.wrap{max-width:920px;padding:12px 12px calc(30px + env(safe-area-inset-bottom))}
+.header{
+  background:#030507;border-color:#141b23;border-radius:24px;
+  padding:14px 18px;margin-bottom:12px
+}
+.brand{color:#fff;font-size:13px}
+.name{font-size:24px}
+.dashboard-view{display:grid;gap:14px}
+.dashboard-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:4px 4px 2px
+}
+.dashboard-kicker{font-size:14px;font-weight:900;color:#aab6c2}
+.dashboard-head h1{font-size:24px;margin:4px 0 0}
+.icon-button{
+  width:44px;height:44px;border-radius:50%;border:1px solid #2e3944;
+  background:#0b1117;color:#dce5ee;font-size:25px;cursor:pointer
+}
+.dashboard-card{
+  position:relative;width:100%;display:grid;grid-template-columns:minmax(240px,.85fr) minmax(300px,1.45fr);
+  gap:18px;text-align:left;background:linear-gradient(135deg,#080c10,#0d141a);
+  color:#fff;border:1px solid var(--dash-border);border-radius:20px;padding:22px;
+  box-shadow:0 12px 32px rgba(0,0,0,.22);overflow:hidden;cursor:pointer
+}
+.dashboard-card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:currentColor
+}
+.dashboard-card:active{transform:scale(.995)}
+.dashboard-shooting{color:var(--shoot)}
+.dashboard-body{color:var(--body)}
+.dashboard-agility{color:var(--agility)}
+.dashboard-ranking{color:var(--rank);grid-template-columns:1fr;cursor:default}
+.dashboard-card-left{display:flex;flex-direction:column;gap:14px;min-width:0}
+.dashboard-icon{font-size:48px;line-height:1}
+.dashboard-title{font-size:25px;font-weight:950;color:#fff}
+.dashboard-title span{color:currentColor;margin-left:6px}
+.dashboard-sub{font-size:12px;font-weight:800;color:currentColor}
+.dashboard-primary small,.dashboard-pair small{
+  display:block;color:#aab6c2;font-size:12px;margin-bottom:4px
+}
+.dashboard-primary strong{display:block;color:#fff;font-size:42px;line-height:1.1}
+.dashboard-primary span,.dashboard-delta{font-size:13px;font-weight:900;color:currentColor}
+.dashboard-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dashboard-pair strong{display:block;color:#fff;font-size:27px}
+.mini-chart-box{min-width:0;align-self:stretch}
+.mini-chart-title{font-size:14px;font-weight:900;color:#fff;margin:2px 0 8px}
+.mini-chart-box canvas{height:230px;background:#070b0f;border-color:#27323d}
+.ranking-left{display:flex;align-items:center;gap:15px}
+.ranking-disabled{opacity:.88}
+.dashboard-refresh{margin-top:2px}
+.detail-shell{display:block}
+.detail-toolbar{
+  position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+  background:rgba(3,5,7,.94);backdrop-filter:blur(12px);padding:9px 0;margin-bottom:10px
+}
+.back-button{
+  min-height:44px;border:1px solid #2c3844;border-radius:13px;background:#0d141b;
+  color:#fff;padding:9px 14px;font-weight:900
+}
+.detail-page-title{display:flex;align-items:center;gap:13px;padding:7px 3px 13px}
+.detail-page-title>span{font-size:44px}
+.detail-page-title h2{margin:0;font-size:25px}
+.detail-page-title p{margin:4px 0 0;color:#9cadbd;font-size:12px}
+.detail-view{display:block}
+.card{background:#0c131a;border-color:#2b3743;box-shadow:none}
+@media(max-width:700px){
+  .dashboard-card{grid-template-columns:1fr;padding:18px;gap:15px}
+  .mini-chart-box canvas{height:auto}
+  .dashboard-primary strong{font-size:38px}
+}
+</style>
+
+
+<style id="reference-design-alignment">
+/* Reference-image-aligned dashboard: black base, compact cards, left metrics + right graph. */
+.legacy-profile-header{display:none!important}
+body{
+  background:#020406;
+  color:#fff;
+}
+.wrap{
+  width:100%;
+  max-width:860px;
+  padding:18px 14px calc(34px + env(safe-area-inset-bottom));
+}
+.dashboard-view{gap:14px}
+.dashboard-head{
+  min-height:94px;
+  padding:4px 5px 8px;
+  align-items:center;
+}
+.dashboard-head::before{
+  content:"N";
+  display:grid;
+  place-items:center;
+  flex:0 0 58px;
+  width:58px;
+  height:58px;
+  margin-right:12px;
+  border-radius:18px;
+  border:2px solid #ff2752;
+  color:#fff;
+  font-size:28px;
+  font-weight:1000;
+  font-style:italic;
+  background:
+    radial-gradient(circle at 25% 75%,rgba(0,170,255,.7),transparent 43%),
+    radial-gradient(circle at 75% 25%,rgba(255,0,103,.72),transparent 44%),
+    #05070a;
+  box-shadow:0 0 18px rgba(255,38,82,.18);
+}
+.dashboard-head>div:first-of-type{margin-right:auto}
+.dashboard-kicker{
+  color:#fff;
+  font-size:21px;
+  letter-spacing:.2px;
+  line-height:1.1;
+}
+.dashboard-head h1{
+  font-size:20px;
+  font-weight:850;
+  margin-top:8px;
+}
+.icon-button{
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  background:#0a1017;
+  border:1px solid #33404f;
+  font-size:27px;
+}
+.dashboard-card{
+  min-height:292px;
+  grid-template-columns:minmax(0,40%) minmax(0,60%);
+  align-items:stretch;
+  gap:18px;
+  padding:22px 20px 20px 28px;
+  border-radius:18px;
+  border:1px solid #2b3541;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.018),transparent 48%),
+    #070b10;
+  box-shadow:0 14px 35px rgba(0,0,0,.28);
+}
+.dashboard-card::before{width:3px}
+.dashboard-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(110deg,transparent 55%,rgba(255,255,255,.018));
+}
+.dashboard-card-left{
+  position:relative;
+  z-index:1;
+  gap:10px;
+  justify-content:flex-start;
+}
+.dashboard-icon{
+  width:66px;
+  height:66px;
+  margin-bottom:2px;
+}
+.dashboard-icon svg{
+  width:100%;
+  height:100%;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:4;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:drop-shadow(0 0 7px currentColor);
+}
+.dashboard-icon svg .speed{stroke-width:3}
+.dashboard-title{
+  font-size:25px;
+  line-height:1.15;
+  letter-spacing:.3px;
+}
+.dashboard-sub{
+  font-size:11px;
+  line-height:1.45;
+  margin-top:4px;
+}
+.dashboard-primary{margin-top:auto}
+.dashboard-primary small,.dashboard-pair small{
+  color:#b6c0cc;
+  font-size:11px;
+  font-weight:700;
+}
+.dashboard-primary strong{
+  font-size:42px;
+  letter-spacing:-1px;
+}
+.dashboard-primary span,.dashboard-delta{
+  font-size:12px;
+  line-height:1.4;
+}
+.dashboard-pair{
+  margin-top:auto;
+  gap:10px;
+}
+.dashboard-pair strong{
+  font-size:25px;
+  line-height:1.15;
+  letter-spacing:-.5px;
+}
+.mini-chart-box{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+}
+.mini-chart-title{
+  font-size:14px;
+  margin:0 0 8px 2px;
+}
+.mini-chart-box canvas{
+  width:100%!important;
+  height:220px!important;
+  min-height:220px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.dashboard-ranking{
+  min-height:112px;
+  grid-template-columns:1fr;
+  padding-top:18px;
+  padding-bottom:18px;
+}
+.dashboard-ranking .dashboard-icon{
+  width:52px;
+  height:52px;
+  margin:0;
+}
+.ranking-left{gap:16px}
+.dashboard-refresh{
+  background:#0c151f;
+  border-color:#2a3948;
+}
+.detail-shell .card{
+  background:#080d13;
+  border-color:#2a3541;
+}
+.detail-symbol{color:#45aaff}
+
+/* Keep the same visual structure on phones instead of stacking cards vertically. */
+@media(max-width:700px){
+  .wrap{padding:12px 10px calc(28px + env(safe-area-inset-bottom))}
+  .dashboard-head{
+    min-height:82px;
+    padding:2px 3px 7px;
+  }
+  .dashboard-head::before{
+    width:48px;height:48px;flex-basis:48px;border-radius:15px;
+    font-size:23px;margin-right:9px;
+  }
+  .dashboard-kicker{font-size:18px}
+  .dashboard-head h1{font-size:18px;margin-top:6px}
+  .icon-button{width:43px;height:43px;flex-basis:43px}
+  .dashboard-card{
+    grid-template-columns:minmax(0,42%) minmax(0,58%);
+    min-height:250px;
+    gap:10px;
+    padding:18px 12px 16px 19px;
+    border-radius:17px;
+  }
+  .dashboard-icon{width:50px;height:50px}
+  .dashboard-title{font-size:20px}
+  .dashboard-sub{font-size:9px}
+  .dashboard-primary strong{font-size:33px}
+  .dashboard-primary small,.dashboard-pair small{font-size:9px}
+  .dashboard-primary span,.dashboard-delta{font-size:9px}
+  .dashboard-pair{grid-template-columns:1fr;gap:6px}
+  .dashboard-pair strong{font-size:21px}
+  .mini-chart-title{font-size:11px;margin-bottom:4px}
+  .mini-chart-box canvas{
+    height:190px!important;
+    min-height:190px;
+  }
+  .dashboard-ranking{
+    grid-template-columns:1fr;
+    min-height:96px;
+    padding:15px 14px 14px 19px;
+  }
+  .dashboard-ranking .dashboard-icon{width:43px;height:43px}
+  .ranking-left{gap:11px}
+}
+@media(max-width:390px){
+  .dashboard-card{
+    grid-template-columns:minmax(0,43%) minmax(0,57%);
+    min-height:232px;
+    padding-left:16px;
+    gap:8px;
+  }
+  .dashboard-title{font-size:18px}
+  .dashboard-icon{width:45px;height:45px}
+  .dashboard-primary strong{font-size:29px}
+  .dashboard-pair strong{font-size:18px}
+  .mini-chart-box canvas{
+    height:172px!important;
+    min-height:172px;
+  }
+}
+</style>
+
+
+<style id="compact-dashboard-adjustments">
+.dashboard-card{
+  min-height:230px;
+  padding-top:16px;
+  padding-bottom:14px;
+}
+.dashboard-icon{
+  width:52px;
+  height:52px;
+}
+.dashboard-title{font-size:22px}
+.dashboard-primary strong{font-size:36px}
+.dashboard-pair strong{font-size:22px}
+.mini-chart-box canvas{
+  height:176px!important;
+  min-height:176px;
+}
+.mini-chart-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:2px;
+}
+.mini-chart-heading .mini-chart-title{
+  margin:0;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.mini-select-label{
+  position:relative;
+  flex:0 0 auto;
+}
+.mini-select-label::after{
+  content:"▼";
+  position:absolute;
+  right:8px;
+  top:50%;
+  transform:translateY(-52%);
+  color:#159eff;
+  font-size:9px;
+  pointer-events:none;
+}
+#dashAgilityTypeSelect{
+  appearance:none;
+  -webkit-appearance:none;
+  max-width:170px;
+  height:30px;
+  padding:4px 25px 4px 9px;
+  border:1px solid #244766;
+  border-radius:9px;
+  background:#09131d;
+  color:#e9f5ff;
+  font-size:10px;
+  font-weight:800;
+}
+.dashboard-ranking{
+  min-height:86px;
+}
+@media(max-width:700px){
+  .dashboard-card{
+    min-height:205px;
+    padding-top:14px;
+    padding-bottom:12px;
+  }
+  .dashboard-icon{
+    width:42px;
+    height:42px;
+  }
+  .dashboard-title{font-size:18px}
+  .dashboard-primary strong{font-size:29px}
+  .dashboard-pair strong{font-size:18px}
+  .mini-chart-box canvas{
+    height:148px!important;
+    min-height:148px;
+  }
+  #dashAgilityTypeSelect{
+    max-width:110px;
+    height:27px;
+    font-size:8px;
+    padding-left:6px;
+    padding-right:20px;
+  }
+  .mini-select-label::after{
+    right:6px;
+    font-size:8px;
+  }
+  .dashboard-ranking{
+    min-height:76px;
+  }
+}
+@media(max-width:390px){
+  .dashboard-card{
+    min-height:192px;
+  }
+  .mini-chart-box canvas{
+    height:136px!important;
+    min-height:136px;
+  }
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="header legacy-profile-header">
+    <div class="brand">NINJA PLAYER DATA <span style="font-size:10px;opacity:.7">v20260727-0045</span></div>
+    <div id="profile" class="hidden">
+      <div id="playerName" class="name"></div>
+      <div id="playerMeta" class="muted"></div>
+    </div>
+  </header>
+
+  <div id="loading" class="card loading">
+    <div class="spinner"></div>
+    <div id="loadingText">LINEを初期化しています…</div>
+  </div>
+
+  <div id="message" class="notice hidden"></div>
+
+  <section id="linkLogin" class="card login-card hidden">
+    <h2>初回ログイン</h2>
+    <p>
+      成長記録を初めて開く場合は、選手IDとパスワードを入力してください。
+      一度連携すると、次回からは自動で自分の記録を表示します。
+    </p>
+
+    <form id="linkLoginForm" class="login-form" onsubmit="submitGrowthLink(event)">
+      <div class="login-field">
+        <label for="linkPlayerId">選手ID</label>
+        <input
+          id="linkPlayerId"
+          name="playerId"
+          type="text"
+          inputmode="text"
+          autocomplete="username"
+          maxlength="50"
+          required
+        >
+      </div>
+
+      <div class="login-field">
+        <label for="linkPassword">パスワード</label>
+        <input
+          id="linkPassword"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          maxlength="100"
+          required
+        >
+      </div>
+
+      <button id="linkSubmitButton" class="login-submit" type="submit">
+        ログインして連携する
+      </button>
+    </form>
+
+    <div id="linkLoginError" class="login-error hidden"></div>
+
+    <div class="login-help">
+      選手IDまたはパスワードが分からない場合は、コーチへ確認してください。
+      同じ選手IDを複数のLINEアカウントへ登録することはできません。
+    </div>
+  </section>
+
+
+
+  <main id="app" class="hidden">
+    <section id="dashboardView" class="dashboard-view">
+      <div class="dashboard-head">
+        <div>
+          <div class="dashboard-kicker">NINJA 成長記録</div>
+          <h1 id="dashboardPlayerName">選手データ</h1>
+        </div>
+        <button class="icon-button" type="button" onclick="loadBundle()" aria-label="最新情報に更新">↻</button>
+      </div>
+
+      <button class="dashboard-card dashboard-shooting" type="button" onclick="openDetail('shooting')">
+        <div class="dashboard-card-left">
+          <div class="dashboard-icon icon-shoot" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><circle cx="34" cy="32" r="22"/><path d="M13 32h43M34 10c-7 7-10 14-10 22s3 15 10 22M34 10c7 7 10 14 10 22s-3 15-10 22M18 17c10 5 18 14 23 28M50 17c-10 5-18 14-23 28"/><path class="speed" d="M2 22h13M0 32h14M3 42h12"/></svg>
+    </div>
+          <div>
+            <div class="dashboard-title">シュート <span>›</span></div>
+            <div class="dashboard-sub">成功率・成功数・試投数の詳細</div>
+          </div>
+          <div class="dashboard-primary">
+            <small>最新月の成功率</small>
+            <strong id="dashShootRate">－</strong>
+            <span id="dashShootDelta">比較できる記録がありません</span>
+          </div>
+        </div>
+        <div class="mini-chart-box">
+          <div class="mini-chart-title">月別総投数</div>
+          <canvas id="dashShootChart" width="520" height="190"></canvas>
+        </div>
+      </button>
+
+      <button class="dashboard-card dashboard-body" type="button" onclick="openDetail('body')">
+        <div class="dashboard-card-left">
+          <div class="dashboard-icon icon-body" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><rect x="8" y="8" width="12" height="48" rx="2"/><path d="M12 14h8M12 21h5M12 28h8M12 35h5M12 42h8M12 49h5"/><circle cx="42" cy="17" r="7"/><path d="M31 34c0-7 5-12 11-12s11 5 11 12v8H49v14h-6V43h-2v13h-6V42h-4z"/></svg>
+    </div>
+          <div>
+            <div class="dashboard-title">身体測定 <span>›</span></div>
+            <div class="dashboard-sub">身長・体重の推移と記録一覧</div>
+          </div>
+          <div class="dashboard-pair">
+            <div><small>最新身長</small><strong id="dashHeight">－</strong></div>
+            <div><small>最新体重</small><strong id="dashWeight">－</strong></div>
+          </div>
+          <div id="dashBodyDelta" class="dashboard-delta">比較できる記録がありません</div>
+        </div>
+        <div class="mini-chart-box">
+          <div class="mini-chart-title">身長・体重の推移</div>
+          <canvas id="dashBodyChart" width="520" height="230"></canvas>
+        </div>
+      </button>
+
+      <button class="dashboard-card dashboard-agility" type="button" onclick="openDetail('agility')">
+        <div class="dashboard-card-left">
+          <div class="dashboard-icon icon-agility" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><circle cx="34" cy="35" r="20"/><path d="M34 15V8M27 8h14M48 20l5-5M34 35l10-9M34 35h-1"/><path class="speed" d="M2 26h15M0 35h14M3 44h14"/></svg>
+    </div>
+          <div>
+            <div class="dashboard-title">アジリティ <span>›</span></div>
+            <div class="dashboard-sub">5種目から選んで詳細確認</div>
+          </div>
+          <div class="dashboard-primary">
+            <small id="dashAgilityType">最新記録</small>
+            <strong id="dashAgilityValue">－</strong>
+            <span id="dashAgilityDelta">比較できる記録がありません</span>
+          </div>
+        </div>
+        <div class="mini-chart-box">
+          <div class="mini-chart-heading">
+            <div id="dashAgilityChartTitle" class="mini-chart-title">アジリティ推移</div>
+            <label class="mini-select-label" aria-label="アジリティ種目を選択">
+              <select id="dashAgilityTypeSelect" onchange="renderDashboardAgility()"></select>
+            </label>
+          </div>
+          <canvas id="dashAgilityChart" width="520" height="190"></canvas>
+        </div>
+      </button>
+
+      <button id="rankingDashboardCard" class="dashboard-card dashboard-ranking ranking-disabled" type="button" onclick="openDetail('ranking')">
+        <div class="ranking-left">
+          <div class="dashboard-icon icon-rank" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><path d="M21 10h22v9c0 12-6 20-11 20s-11-8-11-20z"/><path d="M21 15H10v5c0 8 5 13 13 14M43 15h11v5c0 8-5 13-13 14M32 39v8M22 54h20M26 47h12"/><path d="m32 16 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>
+    </div>
+          <div>
+            <div class="dashboard-title">ランキング</div>
+            <div id="rankingStatus" class="dashboard-sub">ランキングデータは現在のAPIに含まれていません</div>
+          </div>
+        </div>
+      </button>
+
+      <button class="refresh dashboard-refresh" onclick="loadBundle()">最新情報に更新</button>
+
+      <div class="account-actions">
+        <button
+          id="unlinkButton"
+          class="unlink-button"
+          type="button"
+          onclick="unlinkGrowthAccount()"
+        >
+          選手連携を解除
+        </button>
+      </div>
+    </section>
+
+    <section id="detailShell" class="detail-shell hidden">
+      <div class="detail-toolbar">
+        <button class="back-button" type="button" onclick="closeDetail()">‹ 成長記録へ戻る</button>
+        <button class="icon-button" type="button" onclick="loadBundle()" aria-label="最新情報に更新">↻</button>
+      </div>
+
+      <section id="shootingView" class="detail-view hidden">
+        <div class="detail-page-title">
+          <span class="detail-symbol">●</span>
+          <div><h2>シュート詳細</h2><p>月比較、ポジション別、種目別、月別推移</p></div>
+        </div>
+
+        <div class="card">
+          <h2 class="title">月別シュート比較</h2>
+          <div class="month-control">
+            <label>表示月
+              <select id="currentMonthSelect" onchange="renderShootingComparison()"></select>
+            </label>
+            <label>比較月
+              <select id="compareMonthSelect" onchange="renderShootingComparison()"></select>
+            </label>
+          </div>
+          <div id="shootCompareCards" class="compare-grid"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="title">ポジション別シュートチャート</h2>
+          <div class="section-lead">コート上の円を押すと、選択月と比較月の成功率・成功数・試投数を表示します。</div>
+          <div class="court-wrap">
+            <div class="shot-court" aria-label="ポジション別シュート成功率">
+              <svg viewBox="0 0 920 1000" aria-hidden="true">
+                <rect x="8" y="8" width="904" height="984" rx="4" fill="none" stroke="#fff" stroke-width="10"/>
+                <line x1="8" y1="120" x2="912" y2="120" stroke="#fff" stroke-width="10"/>
+                <path d="M350 120 A110 110 0 0 0 570 120" fill="none" stroke="#fff" stroke-width="10"/>
+                <line x1="105" y1="992" x2="105" y2="690" stroke="#fff" stroke-width="10"/>
+                <line x1="815" y1="992" x2="815" y2="690" stroke="#fff" stroke-width="10"/>
+                <path d="M105 690 A365 365 0 0 1 815 690" fill="none" stroke="#fff" stroke-width="10"/>
+                <rect x="315" y="655" width="290" height="337" fill="#f07c00" stroke="#fff" stroke-width="10"/>
+                <path d="M365 655 A95 95 0 0 1 555 655" fill="none" stroke="#fff" stroke-width="10"/>
+                <path d="M365 655 A95 95 0 0 0 555 655" fill="none" stroke="#fff" stroke-width="10" stroke-dasharray="18 16"/>
+                <path d="M395 925 A65 65 0 0 1 525 925" fill="none" stroke="#fff" stroke-width="10"/>
+                <line x1="395" y1="955" x2="525" y2="955" stroke="#fff" stroke-width="12"/>
+                <circle cx="460" cy="925" r="20" fill="none" stroke="#fff" stroke-width="8"/>
+              </svg>
+              <div id="shotMarkers"></div>
+            </div>
+            <aside id="courtDetail" class="court-detail">
+              <h3>ポジションを選択</h3>
+              <div class="small">円を押すと月別比較を表示します。</div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="title">種目別比較</h2>
+          <div style="overflow:auto"><table class="compare-table">
+            <thead><tr><th>種目</th><th id="typeCurrentHead">表示月</th><th id="typeCompareHead">比較月</th><th>差</th></tr></thead>
+            <tbody id="shootTypeCompare"></tbody>
+          </table></div>
+        </div>
+
+        <div class="card"><h2 class="title">月別成功率推移</h2><canvas id="shootChart" width="660" height="300"></canvas></div>
+      </section>
+
+      <section id="bodyView" class="detail-view hidden">
+        <div class="detail-page-title">
+          <span class="detail-symbol">▥</span>
+          <div><h2>身体測定詳細</h2><p>身長・体重の最新値、比較、推移、記録一覧</p></div>
+        </div>
+
+        <div class="card">
+          <h2 class="title">身体成長</h2>
+          <div id="bodyCompactSummary" class="body-compact-summary"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="title">身長・体重一覧</h2>
+          <div class="section-lead">月ごとの変化を横に並べて確認できます。</div>
+          <div id="bodyHistoryTable" class="body-table-wrap"></div>
+        </div>
+
+        <div class="card"><h2 class="title">身長の成長グラフ</h2><canvas id="heightChart" width="660" height="300"></canvas></div>
+        <div class="card"><h2 class="title">体重の成長グラフ</h2><canvas id="weightChart" width="660" height="300"></canvas></div>
+      </section>
+
+      <section id="agilityView" class="detail-view hidden">
+        <div class="detail-page-title">
+          <span class="detail-symbol">◷</span>
+          <div><h2>アジリティ詳細</h2><p>種目選択、初回・前回・最新・ベスト、推移グラフ</p></div>
+        </div>
+
+        <div class="card">
+          <h2 class="title">アジリティ</h2>
+          <div class="section-lead">確認したい種目を選択してください。</div>
+          <div class="agility-select-wrap">
+            <label>種目
+              <select id="agilityTypeSelect" onchange="renderSelectedAgility()"></select>
+            </label>
+          </div>
+          <div id="selectedAgilityComparison"></div>
+        </div>
+
+        <div class="card">
+          <h2 class="title">記録推移グラフ</h2>
+          <div id="selectedAgilityChartTitle" class="section-lead"></div>
+          <canvas id="selectedAgilityChart" width="660" height="300"></canvas>
+        </div>
+
+        <div class="card">
+          <button id="agilityListToggle" class="toggle-list" type="button" onclick="toggleAgilityList()">
+            <span id="agilityListToggleIcon" class="toggle-icon">＋</span>
+            <span id="agilityListToggleText">記録一覧を表示</span>
+          </button>
+          <div id="agilityListPanel" class="collapsible">
+            <div id="selectedAgilityList" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="rankingView" class="detail-view hidden">
+        <div class="detail-page-title">
+          <span class="detail-symbol">♛</span>
+          <div><h2>ランキング</h2><p>シュート・アジリティの男女別、カテゴリー別順位</p></div>
+        </div>
+
+        <div class="card">
+          <div class="ranking-page-controls">
+            <div class="ranking-mode-tabs">
+              <button id="rankModeShooting" class="active" type="button" onclick="setRankingMode('shooting')">シュート</button>
+              <button id="rankModeAgility" type="button" onclick="setRankingMode('agility')">アジリティ</button>
+            </div>
+
+            <div class="ranking-scope-tabs">
+              <button id="rankScopeOverall" class="active" type="button" onclick="setRankingScope('overall')">男女別順位</button>
+              <button id="rankScopeCategory" type="button" onclick="setRankingScope('category')">カテゴリー別順位</button>
+            </div>
+
+            <div class="ranking-filter-grid">
+              <label>性別
+                <select id="rankingGender" onchange="renderRankingPage()">
+                  <option value="男子">男子</option>
+                  <option value="女子">女子</option>
+                </select>
+              </label>
+
+              <label id="rankingCategoryLabel" class="hidden">カテゴリー
+                <select id="rankingCategory" onchange="renderRankingPage()"></select>
+              </label>
+
+              <label id="rankingShootMetricLabel">ランキング項目
+                <select id="rankingShootMetric" onchange="renderRankingPage()">
+                  <option value="totalAttempts">総投数</option>
+                  <option value="totalMade">成功数</option>
+                  <option value="successRate">成功率</option>
+                </select>
+              </label>
+
+              <label id="rankingAgilityTypeLabel" class="hidden">アジリティ種目
+                <select id="rankingAgilityType" onchange="renderRankingPage()">
+                  <option value="20mシャトルラン">20mシャトルラン</option>
+                  <option value="反復横跳び">反復横跳び</option>
+                  <option value="L字コーン">L字コーン</option>
+                  <option value="垂直跳び">垂直跳び</option>
+                  <option value="120回ハンドリング">120回ハンドリング</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="rankingRuleNote" class="ranking-note"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 id="rankingListTitle" class="title">ランキング一覧</h2>
+          <div id="rankingList" class="ranking-list"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<script>
+const GROWTH_APP_CONFIG=Object.freeze({
+  VERSION:"v12.1.0",
+  BUILD:"2026-07-31-growth-v12.1",
+  DEFAULT_LIFF_ID:"2010789200-zVWWxqSQ",
+  DEFAULT_GAS_URL:"https://script.google.com/macros/s/AKfycbzm_oS0K-zuFubrtC6QE8O4JneXN2MMsBl4l8ZhH9tXvvDdRquPRCt7lD1I6L8_zaKPmA/exec"
+});
+
+const RUNTIME_CONFIG=
+  window.NINJA_GROWTH_CONFIG&&
+  typeof window.NINJA_GROWTH_CONFIG==="object"
+    ?window.NINJA_GROWTH_CONFIG
+    :{};
+
+const LIFF_ID=String(
+  RUNTIME_CONFIG.LIFF_ID||
+  RUNTIME_CONFIG.liffId||
+  GROWTH_APP_CONFIG.DEFAULT_LIFF_ID
+).trim();
+
+const GAS_URL=String(
+  RUNTIME_CONFIG.GAS_URL||
+  RUNTIME_CONFIG.API_URL||
+  RUNTIME_CONFIG.gasUrl||
+  RUNTIME_CONFIG.apiUrl||
+  GROWTH_APP_CONFIG.DEFAULT_GAS_URL
+).trim().replace(/\/+$/,"");
+
+let idToken="";
+let bundle=null;
+
+console.info(
+  "[NINJA GROWTH]",
+  GROWTH_APP_CONFIG.VERSION,
+  GROWTH_APP_CONFIG.BUILD
+);
+
+window.addEventListener("load",init);
+
+async function init(){
+  try{
+    if(!LIFF_ID)throw new Error("LIFF IDが設定されていません。");
+    if(!GAS_URL||!/^https:\/\/script\.google\.com\/macros\/s\//.test(GAS_URL)){
+      throw new Error("Apps Script WebアプリURLが正しくありません。");
+    }
+    if(!window.liff)throw new Error("LIFF SDKを読み込めませんでした。");
+    setLoading("LINE認証を初期化しています…");
+    await liff.init({liffId:LIFF_ID,withLoginOnExternalBrowser:true});
+    if(!liff.isLoggedIn()){
+      setLoading("LINEログイン画面へ移動します…");
+      liff.login({redirectUri:location.href.split("#")[0]});
+      return;
+    }
+    idToken=liff.getIDToken();
+    if(!idToken)throw new Error("LINE認証情報を取得できませんでした。");
+    setLoading("本人情報を確認しています…");
+    const session=await jsonp({action:"growthSession",idToken:idToken});
+
+    if(session&&session.status==="unlinked"){
+      hide("loading");
+      hide("app");
+      hide("message");
+      show("linkLogin");
+      return;
+    }
+
+    if(!session||session.status!=="ok"){
+      throw new Error(session&&session.message?session.message:"本人情報を確認できませんでした。");
+    }
+
+    applySessionPlayer(session.player);
+    await loadBundle();
+  }catch(error){showError(error)}
+}
+
+async function loadBundle(){
+  try{
+    if(!idToken)throw new Error("LINE認証情報がありません。LINEのリッチメニューから開き直してください。");
+    show("loading");hide("app");hide("message");hide("linkLogin");setLoading("成長記録を取得しています…");
+    const result=await jsonp({action:"growthBundle",idToken:idToken});
+    if(!result||result.status!=="ok")throw new Error(result&&result.message?result.message:"成長記録を取得できませんでした。");
+    bundle=result;
+    renderAll();
+    hide("loading");show("app");
+  }catch(error){showError(error)}
+}
+
+
+
+function applySessionPlayer(player){
+  if(!player)return;
+  text("playerName",player.name||"");
+  text("playerMeta",(player.category||"")+" / "+(player.playerId||""));
+  text("dashboardPlayerName",player.name||"選手データ");
+  show("profile");
+}
+
+async function submitGrowthLink(event){
+  event.preventDefault();
+
+  const playerId=String(document.getElementById("linkPlayerId").value||"").trim();
+  const password=String(document.getElementById("linkPassword").value||"");
+  const button=document.getElementById("linkSubmitButton");
+  const errorBox=document.getElementById("linkLoginError");
+
+  hide("linkLoginError");
+
+  if(!playerId||!password){
+    errorBox.textContent="選手IDとパスワードを入力してください。";
+    show("linkLoginError");
+    return;
+  }
+
+  button.disabled=true;
+  button.textContent="本人情報を確認しています…";
+
+  try{
+    const result=await jsonp({
+      action:"growthLink",
+      idToken:idToken,
+      playerId:playerId,
+      password:password
+    });
+
+    if(!result||result.status!=="ok"){
+      throw new Error(result&&result.message?result.message:"ログインできませんでした。");
+    }
+
+    applySessionPlayer(result.player);
+    document.getElementById("linkPassword").value="";
+    hide("linkLogin");
+    await loadBundle();
+
+  }catch(error){
+    errorBox.textContent=error&&error.message?error.message:String(error);
+    show("linkLoginError");
+
+  }finally{
+    button.disabled=false;
+    button.textContent="ログインして連携する";
+  }
+}
+
+
+async function unlinkGrowthAccount(){
+  const confirmed=window.confirm(
+    "このLINEアカウントと選手IDの連携を解除します。\n\n" +
+    "解除後は、選手IDとパスワードで再ログインが必要です。\n" +
+    "成長記録や入力済みデータは削除されません。\n\n" +
+    "連携を解除しますか？"
+  );
+
+  if(!confirmed)return;
+
+  const button=document.getElementById("unlinkButton");
+  if(button){
+    button.disabled=true;
+    button.textContent="連携を解除しています…";
+  }
+
+  try{
+    const result=await jsonp({
+      action:"growthUnlink",
+      idToken:idToken
+    });
+
+    if(!result||result.status!=="ok"){
+      throw new Error(
+        result&&result.message
+          ? result.message
+          : "選手連携を解除できませんでした。"
+      );
+    }
+
+    bundle=null;
+    hide("app");
+    hide("profile");
+    hide("message");
+    hide("loading");
+
+    document.getElementById("linkPlayerId").value="";
+    document.getElementById("linkPassword").value="";
+    hide("linkLoginError");
+    show("linkLogin");
+
+    window.scrollTo({top:0,behavior:"instant"});
+
+  }catch(error){
+    showError(error);
+
+  }finally{
+    if(button){
+      button.disabled=false;
+      button.textContent="選手連携を解除";
+    }
+  }
+}
+
+
+let rankingMode="shooting";
+let rankingScope="overall";
+
+function setupRankingPage(){
+  const ranking=bundle&&bundle.ranking;
+  const categorySelect=document.getElementById("rankingCategory");
+  const genderSelect=document.getElementById("rankingGender");
+
+  if(!ranking||!categorySelect||!genderSelect)return;
+
+  const currentCategory=String(ranking.currentCategory||"");
+  const currentGender=currentCategory.includes("女子")?"女子":"男子";
+  genderSelect.value=currentGender;
+
+  const categories=new Set();
+  const sources=[
+    ...(((ranking.shooting||{}).totalAttempts)||[]),
+    ...Object.values(ranking.agility||{}).flatMap(function(group){
+      return group&&Array.isArray(group.rows)?group.rows:[];
+    })
+  ];
+
+  sources.forEach(function(row){
+    if(row&&row.categoryKey)categories.add(row.categoryKey);
+  });
+
+  const sorted=Array.from(categories).sort(function(a,b){
+    const an=Number(String(a).replace(/\D/g,""))||999;
+    const bn=Number(String(b).replace(/\D/g,""))||999;
+    return an-bn||String(a).localeCompare(String(b),"ja");
+  });
+
+  categorySelect.innerHTML=sorted.map(function(category){
+    return '<option value="'+esc(category)+'">'+esc(category)+'</option>';
+  }).join("");
+
+  const currentKey=(currentCategory.match(/U\s*(\d{1,2})/i)||[])[1];
+  if(currentKey&&sorted.includes("U"+currentKey)){
+    categorySelect.value="U"+currentKey;
+  }
+}
+
+function setRankingMode(mode){
+  rankingMode=mode;
+  document.getElementById("rankModeShooting").classList.toggle("active",mode==="shooting");
+  document.getElementById("rankModeAgility").classList.toggle("active",mode==="agility");
+  document.getElementById("rankingShootMetricLabel").classList.toggle("hidden",mode!=="shooting");
+  document.getElementById("rankingAgilityTypeLabel").classList.toggle("hidden",mode!=="agility");
+  renderRankingPage();
+}
+
+function setRankingScope(scope){
+  rankingScope=scope;
+  document.getElementById("rankScopeOverall").classList.toggle("active",scope==="overall");
+  document.getElementById("rankScopeCategory").classList.toggle("active",scope==="category");
+  document.getElementById("rankingCategoryLabel").classList.toggle("hidden",scope!=="category");
+  renderRankingPage();
+}
+
+function renderRankingPage(){
+  const ranking=bundle&&bundle.ranking;
+  const list=document.getElementById("rankingList");
+  const title=document.getElementById("rankingListTitle");
+  const note=document.getElementById("rankingRuleNote");
+  if(!ranking||!list||!title||!note)return;
+
+  const gender=document.getElementById("rankingGender").value;
+  const category=document.getElementById("rankingCategory").value;
+  let rows=[];
+  let valueLabel="";
+  let unit="";
+  let subValue=function(){return""};
+  let metricKey="";
+
+  if(rankingMode==="shooting"){
+    const metric=document.getElementById("rankingShootMetric").value;
+    metricKey=metric;
+    const shooting=ranking.shooting||{};
+    rows=(shooting[metric]||[]).slice();
+
+    if(metric==="totalAttempts"){
+      valueLabel="総投数";
+      unit="本";
+      subValue=function(r){
+        return r.status==="no_record"
+          ?"シュート記録がありません"
+          :"成功 "+fmt(r.made)+"本 / 成功率 "+fmt(r.rate)+"%";
+      };
+      note.textContent="保存済みの有効な全シュート記録を選手ごとに合計しています。未入力の選手も「記録なし」で表示します。";
+    }else if(metric==="totalMade"){
+      valueLabel="成功数";
+      unit="本";
+      subValue=function(r){
+        return r.status==="no_record"
+          ?"シュート記録がありません"
+          :"総投数 "+fmt(r.attempts)+"本 / 成功率 "+fmt(r.rate)+"%";
+      };
+      note.textContent="保存済みの有効な全シュート記録を選手ごとに合計しています。未入力の選手も「記録なし」で表示します。";
+    }else{
+      valueLabel="成功率";
+      unit="%";
+      subValue=function(r){
+        if(r.status==="no_record")return "シュート記録がありません";
+        if(r.status==="ineligible")return "総投数 "+fmt(r.attempts)+"本 / 500本未満";
+        return "成功 "+fmt(r.made)+"本 / 総投数 "+fmt(r.attempts)+"本";
+      };
+      note.textContent="成功率ランキングは総投数500本以上のみ順位対象です。500本未満は「対象外」、未入力は「記録なし」で表示します。";
+    }
+  }else{
+    const type=document.getElementById("rankingAgilityType").value;
+    const group=(ranking.agility||{})[type]||{rows:[],unit:"",lowerIsBetter:false};
+    rows=(group.rows||[]).slice();
+    metricKey="value";
+    valueLabel=type;
+    unit=group.unit||"";
+    subValue=function(r){
+      return r.status==="no_record"
+        ?"測定記録がありません"
+        :r.date
+          ?"ベスト記録 "+formatYearMonthLabel(r.date)
+          :"個人ベスト";
+    };
+    note.textContent=(group.lowerIsBetter
+      ?"全期間の個人ベストで順位を算出しています。秒数が小さい選手が上位です。"
+      :"全期間の個人ベストで順位を算出しています。数値が大きい選手が上位です。"
+    )+" 未測定の選手も「記録なし」で表示します。";
+  }
+
+  rows=rows.filter(function(row){
+    if(row.gender!==gender)return false;
+    if(rankingScope==="category"&&row.categoryKey!==category)return false;
+    return true;
+  });
+
+  const validRows=rows.filter(function(row){
+    return !row.status;
+  });
+
+  const invalidRows=rows.filter(function(row){
+    return row.status;
+  });
+
+  const lowerIsBetter=rankingMode==="agility"
+    ?((ranking.agility||{})[document.getElementById("rankingAgilityType").value]||{}).lowerIsBetter
+    :false;
+
+  const reranked=rerankVisibleRows(
+    validRows,
+    lowerIsBetter,
+    metricKey
+  );
+
+  const statusOrder={ineligible:1,no_record:2};
+  invalidRows.sort(function(a,b){
+    const sa=statusOrder[a.status]||9;
+    const sb=statusOrder[b.status]||9;
+    if(sa!==sb)return sa-sb;
+    return String(a.name).localeCompare(String(b.name),"ja");
+  });
+
+  rows=reranked.concat(invalidRows);
+
+  const scopeText=rankingScope==="category"
+    ?gender+" "+category
+    :gender+"総合";
+  title.textContent=scopeText+"・"+valueLabel+"ランキング";
+
+  if(!rows.length){
+    list.innerHTML='<div class="ranking-empty">対象となる選手がいません。</div>';
+    return;
+  }
+
+  list.innerHTML=rows.map(function(row){
+    const isNoRecord=row.status==="no_record";
+    const isIneligible=row.status==="ineligible";
+    let displayValue="記録なし";
+    let rankText="－";
+
+    if(isIneligible){
+      displayValue="対象外";
+      rankText="対象外";
+    }else if(!isNoRecord){
+      const value=rankingMode==="shooting"
+        ?(metricKey==="totalAttempts"
+            ?row.attempts
+            :metricKey==="totalMade"
+              ?row.made
+              :row.rate)
+        :row.value;
+      displayValue=fmt(value)+unit;
+      rankText=row.visibleRank+"位";
+    }
+
+    return '<div class="ranking-row '+
+      (row.playerId===ranking.currentPlayerId?"ranking-current ":"")+
+      (isNoRecord?"ranking-no-record ":"")+
+      (isIneligible?"ranking-ineligible ":"")+'">'+
+      '<div class="ranking-position">'+esc(rankText)+'</div>'+
+      '<div class="ranking-player"><strong>'+esc(row.name)+'</strong>'+
+      '<span>'+esc(row.category||row.categoryKey||"")+'</span></div>'+
+      '<div class="ranking-value">'+esc(displayValue)+
+      '<small>'+esc(subValue(row))+'</small></div></div>';
+  }).join("");
+}
+
+function rerankVisibleRows(rows,lowerIsBetter,valueKey){
+  const sorted=rows.slice().sort(function(a,b){
+    const av=Number(valueKey==="totalAttempts"?a.attempts:valueKey==="totalMade"?a.made:valueKey==="successRate"?a.rate:a[valueKey]);
+    const bv=Number(valueKey==="totalAttempts"?b.attempts:valueKey==="totalMade"?b.made:valueKey==="successRate"?b.rate:b[valueKey]);
+    if(av!==bv)return lowerIsBetter?av-bv:bv-av;
+    return String(a.name).localeCompare(String(b.name),"ja");
+  });
+
+  let last=null,lastRank=0;
+  return sorted.map(function(row,index){
+    const value=Number(valueKey==="totalAttempts"?row.attempts:valueKey==="totalMade"?row.made:valueKey==="successRate"?row.rate:row[valueKey]);
+    const copy=Object.assign({},row);
+    copy.visibleRank=(last!==null&&value===last)?lastRank:index+1;
+    last=value;
+    lastRank=copy.visibleRank;
+    return copy;
+  });
+}
+
+function openDetail(name){
+  hide("dashboardView");
+  show("detailShell");
+  ["shooting","body","agility","ranking"].forEach(function(key){
+    const el=document.getElementById(key+"View");
+    if(el)el.classList.toggle("hidden",key!==name);
+  });
+  window.scrollTo({top:0,behavior:"instant"});
+  window.setTimeout(function(){
+    if(name==="shooting"){renderShootingComparison();drawShooting()}
+    if(name==="body"){renderBody();drawBody()}
+    if(name==="agility"){renderSelectedAgility()}
+    if(name==="ranking"){setupRankingPage();renderRankingPage()}
+  },40);
+}
+
+function closeDetail(){
+  hide("detailShell");
+  show("dashboardView");
+  window.scrollTo({top:0,behavior:"instant"});
+  window.setTimeout(renderDashboard,30);
+}
+
+
+function drawBars(canvasId,points,label){
+  const canvas=document.getElementById(canvasId);
+  if(!canvas)return;
+  const ctx=canvas.getContext("2d");
+  const dpr=window.devicePixelRatio||1;
+  const cssWidth=Math.max(260,canvas.clientWidth||520);
+  const cssHeight=Math.max(140,canvas.clientHeight||190);
+  canvas.width=Math.round(cssWidth*dpr);
+  canvas.height=Math.round(cssHeight*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssWidth,cssHeight);
+
+  const data=(points||[]).filter(function(p){return Number.isFinite(Number(p.value))});
+  if(!data.length){
+    ctx.fillStyle="#7f8b98";
+    ctx.font="12px sans-serif";
+    ctx.textAlign="center";
+    ctx.fillText("記録がありません",cssWidth/2,cssHeight/2);
+    return;
+  }
+
+  const pad={left:35,right:10,top:24,bottom:26};
+  const w=cssWidth-pad.left-pad.right;
+  const h=cssHeight-pad.top-pad.bottom;
+  const maxValue=Math.max.apply(null,data.map(function(p){return Number(p.value)}).concat([1]));
+  const topValue=Math.ceil(maxValue/50)*50 || maxValue;
+  const gridCount=4;
+
+  ctx.strokeStyle="#22303d";
+  ctx.lineWidth=1;
+  ctx.fillStyle="#8592a0";
+  ctx.font="10px sans-serif";
+  ctx.textAlign="right";
+  for(let i=0;i<=gridCount;i++){
+    const y=pad.top+h-(h*i/gridCount);
+    ctx.beginPath();
+    ctx.moveTo(pad.left,y);
+    ctx.lineTo(pad.left+w,y);
+    ctx.stroke();
+    ctx.fillText(String(Math.round(topValue*i/gridCount)),pad.left-5,y+3);
+  }
+
+  const gap=Math.max(7,w/data.length*.18);
+  const barWidth=Math.max(10,(w-gap*(data.length+1))/data.length);
+  data.forEach(function(p,index){
+    const value=Number(p.value);
+    const x=pad.left+gap+(barWidth+gap)*index;
+    const barHeight=h*(value/topValue);
+    const y=pad.top+h-barHeight;
+    const gradient=ctx.createLinearGradient(0,y,0,pad.top+h);
+    gradient.addColorStop(0,"#ff3346");
+    gradient.addColorStop(1,"#83000c");
+    ctx.fillStyle=gradient;
+    ctx.fillRect(x,y,barWidth,barHeight);
+    ctx.fillStyle="#d7dee6";
+    ctx.font="10px sans-serif";
+    ctx.textAlign="center";
+    ctx.fillText(String(p.label||""),x+barWidth/2,cssHeight-8);
+  });
+
+  ctx.fillStyle="#c5ced7";
+  ctx.font="10px sans-serif";
+  ctx.textAlign="left";
+  ctx.fillText(label||"",pad.left,12);
+}
+
+function setupDashboardAgilitySelector(){
+  const select=document.getElementById("dashAgilityTypeSelect");
+  if(!select)return;
+  const groups=getAgilityGroups();
+  const types=Object.keys(groups).sort(function(a,b){
+    return agilityTypeOrder(a)-agilityTypeOrder(b)||a.localeCompare(b,"ja");
+  });
+  const current=select.value;
+  select.innerHTML="";
+  types.forEach(function(type){
+    const option=document.createElement("option");
+    option.value=type;
+    option.textContent=type;
+    select.appendChild(option);
+  });
+  if(current&&types.includes(current))select.value=current;
+  else if(types.length)select.value=types[0];
+}
+
+function renderDashboardAgility(){
+  const select=document.getElementById("dashAgilityTypeSelect");
+  const groups=getAgilityGroups();
+  const selected=select&&select.value?select.value:Object.keys(groups)[0]||"";
+  const records=selected?(groups[selected]||[]):[];
+  const latest=records.length?records[records.length-1]:null;
+  const previous=records.length>=2?records[records.length-2]:null;
+
+  text("dashAgilityType",selected||"最新記録");
+  text("dashAgilityValue",latest?fmt(latest.value)+(latest.unit||""):"－");
+  text("dashAgilityDelta",latest&&previous
+    ?"前回比 "+signedDashboardDiff(Number(latest.value)-Number(previous.value),latest.unit||"")
+    :"比較できる記録がありません");
+  text("dashAgilityChartTitle",selected?selected+" の推移":"アジリティ推移");
+  drawLines("dashAgilityChart",[
+    {label:selected||"記録",points:records.map(function(r){return{label:r.month,value:Number(r.value)}})}
+  ]);
+}
+
+function renderDashboard(){
+  if(!bundle)return;
+
+  const playerName=document.getElementById("playerName");
+  text("dashboardPlayerName",playerName&&playerName.textContent?playerName.textContent:"選手データ");
+
+  const shootRows=monthRows();
+  const latestShoot=shootRows.length?shootRows[shootRows.length-1]:null;
+  const previousShoot=shootRows.length>=2?shootRows[shootRows.length-2]:null;
+  text("dashShootRate",latestShoot?fmt(latestShoot.rate)+"%":"－");
+  text("dashShootDelta",latestShoot&&previousShoot
+    ?"前月比 "+signedDashboardDiff(Number(latestShoot.rate)-Number(previousShoot.rate),"%")
+    :"比較できる記録がありません");
+  drawBars("dashShootChart",
+    shootRows.map(function(r){
+      const attempts=Number(r.attempts ?? r.totalAttempts ?? r.total ?? r.shots ?? 0);
+      return {label:r.month,value:attempts};
+    }),
+    "総投数"
+  );
+
+  const bodyRows=((bundle.body||{}).records||[]).slice().sort(function(a,b){
+    return String(a.month||"").localeCompare(String(b.month||""));
+  });
+  const heights=bodyRows.filter(function(r){return Number.isFinite(Number(r.height))});
+  const weights=bodyRows.filter(function(r){return Number.isFinite(Number(r.weight))});
+  const latestH=heights.length?heights[heights.length-1]:null;
+  const previousH=heights.length>=2?heights[heights.length-2]:null;
+  const latestW=weights.length?weights[weights.length-1]:null;
+  const previousW=weights.length>=2?weights[weights.length-2]:null;
+  text("dashHeight",latestH?fmt(latestH.height)+"cm":"－");
+  text("dashWeight",latestW?fmt(latestW.weight)+"kg":"－");
+  const bodyParts=[];
+  if(latestH&&previousH)bodyParts.push("身長 "+signedDashboardDiff(Number(latestH.height)-Number(previousH.height),"cm"));
+  if(latestW&&previousW)bodyParts.push("体重 "+signedDashboardDiff(Number(latestW.weight)-Number(previousW.weight),"kg"));
+  text("dashBodyDelta",bodyParts.length?"前回比 "+bodyParts.join(" / "):"比較できる記録がありません");
+  drawLines("dashBodyChart",[
+    {label:"身長 cm",points:heights.map(function(r){return{label:r.month,value:Number(r.height)}})},
+    {label:"体重 kg",points:weights.map(function(r){return{label:r.month,value:Number(r.weight)}})}
+  ]);
+
+  setupDashboardAgilitySelector();
+  renderDashboardAgility();
+
+  renderRankingDashboard();
+}
+
+function signedDashboardDiff(value,unit){
+  if(!Number.isFinite(value))return "－";
+  return (value>0?"+":"")+fmt(value)+(unit||"");
+}
+
+function renderRankingDashboard(){
+  const ranking=bundle&&bundle.ranking;
+  const card=document.getElementById("rankingDashboardCard");
+  const status=document.getElementById("rankingStatus");
+  if(!card||!status)return;
+
+  if(!ranking){
+    status.textContent="ランキングデータを取得できません";
+    card.classList.add("ranking-disabled");
+    card.disabled=true;
+    return;
+  }
+
+  card.classList.remove("ranking-disabled");
+  card.disabled=false;
+
+  const playerId=ranking.currentPlayerId;
+  const attempts=((ranking.shooting||{}).totalAttempts||[]);
+  const rate=((ranking.shooting||{}).successRate||[]);
+  const attemptRow=attempts.find(function(r){return r.playerId===playerId});
+  const rateRow=rate.find(function(r){return r.playerId===playerId});
+  const parts=[];
+
+  if(attemptRow)parts.push("総投数 "+attemptRow.rank+"位");
+  if(rateRow)parts.push("成功率 "+rateRow.rank+"位");
+
+  status.textContent=parts.length
+    ?parts.join("　")+"　タップして一覧表示"
+    :"タップして男女別・カテゴリー別順位を確認";
+}
+
+function renderAll(){
+  setupMonthSelectors();
+  renderShootingComparison();
+  renderBody();
+  setupAgilitySelector();
+  renderSelectedAgility();
+  setupRankingPage();
+  hide("detailShell");
+  show("dashboardView");
+  setTimeout(function(){
+    drawShooting();
+    drawBody();
+    renderSelectedAgility();
+    renderDashboard();
+  },60);
+}
+
+
+function showView(name){
+  ["shooting","body","agility"].forEach(function(viewName){
+    const view=document.getElementById(viewName+"View");
+    const tab=document.getElementById(
+      viewName==="shooting"?"tabShooting":
+      viewName==="body"?"tabBody":"tabAgility"
+    );
+    if(view)view.classList.toggle("active",viewName===name);
+    if(tab)tab.classList.toggle("active",viewName===name);
+  });
+
+  window.setTimeout(function(){
+    if(name==="shooting")drawShooting();
+    if(name==="body")drawBody();
+    if(name==="agility")renderSelectedAgility();
+  },30);
+}
+
+function drawShooting(){
+  const rows=monthRows();
+  const points=rows.map(function(r){
+    return {
+      label:r.month,
+      value:Number(r.rate||0)
+    };
+  });
+
+  drawLines("shootChart",[
+    {
+      label:"成功率 %",
+      points:points,
+      min:0,
+      max:100
+    }
+  ]);
+}
+
+function drawBody(){
+  const rows=((bundle&&bundle.body&&bundle.body.records)||[]).slice().sort(function(a,b){
+    return String(a.month||"").localeCompare(String(b.month||""));
+  });
+
+  const heightPoints=rows
+    .filter(function(r){return Number.isFinite(Number(r.height))})
+    .map(function(r){
+      return {label:r.month,value:Number(r.height)};
+    });
+
+  const weightPoints=rows
+    .filter(function(r){return Number.isFinite(Number(r.weight))})
+    .map(function(r){
+      return {label:r.month,value:Number(r.weight)};
+    });
+
+  drawLines("heightChart",[
+    {label:"身長 cm",points:heightPoints}
+  ]);
+
+  drawLines("weightChart",[
+    {label:"体重 kg",points:weightPoints}
+  ]);
+}
+
+
+function scrollToGrowthSection(name){
+  const map={
+    shooting:"shootingView",
+    body:"bodyView",
+    agility:"agilityView"
+  };
+  const target=document.getElementById(map[name]||name);
+  if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function monthRows(){
+  return ((bundle&&bundle.shooting&&bundle.shooting.monthly)||[]).slice().sort(function(a,b){
+    return String(a.month).localeCompare(String(b.month));
+  });
+}
+function setupMonthSelectors(){
+  const rows=monthRows();
+  const months=rows.map(function(r){return r.month});
+  const current=document.getElementById("currentMonthSelect");
+  const compare=document.getElementById("compareMonthSelect");
+  const previousCurrent=current.value;
+  const previousCompare=compare.value;
+  const options=months.length
+    ?months.slice().reverse().map(function(m){return '<option value="'+esc(m)+'">'+esc(m)+'</option>'}).join("")
+    :'<option value="">記録なし</option>';
+  current.innerHTML=options;
+  compare.innerHTML=options;
+  current.value=months.includes(previousCurrent)?previousCurrent:(months[months.length-1]||"");
+  const defaultCompare=months.length>=2?months[months.length-2]:(months[months.length-1]||"");
+  compare.value=months.includes(previousCompare)?previousCompare:defaultCompare;
+}
+
+function getMonthData(month){
+  const s=(bundle&&bundle.shooting)||{};
+  const row=(s.monthly||[]).find(function(x){return x.month===month})||{month:month,made:0,attempts:0,rate:0};
+  return {
+    month:month,made:Number(row.made||0),attempts:Number(row.attempts||0),rate:Number(row.rate||0),
+    byType:(s.monthlyByType&&s.monthlyByType[month])||[],
+    byPosition:(s.monthlyByPosition&&s.monthlyByPosition[month])||[]
+  };
+}
+function renderShootingComparison(){
+  const currentMonth=document.getElementById("currentMonthSelect").value;
+  const compareMonth=document.getElementById("compareMonthSelect").value;
+  const current=getMonthData(currentMonth);
+  const compare=getMonthData(compareMonth);
+  const cards=[
+    metricCompareCard("成功率",current.rate,compare.rate,"%"),
+    metricCompareCard("成功数",current.made,compare.made,"本"),
+    metricCompareCard("試投数",current.attempts,compare.attempts,"本")
+  ];
+  document.getElementById("shootCompareCards").innerHTML=cards.join("");
+  document.getElementById("typeCurrentHead").textContent=currentMonth||"今月";
+  document.getElementById("typeCompareHead").textContent=compareMonth||"比較月";
+  renderTypeComparison(current,compare);
+  renderShotCourt(current,compare);
+}
+function metricCompareCard(label,current,compare,unit){
+  const diff=Number(current)-Number(compare);
+  const cls=diff>0?"up":diff<0?"down":"same";
+  const diffText=(diff>0?"+":"")+fmt(diff)+unit;
+  return '<div class="compare-card"><div class="compare-label">'+esc(label)+'</div>'+
+    '<div class="compare-main">'+fmt(current)+esc(unit)+'</div>'+
+    '<div class="compare-sub">比較月 '+fmt(compare)+esc(unit)+'</div>'+
+    '<div class="delta '+cls+'">'+diffText+'</div></div>';
+}
+function renderTypeComparison(current,compare){
+  const map={};
+  current.byType.forEach(function(x){map[x.type]={type:x.type,current:x,compare:null}});
+  compare.byType.forEach(function(x){
+    if(!map[x.type])map[x.type]={type:x.type,current:null,compare:x};
+    else map[x.type].compare=x;
+  });
+  const rows=Object.values(map).sort(function(a,b){return a.type.localeCompare(b.type,"ja")});
+  document.getElementById("shootTypeCompare").innerHTML=rows.length?rows.map(function(r){
+    const c=r.current||{made:0,attempts:0,rate:0};
+    const p=r.compare||{made:0,attempts:0,rate:0};
+    const diff=Number(c.rate)-Number(p.rate);
+    return '<tr><td><b>'+esc(r.type)+'</b></td>'+
+      '<td>'+fmt(c.rate)+'%<br><span class="small">'+c.made+'/'+c.attempts+'</span></td>'+
+      '<td>'+fmt(p.rate)+'%<br><span class="small">'+p.made+'/'+p.attempts+'</span></td>'+
+      '<td class="'+(diff>0?"status-good":diff<0?"status-warn":"")+'">'+(diff>0?"+":"")+fmt(diff)+'%</td></tr>';
+  }).join(""):'<tr><td colspan="4">月別種目データがありません。Apps Scriptを月比較対応版へ更新してください。</td></tr>';
+}
+
+function normalizePositionName(name){
+  return String(name||"").normalize("NFKC").replace(/\s+/g,"").replace(/[（(].*?[）)]/g,"");
+}
+function courtPosition(name,type){
+  const n=normalizePositionName(name);
+  const is3=String(type).includes("3P");
+  const map=[
+    {keys:["右0度","右コーナー","右底角"],x:is3?94:76,y:82},
+    {keys:["左0度","左コーナー","左底角"],x:is3?6:24,y:82},
+    {keys:["右45度","右ウィング"],x:is3?87:70,y:is3?52:66},
+    {keys:["左45度","左ウィング"],x:is3?13:30,y:is3?52:66},
+    {keys:["90度","トップ","正面"],x:50,y:is3?37:59},
+    {keys:["右エルボー"],x:61,y:69},{keys:["左エルボー"],x:39,y:69},
+    {keys:["フリースロー","FT"],x:50,y:67},{keys:["マイカン","ゴール下"],x:50,y:91}
+  ];
+  return map.find(function(m){return m.keys.some(function(k){return n.includes(k)})})||{x:50,y:is3?37:66};
+}
+function shotRank(rate){
+  const r=Number(rate||0);
+  if(r<=20)return"rank-red";if(r<=35)return"rank-yellow";if(r<=45)return"rank-green";if(r<=60)return"rank-silver";return"rank-gold";
+}
+function renderShotCourt(current,compare){
+  const holder=document.getElementById("shotMarkers");
+  const detail=document.getElementById("courtDetail");
+  const map={};
+  current.byPosition.forEach(function(x){map[x.type+"|||"+x.position]={type:x.type,position:x.position,current:x,compare:null}});
+  compare.byPosition.forEach(function(x){
+    const key=x.type+"|||"+x.position;
+    if(!map[key])map[key]={type:x.type,position:x.position,current:null,compare:x};
+    else map[key].compare=x;
+  });
+  const rows=Object.values(map).filter(function(r){
+    return Number((r.current&&r.current.attempts)||0)>0||Number((r.compare&&r.compare.attempts)||0)>0;
+  });
+  if(!rows.length){
+    holder.innerHTML="";
+    detail.innerHTML='<h3>月別ポジションデータなし</h3><div class="small">Apps Scriptを月比較対応版へ更新すると表示されます。</div>';
+    return;
+  }
+  holder.innerHTML=rows.map(function(r,i){
+    const c=r.current||{made:0,attempts:0,rate:0};
+    const pos=courtPosition(r.position,r.type);
+    return '<button type="button" class="shot-marker '+shotRank(c.rate)+'" style="left:'+pos.x+'%;top:'+pos.y+'%" data-index="'+i+'">'+
+      '<strong>'+fmt(c.rate)+'%</strong><span>'+esc(r.type)+'<br>'+c.attempts+'本</span></button>';
+  }).join("");
+  holder.querySelectorAll(".shot-marker").forEach(function(btn){
+    btn.addEventListener("click",function(){showCourtDetail(rows[Number(btn.dataset.index)],current.month,compare.month)});
+  });
+  showCourtDetail(rows.slice().sort(function(a,b){
+    return Number((b.current&&b.current.attempts)||0)-Number((a.current&&a.current.attempts)||0);
+  })[0],current.month,compare.month);
+}
+function showCourtDetail(row,currentMonth,compareMonth){
+  const c=row.current||{made:0,attempts:0,rate:0};
+  const p=row.compare||{made:0,attempts:0,rate:0};
+  document.getElementById("courtDetail").innerHTML=
+    '<h3>'+esc(row.position)+'</h3><div class="small">'+esc(row.type)+'</div>'+
+    '<div class="detail-rate">'+fmt(c.rate)+'%</div><div class="small">'+esc(currentMonth)+'</div>'+
+    '<div class="detail-grid"><div><small>成功</small><b>'+c.made+'本</b></div><div><small>試投</small><b>'+c.attempts+'本</b></div></div>'+
+    '<hr style="border:0;border-top:1px solid var(--line);margin:13px 0">'+
+    '<div class="small">'+esc(compareMonth)+'：'+fmt(p.rate)+'%</div>'+
+    '<div class="detail-grid"><div><small>成功</small><b>'+p.made+'本</b></div><div><small>試投</small><b>'+p.attempts+'本</b></div></div>';
+}
+
+function formatBodyMonth(value){
+  const text=String(value||"").replace(/-/g,"/");
+  const match=text.match(/^(\d{4})\/(\d{1,2})/);
+  if(!match)return text;
+  return String(match[1]).slice(-2)+"."+Number(match[2]);
+}
+
+
+function formatYearMonthLabel(value){
+  const raw=String(value??"").trim();
+  if(!raw)return "－";
+  const match=raw.match(/^(\d{4})[\/.\-](\d{1,2})(?:[\/.\-]\d{1,2})?/);
+  if(match)return match[1]+"."+Number(match[2]);
+  const date=new Date(raw);
+  if(!Number.isNaN(date.getTime()))return date.getFullYear()+"."+(date.getMonth()+1);
+  return raw;
+}
+
+function renderBody(){
+  const rows=((bundle.body||{}).records||[]).slice().sort(function(a,b){
+    return String(a.month||"").localeCompare(String(b.month||""));
+  });
+
+  const summary=document.getElementById("bodyCompactSummary");
+  const table=document.getElementById("bodyHistoryTable");
+
+  if(!rows.length){
+    if(summary)summary.innerHTML='<div class="empty">まだ記録がありません。</div>';
+    if(table)table.innerHTML='<div class="empty">まだ記録がありません。</div>';
+    return;
+  }
+
+  const heightRows=rows.filter(function(r){
+    return r.height!==null&&r.height!==undefined&&Number.isFinite(Number(r.height));
+  });
+  const weightRows=rows.filter(function(r){
+    return r.weight!==null&&r.weight!==undefined&&Number.isFinite(Number(r.weight));
+  });
+
+  const latestHeight=heightRows.length?heightRows[heightRows.length-1]:null;
+  const firstHeight=heightRows.length?heightRows[0]:null;
+  const latestWeight=weightRows.length?weightRows[weightRows.length-1]:null;
+  const firstWeight=weightRows.length?weightRows[0]:null;
+
+  if(summary){
+    summary.innerHTML=
+      '<div class="body-compact-box">'+
+        '<div class="label">最新身長</div>'+
+        '<div class="main">'+(latestHeight?fmt(latestHeight.height)+'cm':'－')+'</div>'+
+        '<div class="sub">'+
+          (latestHeight&&firstHeight
+            ?'初回比 '+signedBodyDiff(Number(latestHeight.height)-Number(firstHeight.height),'cm')
+            :'比較なし')+
+        '</div>'+
+      '</div>'+
+      '<div class="body-compact-box">'+
+        '<div class="label">最新体重</div>'+
+        '<div class="main">'+(latestWeight?fmt(latestWeight.weight)+'kg':'－')+'</div>'+
+        '<div class="sub">'+
+          (latestWeight&&firstWeight
+            ?'初回比 '+signedBodyDiff(Number(latestWeight.weight)-Number(firstWeight.weight),'kg')
+            :'比較なし')+
+        '</div>'+
+      '</div>';
+  }
+
+  if(table){
+    const dates=rows.map(function(r){
+      return '<th>'+esc(formatBodyMonth(r.month))+'</th>';
+    }).join("");
+
+    const heights=rows.map(function(r){
+      return '<td>'+(r.height==null?'－':fmt(r.height))+'</td>';
+    }).join("");
+
+    const weights=rows.map(function(r){
+      return '<td>'+(r.weight==null?'－':fmt(r.weight))+'</td>';
+    }).join("");
+
+    table.innerHTML=
+      '<table class="body-table">'+
+        '<tr><th>記録</th>'+dates+'</tr>'+
+        '<tr><td>身長 cm</td>'+heights+'</tr>'+
+        '<tr><td>体重 kg</td>'+weights+'</tr>'+
+      '</table>';
+  }
+}
+
+function signedBodyDiff(value,unit){
+  if(!Number.isFinite(value))return '－';
+  return (value>0?'+':'')+fmt(value)+unit;
+}
+
+function buildBodyCard(label,rows,key,unit){
+  if(!rows.length)return'<div class="item"><b>'+esc(label)+'</b><div class="empty">記録がありません。</div></div>';
+  const first=rows[0],latest=rows[rows.length-1],previous=rows.length>=2?rows[rows.length-2]:null;
+  return '<div class="item"><b>'+esc(label)+'</b><div class="grid three" style="margin-top:10px">'+
+    statHtml("初回",first[key],unit,first.month)+statHtml("前回",previous?previous[key]:null,unit,previous?previous.month:"比較なし")+
+    statHtml("最新",latest[key],unit,latest.month)+'</div><div class="grid" style="margin-top:10px">'+
+    comparisonBox("初回比",Number(latest[key])-Number(first[key]),unit,true)+
+    comparisonBox("前回比",previous?Number(latest[key])-Number(previous[key]):null,unit,true)+'</div></div>';
+}
+
+function comparisonBox(label,diff,unit,higherIsBetter){
+  if(diff==null||!Number.isFinite(Number(diff))){
+    return '<div class="summary-box">'+
+      '<div class="kpi-label">'+esc(label)+'</div>'+
+      '<div class="kpi-value">－</div>'+
+      '<div class="kpi-note">比較できる記録がありません</div>'+
+    '</div>';
+  }
+
+  const value=Number(diff);
+  const improved=value===0?null:(higherIsBetter?value>0:value<0);
+  const className=improved===true
+    ?"status-good"
+    :improved===false
+      ?"status-warn"
+      :"";
+
+  return '<div class="summary-box">'+
+    '<div class="kpi-label">'+esc(label)+'</div>'+
+    '<div class="kpi-value '+className+'">'+
+      (value>0?"+":"")+fmt(value)+esc(unit||"")+
+    '</div>'+
+    '<div class="kpi-note">'+
+      (value===0
+        ?"変化なし"
+        :improved===true
+          ?"成長しています"
+          :"前回との差")+
+    '</div>'+
+  '</div>';
+}
+
+function statHtml(label,value,unit,sub){
+  return '<div class="stat"><span class="muted">'+esc(label)+'</span><b>'+(value==null?"－":fmt(value)+esc(unit))+
+    '</b><div class="small">'+esc(sub||"")+'</div></div>';
+}
+
+
+function normalizeAgilityType(type){
+  const value=String(type||"").normalize("NFKC").replace(/\s+/g,"");
+  if(value.includes("シャトル"))return "20mシャトルラン";
+  if(value.includes("反復横"))return "反復横跳び";
+  if(value.includes("L字")||value.includes("l字"))return "L字コーン";
+  if(value.includes("垂直"))return "垂直跳び";
+  if(value.includes("120")&&value.includes("ハンドリング"))return "120回ハンドリング";
+  return String(type||"未設定");
+}
+
+function agilityTypeOrder(type){
+  const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング"];
+  const index=order.indexOf(type);
+  return index<0?999:index;
+}
+
+function getAgilityGroups(){
+  const rows=((bundle.agility||{}).records||[]);
+  const groups={};
+
+  rows.forEach(function(r){
+    const type=normalizeAgilityType(r.type);
+    const normalized=Object.assign({},r,{type:type});
+    if(!groups[type])groups[type]=[];
+    groups[type].push(normalized);
+  });
+
+  Object.keys(groups).forEach(function(type){
+    groups[type].sort(function(a,b){
+      return String(a.month).localeCompare(String(b.month));
+    });
+  });
+
+  return groups;
+}
+
+function setupAgilitySelector(){
+  const select=document.getElementById("agilityTypeSelect");
+  if(!select)return;
+
+  const groups=getAgilityGroups();
+  const types=Object.keys(groups).sort(function(a,b){
+    return agilityTypeOrder(a)-agilityTypeOrder(b)||a.localeCompare(b,"ja");
+  });
+
+  const current=select.value;
+
+  if(!types.length){
+    select.innerHTML='<option value="">記録なし</option>';
+    return;
+  }
+
+  select.innerHTML=types.map(function(type){
+    return '<option value="'+esc(type)+'">'+esc(type)+'</option>';
+  }).join("");
+
+  select.value=types.includes(current)?current:types[0];
+}
+
+function renderSelectedAgility(){
+  const select=document.getElementById("agilityTypeSelect");
+  const comparison=document.getElementById("selectedAgilityComparison");
+  const list=document.getElementById("selectedAgilityList");
+  const chartTitle=document.getElementById("selectedAgilityChartTitle");
+
+  if(!select||!comparison||!list||!chartTitle)return;
+
+  const groups=getAgilityGroups();
+  const type=select.value;
+  const records=groups[type]||[];
+
+  if(!type||!records.length){
+    comparison.innerHTML='<div class="empty">この種目の記録がありません。</div>';
+    list.innerHTML='<div class="empty">記録がありません。</div>';
+    chartTitle.textContent="";
+    drawLines("selectedAgilityChart",[]);
+    return;
+  }
+
+  comparison.innerHTML=buildAgilityCard(type,records);
+  list.innerHTML=records.slice().reverse().map(function(r){
+    return '<div class="item"><b>'+esc(r.month)+'</b><br>'+
+      '<span class="value">'+fmt(r.value)+esc(r.unit||"")+'</span></div>';
+  }).join("");
+
+  chartTitle.textContent=type+" の記録推移";
+
+  const unit=(records[0]&&records[0].unit)||"";
+  const points=records.filter(function(r){
+    return Number.isFinite(Number(r.value));
+  }).map(function(r){
+    return {label:r.month,value:Number(r.value)};
+  });
+
+  drawLines("selectedAgilityChart",[
+    {label:type+(unit?" "+unit:""),points:points}
+  ]);
+}
+
+function buildAgilityCard(type,records){
+  const valid=records.filter(function(r){return Number.isFinite(Number(r.value))});
+  if(!valid.length){
+    return '<div class="item"><b>'+esc(type)+'</b><div class="empty">記録がありません。</div></div>';
+  }
+
+  const first=valid[0];
+  const latest=valid[valid.length-1];
+  const previous=valid.length>=2?valid[valid.length-2]:null;
+  const normalizedType=String(type||"").normalize("NFKC");
+  const lower=
+    normalizedType.indexOf("L字")>=0 ||
+    normalizedType.indexOf("l字")>=0 ||
+    normalizedType.indexOf("ハンドリング")>=0;
+  const best=valid.reduce(function(a,b){
+    return lower
+      ? Number(b.value)<Number(a.value)?b:a
+      : Number(b.value)>Number(a.value)?b:a;
+  });
+  const unit=latest.unit||first.unit||"";
+
+  return '<div class="item"><b>'+esc(type)+'</b>'+
+    '<div class="grid three" style="margin-top:10px">'+
+      statHtml("初回",first.value,unit,first.month)+
+      statHtml("前回",previous?previous.value:null,unit,previous?previous.month:"比較なし")+
+      statHtml("最新",latest.value,unit,latest.month)+
+    '</div>'+
+    '<div class="grid" style="margin-top:10px">'+
+      comparisonBox("初回比",Number(latest.value)-Number(first.value),unit,!lower)+
+      comparisonBox("前回比",previous?Number(latest.value)-Number(previous.value):null,unit,!lower)+
+    '</div>'+
+    '<div class="summary-box" style="margin-top:10px">'+
+      '<div class="kpi-label">ベスト記録</div>'+
+      '<div class="kpi-value">'+fmt(best.value)+esc(best.unit||unit)+'</div>'+
+      '<div class="kpi-note">'+esc(best.month||"")+'</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function toggleAgilityList(){
+  const panel=document.getElementById("agilityListPanel");
+  const icon=document.getElementById("agilityListToggleIcon");
+  const textEl=document.getElementById("agilityListToggleText");
+  if(!panel||!icon||!textEl)return;
+
+  const open=panel.classList.toggle("open");
+  icon.textContent=open?"－":"＋";
+  textEl.textContent=open?"記録一覧を閉じる":"記録一覧を表示";
+}
+
+function drawLines(canvasId,series){
+  const canvas=document.getElementById(canvasId),ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height);
+  const active=series.filter(function(s){return s.points&&s.points.length});
+  const all=active.flatMap(function(s){return s.points.map(function(p){return p.value})}).filter(Number.isFinite);
+  if(!all.length){ctx.fillStyle="#a7bad2";ctx.font="20px sans-serif";ctx.textAlign="center";ctx.fillText("記録がありません",canvas.width/2,canvas.height/2);ctx.textAlign="left";return}
+  const left=55,right=20,top=42,bottom=48,width=canvas.width-left-right,height=canvas.height-top-bottom;
+  let min=Math.min.apply(null,all),max=Math.max.apply(null,all);
+  if(active.some(function(s){return s.min===0}))min=0;if(active.some(function(s){return s.max===100}))max=100;
+  if(min===max){min-=1;max+=1}const pad=(max-min)*.1;if(!active.some(function(s){return s.min===0}))min-=pad;if(!active.some(function(s){return s.max===100}))max+=pad;
+  ctx.strokeStyle="#29496d";ctx.fillStyle="#a7bad2";ctx.font="12px sans-serif";
+  for(let i=0;i<=4;i++){const y=top+i*height/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(canvas.width-right,y);ctx.stroke();ctx.fillText(fmt(max-(max-min)*i/4),5,y+4)}
+  const colors=["#42a5f5","#77c4ff","#ff7373","#ffb35c","#ad7cff","#44d8e8"];
+  active.forEach(function(s,si){
+    const color=colors[si%colors.length],pts=s.points.map(function(p,i){return{x:left+i*(width/Math.max(1,s.points.length-1)),y:top+(max-p.value)*height/(max-min),label:p.label,value:p.value}});
+    ctx.beginPath();pts.forEach(function(p,i){i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});ctx.strokeStyle=color;ctx.lineWidth=4;ctx.stroke();
+    pts.forEach(function(p){ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill()});
+    ctx.fillStyle=color;ctx.fillRect(left+(si%3)*190,10,15,5);ctx.fillStyle="#f5f9ff";ctx.fillText(s.label,left+22+(si%3)*190,17);
+  });
+  const labels=active[0].points;ctx.fillStyle="#a7bad2";ctx.font="11px sans-serif";ctx.textAlign="center";
+  labels.forEach(function(p,i){if(labels.length>6&&i%Math.ceil(labels.length/6)!==0&&i!==labels.length-1)return;const x=left+i*(width/Math.max(1,labels.length-1));ctx.fillText(String(p.label).replace(/^\d{4}\//,""),x,canvas.height-16)});ctx.textAlign="left";
+}
+
+function jsonp(params,timeoutMs){
+  timeoutMs=timeoutMs||45000;
+  return new Promise(function(resolve,reject){
+    if(!GAS_URL){
+      reject(new Error("Apps Script WebアプリURLが設定されていません。"));
+      return;
+    }
+    const callback="__ninjaGrowth_"+Date.now()+"_"+Math.random().toString(36).slice(2),script=document.createElement("script");
+    const timer=setTimeout(function(){cleanup(new Error("Apps Scriptとの通信がタイムアウトしました。通信環境を確認して再読み込みしてください。"))},timeoutMs);
+    function cleanup(error,data){clearTimeout(timer);try{delete window[callback]}catch(_){}if(script.parentNode)script.remove();error?reject(error):resolve(data)}
+    window[callback]=function(data){cleanup(null,data)};
+    script.src=GAS_URL+"?"+new URLSearchParams(Object.assign({},params,{callback:callback,_:Date.now()})).toString();
+    script.onerror=function(){cleanup(new Error("Apps Scriptへ接続できませんでした。"))};
+    document.head.appendChild(script);
+  });
+}
+function setLoading(v){text("loadingText",v)}
+function showError(error){hide("loading");hide("app");hide("linkLogin");const box=document.getElementById("message");box.textContent=error&&error.message?error.message:String(error);box.className="notice error";show("message")}
+function show(id){document.getElementById(id).classList.remove("hidden")}
+function hide(id){document.getElementById(id).classList.add("hidden")}
+function text(id,v){const e=document.getElementById(id);if(e)e.textContent=v==null?"":v}
+function fmt(v){const n=Number(v);return Number.isFinite(n)?String(Math.round(n*10)/10):"－"}
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+</script>
+</body>
+</html>
