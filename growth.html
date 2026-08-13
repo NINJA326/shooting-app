@@ -958,7 +958,7 @@ body{
     </div>
           <div>
             <div class="dashboard-title">アジリティ <span>›</span></div>
-            <div class="dashboard-sub">5種目から選んで詳細確認</div>
+            <div class="dashboard-sub">6種目から選んで詳細確認</div>
           </div>
           <div class="dashboard-primary">
             <small id="dashAgilityType">最新記録</small>
@@ -1167,6 +1167,7 @@ body{
                   <option value="L字コーン">L字コーン</option>
                   <option value="垂直跳び">垂直跳び</option>
                   <option value="120回ハンドリング">120回ハンドリング</option>
+                  <option value="龍ラン">龍ラン</option>
                 </select>
               </label>
             </div>
@@ -2162,11 +2163,12 @@ function normalizeAgilityType(type){
   if(value.includes("L字")||value.includes("l字"))return "L字コーン";
   if(value.includes("垂直"))return "垂直跳び";
   if(value.includes("120")&&value.includes("ハンドリング"))return "120回ハンドリング";
+  if(value.includes("龍ラン"))return "龍ラン";
   return String(type||"未設定");
 }
 
 function agilityTypeOrder(type){
-  const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング"];
+  const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング","龍ラン"];
   const index=order.indexOf(type);
   return index<0?999:index;
 }
@@ -2267,7 +2269,8 @@ function buildAgilityCard(type,records){
   const lower=
     normalizedType.indexOf("L字")>=0 ||
     normalizedType.indexOf("l字")>=0 ||
-    normalizedType.indexOf("ハンドリング")>=0;
+    normalizedType.indexOf("ハンドリング")>=0 ||
+    normalizedType.indexOf("龍ラン")>=0;
   const best=valid.reduce(function(a,b){
     return lower
       ? Number(b.value)<Number(a.value)?b:a
