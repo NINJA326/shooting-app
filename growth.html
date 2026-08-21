@@ -2270,7 +2270,7 @@ function renderRyuRunAgility(comparison,list,chartTitle){
 
   if(!measurements.length){
     comparison.innerHTML='<div class="empty">龍ランの記録がありません。</div>';
-    list.innerHTML='<div class="empty">記録がありません。</div>';
+    list.innerHTML="";
     chartTitle.textContent="";
     drawLines("selectedAgilityChart",[]);
     return;
@@ -2278,31 +2278,11 @@ function renderRyuRunAgility(comparison,list,chartTitle){
 
   comparison.innerHTML=buildRyuRunCard(measurements);
 
-  list.innerHTML=measurements.slice().reverse().map(function(m){
-    return '<div class="item">'+
-      '<b>'+esc(m.date||m.month||"")+'</b>'+
-      '<div class="grid three" style="margin-top:10px">'+
-        ryuRunValueBox("1周目",m.lap1)+
-        ryuRunValueBox("2周目",m.lap2)+
-        ryuRunValueBox("合計",m.total)+
-      '</div>'+
-    '</div>';
-  }).join("");
-
-  chartTitle.textContent="龍ラン 合計タイムの記録推移";
-
-  const points=measurements
-    .filter(function(m){return Number.isFinite(Number(m.total));})
-    .map(function(m){
-      return {
-        label:m.date||m.month,
-        value:Number(m.total)
-      };
-    });
-
-  drawLines("selectedAgilityChart",[
-    {label:"龍ラン 合計（秒）",points:points}
-  ]);
+  // 龍ランは初回・前回・ベスト・ラップベストだけ表示するため、
+  // 個別記録一覧と推移グラフは表示しない。
+  list.innerHTML="";
+  chartTitle.textContent="";
+  drawLines("selectedAgilityChart",[]);
 }
 
 
@@ -2324,25 +2304,42 @@ function getRyuRunMeasurements(){
     });
 
   const groups={};
-  let fallbackCounter=0;
+  const fallbackGroups={};
 
   rows.forEach(function(r){
     const recordId=String(r.recordId||"");
     let groupId="";
 
     if(recordId){
-      groupId=recordId
-        .replace(/_(?:L1|L2|TOTAL)$/i,"");
+      groupId=recordId.replace(/_(?:L1|L2|TOTAL)$/i,"");
     }
 
+    // 記録IDがない旧データは、同日・同選手の3種目を1測定としてまとめる。
     if(!groupId){
-      fallbackCounter+=1;
-      groupId=[
+      const fallbackKey=[
         String(r.date||r.month||""),
-        String(r.playerId||""),
-        "fallback",
-        String(fallbackCounter)
+        String(r.playerId||"")
       ].join("|");
+
+      if(!fallbackGroups[fallbackKey]){
+        fallbackGroups[fallbackKey]=[];
+      }
+
+      let candidate=fallbackGroups[fallbackKey].find(function(id){
+        const m=groups[id];
+        if(!m)return false;
+
+        if(r.type==="龍ラン 1周目")return m.lap1==null;
+        if(r.type==="龍ラン 2周目")return m.lap2==null;
+        return m.total==null;
+      });
+
+      if(!candidate){
+        candidate=fallbackKey+"|"+String(fallbackGroups[fallbackKey].length+1);
+        fallbackGroups[fallbackKey].push(candidate);
+      }
+
+      groupId=candidate;
     }
 
     if(!groups[groupId]){
@@ -2362,11 +2359,11 @@ function getRyuRunMeasurements(){
     if(!m.month&&r.month)m.month=r.month;
 
     if(r.type==="龍ラン 1周目"){
-      m.lap1=Number(r.value);
+      m.lap1=toFiniteNumberOrNull(r.value);
     }else if(r.type==="龍ラン 2周目"){
-      m.lap2=Number(r.value);
+      m.lap2=toFiniteNumberOrNull(r.value);
     }else if(r.type==="龍ラン"){
-      m.total=Number(r.value);
+      m.total=toFiniteNumberOrNull(r.value);
     }
   });
 
@@ -2375,17 +2372,17 @@ function getRyuRunMeasurements(){
       const m=groups[key];
 
       if(
-        !Number.isFinite(Number(m.total)) &&
-        Number.isFinite(Number(m.lap1)) &&
-        Number.isFinite(Number(m.lap2))
+        m.total==null &&
+        m.lap1!=null &&
+        m.lap2!=null
       ){
-        m.total=Number(m.lap1)+Number(m.lap2);
+        m.total=m.lap1+m.lap2;
       }
 
       return m;
     })
     .filter(function(m){
-      return Number.isFinite(Number(m.total));
+      return m.total!=null;
     })
     .sort(function(a,b){
       const aDate=String(a.date||a.month||"");
@@ -2398,70 +2395,64 @@ function getRyuRunMeasurements(){
 
 function buildRyuRunCard(measurements){
   const first=measurements[0];
-  const latest=measurements[measurements.length-1];
+
+  // 「前回」は最新記録ではなく、直近の測定記録を表示。
+  // 測定が1回だけなら比較対象がないため「－」。
   const previous=measurements.length>=2
-    ?measurements[measurements.length-2]
+    ?measurements[measurements.length-1]
     :null;
 
+  // 合計ベストを出した「その日の」1周目・2周目・合計をセットで表示。
   const best=measurements.reduce(function(a,b){
     return Number(b.total)<Number(a.total)?b:a;
   });
 
-  return '<div class="item"><b>龍ラン（2.5km）</b>'+
-    '<div class="grid three" style="margin-top:10px">'+
-      ryuRunStatHtml("初回",first.total,first.date||first.month)+
-      ryuRunStatHtml("前回",previous?previous.total:null,previous?(previous.date||previous.month):"比較なし")+
-      ryuRunStatHtml("最新",latest.total,latest.date||latest.month)+
-    '</div>'+
-    '<div class="grid" style="margin-top:10px">'+
-      ryuRunComparisonBox("初回比",Number(latest.total)-Number(first.total))+
-      ryuRunComparisonBox("前回比",previous?Number(latest.total)-Number(previous.total):null)+
-    '</div>'+
-    '<div class="summary-box" style="margin-top:10px">'+
-      '<div class="kpi-label">ベスト記録</div>'+
-      '<div class="kpi-value">'+esc(formatRyuRunTime(best.total))+'</div>'+
-      '<div class="kpi-note">'+esc(best.date||best.month||"")+'</div>'+
-    '</div>'+
-    '<div class="summary-box" style="margin-top:10px">'+
-      '<div class="kpi-label">最新ラップ</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">'+
-        ryuRunMiniValue("1周目",latest.lap1)+
-        ryuRunMiniValue("2周目",latest.lap2)+
-        ryuRunMiniValue("合計",latest.total)+
+  const lap1Best=measurements
+    .filter(function(m){return m.lap1!=null;})
+    .reduce(function(bestValue,m){
+      return bestValue==null||Number(m.lap1)<bestValue
+        ?Number(m.lap1)
+        :bestValue;
+    },null);
+
+  const lap2Best=measurements
+    .filter(function(m){return m.lap2!=null;})
+    .reduce(function(bestValue,m){
+      return bestValue==null||Number(m.lap2)<bestValue
+        ?Number(m.lap2)
+        :bestValue;
+    },null);
+
+  return '<div class="item">'+
+    '<b>龍ラン（2.5km）</b>'+
+    ryuRunMeasurementRow("初回",first)+
+    ryuRunMeasurementRow("前回",previous)+
+    ryuRunMeasurementRow("ベスト",best)+
+    '<div class="summary-box" style="margin-top:12px">'+
+      '<div class="kpi-label">ラップベスト</div>'+
+      '<div class="grid" style="margin-top:8px">'+
+        ryuRunBestLapBox("1周目ベスト",lap1Best)+
+        ryuRunBestLapBox("2周目ベスト",lap2Best)+
       '</div>'+
     '</div>'+
   '</div>';
 }
 
 
-function ryuRunStatHtml(label,value,sub){
-  return '<div class="stat">'+
-    '<span class="muted">'+esc(label)+'</span>'+
-    '<b>'+(value==null?"－":esc(formatRyuRunTime(value)))+'</b>'+
-    '<div class="small">'+esc(sub||"")+'</div>'+
-  '</div>';
-}
+function ryuRunMeasurementRow(label,measurement){
+  const date=measurement
+    ?(measurement.date||measurement.month||"")
+    :"";
 
-
-function ryuRunComparisonBox(label,diffSeconds){
-  if(diffSeconds===null||diffSeconds===undefined||!Number.isFinite(Number(diffSeconds))){
-    return '<div class="summary-box">'+
+  return '<div class="summary-box" style="margin-top:12px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
       '<div class="kpi-label">'+esc(label)+'</div>'+
-      '<div class="kpi-value">－</div>'+
-      '<div class="kpi-note">比較なし</div>'+
-    '</div>';
-  }
-
-  const diff=Number(diffSeconds);
-  const improved=diff<0;
-
-  return '<div class="summary-box">'+
-    '<div class="kpi-label">'+esc(label)+'</div>'+
-    '<div class="kpi-value">'+
-      (diff===0?"±0秒":(diff>0?"+":"−")+esc(formatRyuRunDuration(Math.abs(diff))))+
+      '<div class="small">'+esc(date)+'</div>'+
     '</div>'+
-    '<div class="kpi-note">'+
-      (diff===0?"変化なし":improved?"タイム短縮":"前回より増加")+
+    '<div class="grid three" style="margin-top:8px">'+
+      ryuRunValueBox("1周目",measurement?measurement.lap1:null)+
+      ryuRunValueBox("2周目",measurement?measurement.lap2:null)+
+      ryuRunValueBox("合計",measurement?measurement.total:null)+
     '</div>'+
   '</div>';
 }
@@ -2470,16 +2461,30 @@ function ryuRunComparisonBox(label,diffSeconds){
 function ryuRunValueBox(label,value){
   return '<div class="stat">'+
     '<span class="muted">'+esc(label)+'</span>'+
-    '<b style="font-size:18px">'+(value==null?"－":esc(formatRyuRunTime(value)))+'</b>'+
+    '<b style="font-size:18px">'+
+      (value==null?"－":esc(formatRyuRunTime(value)))+
+    '</b>'+
   '</div>';
 }
 
 
-function ryuRunMiniValue(label,value){
-  return '<div class="stat" style="padding:10px">'+
+function ryuRunBestLapBox(label,value){
+  return '<div class="stat">'+
     '<span class="muted">'+esc(label)+'</span>'+
-    '<b style="font-size:17px">'+(value==null?"－":esc(formatRyuRunTime(value)))+'</b>'+
+    '<b style="font-size:20px">'+
+      (value==null?"－":esc(formatRyuRunTime(value)))+
+    '</b>'+
   '</div>';
+}
+
+
+function toFiniteNumberOrNull(value){
+  if(value===null||value===undefined||value===""){
+    return null;
+  }
+
+  const n=Number(value);
+  return Number.isFinite(n)?n:null;
 }
 
 
@@ -2494,24 +2499,6 @@ function formatRyuRunTime(value){
   const rest=seconds%60;
 
   return String(minutes)+":"+String(rest).padStart(2,"0");
-}
-
-
-function formatRyuRunDuration(value){
-  const seconds=Math.round(Number(value));
-
-  if(!Number.isFinite(seconds)||seconds<0){
-    return "－";
-  }
-
-  if(seconds<60){
-    return String(seconds)+"秒";
-  }
-
-  const minutes=Math.floor(seconds/60);
-  const rest=seconds%60;
-
-  return String(minutes)+"分"+String(rest).padStart(2,"0")+"秒";
 }
 
 
