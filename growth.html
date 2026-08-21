@@ -2419,13 +2419,10 @@ function getRyuRunMeasurements(){
 function buildRyuRunCard(measurements){
   const first=measurements[0];
 
-  // 「前回」は最新記録ではなく、直近の測定記録を表示。
-  // 測定が1回だけなら比較対象がないため「－」。
   const previous=measurements.length>=2
     ?measurements[measurements.length-1]
     :null;
 
-  // 合計ベストを出した「その日の」1周目・2周目・合計をセットで表示。
   const best=measurements.reduce(function(a,b){
     return Number(b.total)<Number(a.total)?b:a;
   });
@@ -2446,37 +2443,72 @@ function buildRyuRunCard(measurements){
         :bestValue;
     },null);
 
-  return '<div class="item">'+
-    '<b>龍ラン（2.5km）</b>'+
-    ryuRunMeasurementRow("初回",first)+
-    ryuRunMeasurementRow("前回",previous)+
-    ryuRunMeasurementRow("ベスト",best)+
-    '<div class="summary-box" style="margin-top:12px">'+
-      '<div class="kpi-label">ラップベスト</div>'+
-      '<div class="grid" style="margin-top:8px">'+
-        ryuRunBestLapBox("1周目ベスト",lap1Best)+
-        ryuRunBestLapBox("2周目ベスト",lap2Best)+
+  return '<div class="item" style="padding:12px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+      '<b>龍ラン（2.5km）</b>'+
+      '<span class="small">1.25km × 2周</span>'+
+    '</div>'+
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
+      ryuRunCompactMeasurement("初回",first)+
+      ryuRunCompactMeasurement("前回",previous)+
+    '</div>'+
+
+    '<div class="summary-box" style="margin-top:10px;padding:11px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+        '<div class="kpi-label">ベスト</div>'+
+        '<div class="small">'+esc(best.date||best.month||"")+'</div>'+
       '</div>'+
+      '<div class="grid three" style="margin-top:7px;gap:7px">'+
+        ryuRunBestValueBox("1周目",best.lap1)+
+        ryuRunBestValueBox("2周目",best.lap2)+
+        ryuRunBestValueBox("合計",best.total,true)+
+      '</div>'+
+    '</div>'+
+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'+
+      ryuRunBestLapBox("1周目ベスト",lap1Best)+
+      ryuRunBestLapBox("2周目ベスト",lap2Best)+
     '</div>'+
   '</div>';
 }
 
 
-function ryuRunMeasurementRow(label,measurement){
+function ryuRunCompactMeasurement(label,measurement){
   const date=measurement
     ?(measurement.date||measurement.month||"")
     :"";
 
-  return '<div class="summary-box" style="margin-top:12px">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
-      '<div class="kpi-label">'+esc(label)+'</div>'+
-      '<div class="small">'+esc(date)+'</div>'+
+  return '<div class="summary-box" style="padding:9px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px">'+
+      '<div class="kpi-label" style="font-size:11px">'+esc(label)+'</div>'+
+      '<div class="small" style="font-size:10px">'+esc(date)+'</div>'+
     '</div>'+
-    '<div class="grid three" style="margin-top:8px">'+
-      ryuRunValueBox("1周目",measurement?measurement.lap1:null)+
-      ryuRunValueBox("2周目",measurement?measurement.lap2:null)+
-      ryuRunValueBox("合計",measurement?measurement.total:null)+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px">'+
+      ryuRunCompactValue("1周",measurement?measurement.lap1:null)+
+      ryuRunCompactValue("2周",measurement?measurement.lap2:null)+
+      ryuRunCompactValue("合計",measurement?measurement.total:null)+
     '</div>'+
+  '</div>';
+}
+
+
+function ryuRunCompactValue(label,value){
+  return '<div style="text-align:center;min-width:0">'+
+    '<div class="muted" style="font-size:9px;white-space:nowrap">'+esc(label)+'</div>'+
+    '<div style="font-size:14px;font-weight:900;margin-top:2px">'+
+      (value==null?"－":esc(formatRyuRunTime(value)))+
+    '</div>'+
+  '</div>';
+}
+
+
+function ryuRunBestValueBox(label,value,isTotal){
+  return '<div class="stat" style="padding:8px;text-align:center">'+
+    '<span class="muted" style="font-size:10px">'+esc(label)+'</span>'+
+    '<b style="font-size:'+(isTotal?'21px':'17px')+';margin-top:3px">'+
+      (value==null?"－":esc(formatRyuRunTime(value)))+
+    '</b>'+
   '</div>';
 }
 
@@ -2492,9 +2524,9 @@ function ryuRunValueBox(label,value){
 
 
 function ryuRunBestLapBox(label,value){
-  return '<div class="stat">'+
-    '<span class="muted">'+esc(label)+'</span>'+
-    '<b style="font-size:20px">'+
+  return '<div class="stat" style="padding:8px;text-align:center">'+
+    '<span class="muted" style="font-size:10px">'+esc(label)+'</span>'+
+    '<b style="font-size:17px;margin-top:3px">'+
       (value==null?"－":esc(formatRyuRunTime(value)))+
     '</b>'+
   '</div>';
