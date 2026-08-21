@@ -1666,9 +1666,13 @@ function setupDashboardAgilitySelector(){
   const select=document.getElementById("dashAgilityTypeSelect");
   if(!select)return;
   const groups=getAgilityGroups();
-  const types=Object.keys(groups).sort(function(a,b){
-    return agilityTypeOrder(a)-agilityTypeOrder(b)||a.localeCompare(b,"ja");
-  });
+  const types=Object.keys(groups)
+    .filter(function(type){
+      return type!=="龍ラン 1周目"&&type!=="龍ラン 2周目";
+    })
+    .sort(function(a,b){
+      return agilityTypeOrder(a)-agilityTypeOrder(b)||a.localeCompare(b,"ja");
+    });
   const current=select.value;
   select.innerHTML="";
   types.forEach(function(type){
@@ -1690,10 +1694,29 @@ function renderDashboardAgility(){
   const previous=records.length>=2?records[records.length-2]:null;
 
   text("dashAgilityType",selected||"最新記録");
-  text("dashAgilityValue",latest?fmt(latest.value)+(latest.unit||""):"－");
-  text("dashAgilityDelta",latest&&previous
-    ?"前回比 "+signedDashboardDiff(Number(latest.value)-Number(previous.value),latest.unit||"")
-    :"比較できる記録がありません");
+  text(
+    "dashAgilityValue",
+    latest
+      ? (
+          String(selected).indexOf("龍ラン")>=0
+            ? formatRyuRunTime(latest.value)
+            : fmt(latest.value)+(latest.unit||"")
+        )
+      : "－"
+  );
+  text(
+    "dashAgilityDelta",
+    String(selected).indexOf("龍ラン")>=0
+      ? ""
+      : (
+          latest&&previous
+            ?"前回比 "+signedDashboardDiff(
+                Number(latest.value)-Number(previous.value),
+                latest.unit||""
+              )
+            :"比較できる記録がありません"
+        )
+  );
   text("dashAgilityChartTitle",selected?selected+" の推移":"アジリティ推移");
   drawLines("dashAgilityChart",[
     {label:selected||"記録",points:records.map(function(r){return{label:r.month,value:Number(r.value)}})}
@@ -2503,6 +2526,15 @@ function formatRyuRunTime(value){
 
 
 function buildAgilityCard(type,records){
+  // 龍ランは共通カードを使わない。
+  // どこから呼ばれても「初回比」「前回比」を表示しないための安全ガード。
+  if(String(type||"").indexOf("龍ラン")>=0){
+    const measurements=getRyuRunMeasurements();
+    return measurements.length
+      ?buildRyuRunCard(measurements)
+      :'<div class="item"><b>龍ラン（2.5km）</b><div class="empty">記録がありません。</div></div>';
+  }
+
   const valid=records.filter(function(r){return Number.isFinite(Number(r.value))});
   if(!valid.length){
     return '<div class="item"><b>'+esc(type)+'</b><div class="empty">記録がありません。</div></div>';
