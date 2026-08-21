@@ -2226,8 +2226,14 @@ function renderSelectedAgility(){
 
   if(!select||!comparison||!list||!chartTitle)return;
 
-  const groups=getAgilityGroups();
   const type=select.value;
+
+  if(type==="龍ラン"){
+    renderRyuRunAgility(comparison,list,chartTitle);
+    return;
+  }
+
+  const groups=getAgilityGroups();
   const records=groups[type]||[];
 
   if(!type||!records.length){
@@ -2240,7 +2246,7 @@ function renderSelectedAgility(){
 
   comparison.innerHTML=buildAgilityCard(type,records);
   list.innerHTML=records.slice().reverse().map(function(r){
-    return '<div class="item"><b>'+esc(r.month)+'</b><br>'+
+    return '<div class="item"><b>'+esc(r.date||r.month||"")+'</b><br>'+
       '<span class="value">'+fmt(r.value)+esc(r.unit||"")+'</span></div>';
   }).join("");
 
@@ -2250,13 +2256,264 @@ function renderSelectedAgility(){
   const points=records.filter(function(r){
     return Number.isFinite(Number(r.value));
   }).map(function(r){
-    return {label:r.month,value:Number(r.value)};
+    return {label:r.date||r.month,value:Number(r.value)};
   });
 
   drawLines("selectedAgilityChart",[
     {label:type+(unit?" "+unit:""),points:points}
   ]);
 }
+
+
+function renderRyuRunAgility(comparison,list,chartTitle){
+  const measurements=getRyuRunMeasurements();
+
+  if(!measurements.length){
+    comparison.innerHTML='<div class="empty">龍ランの記録がありません。</div>';
+    list.innerHTML='<div class="empty">記録がありません。</div>';
+    chartTitle.textContent="";
+    drawLines("selectedAgilityChart",[]);
+    return;
+  }
+
+  comparison.innerHTML=buildRyuRunCard(measurements);
+
+  list.innerHTML=measurements.slice().reverse().map(function(m){
+    return '<div class="item">'+
+      '<b>'+esc(m.date||m.month||"")+'</b>'+
+      '<div class="grid three" style="margin-top:10px">'+
+        ryuRunValueBox("1周目",m.lap1)+
+        ryuRunValueBox("2周目",m.lap2)+
+        ryuRunValueBox("合計",m.total)+
+      '</div>'+
+    '</div>';
+  }).join("");
+
+  chartTitle.textContent="龍ラン 合計タイムの記録推移";
+
+  const points=measurements
+    .filter(function(m){return Number.isFinite(Number(m.total));})
+    .map(function(m){
+      return {
+        label:m.date||m.month,
+        value:Number(m.total)
+      };
+    });
+
+  drawLines("selectedAgilityChart",[
+    {label:"龍ラン 合計（秒）",points:points}
+  ]);
+}
+
+
+function getRyuRunMeasurements(){
+  const rows=((bundle.agility||{}).records||[])
+    .map(function(r){
+      return Object.assign(
+        {},
+        r,
+        {type:normalizeAgilityType(r.type)}
+      );
+    })
+    .filter(function(r){
+      return (
+        r.type==="龍ラン" ||
+        r.type==="龍ラン 1周目" ||
+        r.type==="龍ラン 2周目"
+      );
+    });
+
+  const groups={};
+  let fallbackCounter=0;
+
+  rows.forEach(function(r){
+    const recordId=String(r.recordId||"");
+    let groupId="";
+
+    if(recordId){
+      groupId=recordId
+        .replace(/_(?:L1|L2|TOTAL)$/i,"");
+    }
+
+    if(!groupId){
+      fallbackCounter+=1;
+      groupId=[
+        String(r.date||r.month||""),
+        String(r.playerId||""),
+        "fallback",
+        String(fallbackCounter)
+      ].join("|");
+    }
+
+    if(!groups[groupId]){
+      groups[groupId]={
+        groupId:groupId,
+        date:r.date||"",
+        month:r.month||"",
+        lap1:null,
+        lap2:null,
+        total:null
+      };
+    }
+
+    const m=groups[groupId];
+
+    if(!m.date&&r.date)m.date=r.date;
+    if(!m.month&&r.month)m.month=r.month;
+
+    if(r.type==="龍ラン 1周目"){
+      m.lap1=Number(r.value);
+    }else if(r.type==="龍ラン 2周目"){
+      m.lap2=Number(r.value);
+    }else if(r.type==="龍ラン"){
+      m.total=Number(r.value);
+    }
+  });
+
+  return Object.keys(groups)
+    .map(function(key){
+      const m=groups[key];
+
+      if(
+        !Number.isFinite(Number(m.total)) &&
+        Number.isFinite(Number(m.lap1)) &&
+        Number.isFinite(Number(m.lap2))
+      ){
+        m.total=Number(m.lap1)+Number(m.lap2);
+      }
+
+      return m;
+    })
+    .filter(function(m){
+      return Number.isFinite(Number(m.total));
+    })
+    .sort(function(a,b){
+      const aDate=String(a.date||a.month||"");
+      const bDate=String(b.date||b.month||"");
+      return aDate.localeCompare(bDate)||
+        String(a.groupId).localeCompare(String(b.groupId));
+    });
+}
+
+
+function buildRyuRunCard(measurements){
+  const first=measurements[0];
+  const latest=measurements[measurements.length-1];
+  const previous=measurements.length>=2
+    ?measurements[measurements.length-2]
+    :null;
+
+  const best=measurements.reduce(function(a,b){
+    return Number(b.total)<Number(a.total)?b:a;
+  });
+
+  return '<div class="item"><b>龍ラン（2.5km）</b>'+
+    '<div class="grid three" style="margin-top:10px">'+
+      ryuRunStatHtml("初回",first.total,first.date||first.month)+
+      ryuRunStatHtml("前回",previous?previous.total:null,previous?(previous.date||previous.month):"比較なし")+
+      ryuRunStatHtml("最新",latest.total,latest.date||latest.month)+
+    '</div>'+
+    '<div class="grid" style="margin-top:10px">'+
+      ryuRunComparisonBox("初回比",Number(latest.total)-Number(first.total))+
+      ryuRunComparisonBox("前回比",previous?Number(latest.total)-Number(previous.total):null)+
+    '</div>'+
+    '<div class="summary-box" style="margin-top:10px">'+
+      '<div class="kpi-label">ベスト記録</div>'+
+      '<div class="kpi-value">'+esc(formatRyuRunTime(best.total))+'</div>'+
+      '<div class="kpi-note">'+esc(best.date||best.month||"")+'</div>'+
+    '</div>'+
+    '<div class="summary-box" style="margin-top:10px">'+
+      '<div class="kpi-label">最新ラップ</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">'+
+        ryuRunMiniValue("1周目",latest.lap1)+
+        ryuRunMiniValue("2周目",latest.lap2)+
+        ryuRunMiniValue("合計",latest.total)+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
+
+function ryuRunStatHtml(label,value,sub){
+  return '<div class="stat">'+
+    '<span class="muted">'+esc(label)+'</span>'+
+    '<b>'+(value==null?"－":esc(formatRyuRunTime(value)))+'</b>'+
+    '<div class="small">'+esc(sub||"")+'</div>'+
+  '</div>';
+}
+
+
+function ryuRunComparisonBox(label,diffSeconds){
+  if(diffSeconds===null||diffSeconds===undefined||!Number.isFinite(Number(diffSeconds))){
+    return '<div class="summary-box">'+
+      '<div class="kpi-label">'+esc(label)+'</div>'+
+      '<div class="kpi-value">－</div>'+
+      '<div class="kpi-note">比較なし</div>'+
+    '</div>';
+  }
+
+  const diff=Number(diffSeconds);
+  const improved=diff<0;
+
+  return '<div class="summary-box">'+
+    '<div class="kpi-label">'+esc(label)+'</div>'+
+    '<div class="kpi-value">'+
+      (diff===0?"±0秒":(diff>0?"+":"−")+esc(formatRyuRunDuration(Math.abs(diff))))+
+    '</div>'+
+    '<div class="kpi-note">'+
+      (diff===0?"変化なし":improved?"タイム短縮":"前回より増加")+
+    '</div>'+
+  '</div>';
+}
+
+
+function ryuRunValueBox(label,value){
+  return '<div class="stat">'+
+    '<span class="muted">'+esc(label)+'</span>'+
+    '<b style="font-size:18px">'+(value==null?"－":esc(formatRyuRunTime(value)))+'</b>'+
+  '</div>';
+}
+
+
+function ryuRunMiniValue(label,value){
+  return '<div class="stat" style="padding:10px">'+
+    '<span class="muted">'+esc(label)+'</span>'+
+    '<b style="font-size:17px">'+(value==null?"－":esc(formatRyuRunTime(value)))+'</b>'+
+  '</div>';
+}
+
+
+function formatRyuRunTime(value){
+  const seconds=Math.round(Number(value));
+
+  if(!Number.isFinite(seconds)||seconds<0){
+    return "－";
+  }
+
+  const minutes=Math.floor(seconds/60);
+  const rest=seconds%60;
+
+  return String(minutes)+":"+String(rest).padStart(2,"0");
+}
+
+
+function formatRyuRunDuration(value){
+  const seconds=Math.round(Number(value));
+
+  if(!Number.isFinite(seconds)||seconds<0){
+    return "－";
+  }
+
+  if(seconds<60){
+    return String(seconds)+"秒";
+  }
+
+  const minutes=Math.floor(seconds/60);
+  const rest=seconds%60;
+
+  return String(minutes)+"分"+String(rest).padStart(2,"0")+"秒";
+}
+
 
 function buildAgilityCard(type,records){
   const valid=records.filter(function(r){return Number.isFinite(Number(r.value))});
