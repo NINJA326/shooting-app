@@ -1167,6 +1167,7 @@ body{
                   <option value="L字コーン">L字コーン</option>
                   <option value="垂直跳び">垂直跳び</option>
                   <option value="120回ハンドリング">120回ハンドリング</option>
+                  <option value="龍ラン">龍ラン</option>
                 </select>
               </label>
             </div>
@@ -1470,9 +1471,13 @@ function renderRankingPage(){
           ?"ベスト記録 "+formatYearMonthLabel(r.date)
           :"個人ベスト";
     };
-    note.textContent=(group.lowerIsBetter
-      ?"全期間の個人ベストで順位を算出しています。秒数が小さい選手が上位です。"
-      :"全期間の個人ベストで順位を算出しています。数値が大きい選手が上位です。"
+    note.textContent=(
+      type==="龍ラン"
+        ?"龍ランは2.5km合計タイムの全期間ベストで順位を算出しています。タイムが短い選手が上位です。"
+        :(group.lowerIsBetter
+          ?"全期間の個人ベストで順位を算出しています。秒数が小さい選手が上位です。"
+          :"全期間の個人ベストで順位を算出しています。数値が大きい選手が上位です。"
+        )
     )+" 未測定の選手も「記録なし」で表示します。";
   }
 
@@ -1537,7 +1542,12 @@ function renderRankingPage(){
               ?row.made
               :row.rate)
         :row.value;
-      displayValue=fmt(value)+unit;
+      displayValue=(
+        rankingMode==="agility" &&
+        document.getElementById("rankingAgilityType").value==="龍ラン"
+      )
+        ?formatRyuRunTime(value)
+        :fmt(value)+unit;
       rankText=row.visibleRank+"位";
     }
 
