@@ -1310,30 +1310,71 @@ function unwrapApiData(value){
   return current&&typeof current==="object"?current:{};
 }
 
+function collectGuardianBundleCandidates(value,list,depth){
+  if(!value||typeof value!=="object"||Array.isArray(value)||depth>6)return;
+
+  list.push(value);
+
+  ["data","card","bundle","playerCard","playerBundle"].forEach(function(key){
+    if(value[key]&&typeof value[key]==="object"){
+      collectGuardianBundleCandidates(value[key],list,depth+1);
+    }
+  });
+}
+
+function scoreGuardianBundleCandidate(value){
+  if(!value||typeof value!=="object"||Array.isArray(value))return 0;
+
+  let score=0;
+  if(value.shooting)score+=40;
+  if(value.body)score+=30;
+  if(value.growth)score+=30;
+  if(value.agility)score+=30;
+  if(value.ranking)score+=20;
+  if(value.feedback)score+=8;
+  if(value.coachAdvice)score+=8;
+  if(value.player)score+=5;
+  if(value.monthly||value.records)score+=2;
+
+  return score;
+}
+
+function findBestGuardianBundleCandidate(result){
+  const candidates=[];
+  collectGuardianBundleCandidates(result,candidates,0);
+
+  candidates.sort(function(a,b){
+    return scoreGuardianBundleCandidate(b)-scoreGuardianBundleCandidate(a);
+  });
+
+  return candidates[0]||{};
+}
+
 function normalizeGuardianPlayerViewBundle(result,player){
   const data=unwrapApiData(result);
-  let card=data.card||data.bundle||data.playerCard||data;
-  card=unwrapApiData(card);
+  const best=findBestGuardianBundleCandidate(data);
+  const normalized=Object.assign({},best);
 
-  if(card.card){
-    card=unwrapApiData(card.card);
+  if(normalized.bundle&&typeof normalized.bundle==="object"){
+    const nested=findBestGuardianBundleCandidate(normalized.bundle);
+    if(scoreGuardianBundleCandidate(nested)>scoreGuardianBundleCandidate(normalized)){
+      Object.assign(normalized,nested);
+    }
   }
-
-  const normalized=Object.assign({},card);
 
   if(!normalized.shooting){
     normalized.shooting={monthly:[],monthlyByType:{},monthlyByPosition:{}};
   }
 
-  if(!normalized.shooting.monthly){
+  if(!Array.isArray(normalized.shooting.monthly)){
     normalized.shooting.monthly=[];
   }
 
-  if(!normalized.shooting.monthlyByType){
+  if(!normalized.shooting.monthlyByType||typeof normalized.shooting.monthlyByType!=="object"){
     normalized.shooting.monthlyByType={};
   }
 
-  if(!normalized.shooting.monthlyByPosition){
+  if(!normalized.shooting.monthlyByPosition||typeof normalized.shooting.monthlyByPosition!=="object"){
     normalized.shooting.monthlyByPosition={};
   }
 
@@ -1345,7 +1386,7 @@ function normalizeGuardianPlayerViewBundle(result,player){
     normalized.body={records:[]};
   }
 
-  if(!normalized.body.records){
+  if(!Array.isArray(normalized.body.records)){
     normalized.body.records=[];
   }
 
@@ -1353,7 +1394,7 @@ function normalizeGuardianPlayerViewBundle(result,player){
     normalized.agility={records:[]};
   }
 
-  if(!normalized.agility.records){
+  if(!Array.isArray(normalized.agility.records)){
     normalized.agility.records=[];
   }
 
@@ -1373,7 +1414,7 @@ function currentMonthKey(){
 
 
 const GROWTH_CACHE_CONFIG=Object.freeze({
-  version:"v1",
+  version:"v2",
   prefix:"ninjaGrowthBundleCache",
   maxAgeMs:1000*60*60*24*30
 });
