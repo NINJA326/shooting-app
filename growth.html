@@ -1190,11 +1190,14 @@ const LIFF_ID="2010789200-zVWWxqSQ";
 const GAS_URL="https://script.google.com/macros/s/AKfycbx_SBI38cJqdYtnIyeicdnpnTMu4wG67pak-tR3JwqyLHNoyUGxQ_NulmCJsxLF9_Q/exec";
 let idToken="";
 let bundle=null;
+let guardianLaunchContext=null;
 
 window.addEventListener("load",init);
 
 async function init(){
   try{
+    const guardianLaunch=getGuardianLaunchParams();
+
     if(!window.liff)throw new Error("LIFF SDKを読み込めませんでした。");
     setLoading("LINE認証を初期化しています…");
     await liff.init({liffId:LIFF_ID,withLoginOnExternalBrowser:true});
@@ -1205,6 +1208,12 @@ async function init(){
     }
     idToken=liff.getIDToken();
     if(!idToken)throw new Error("LINE認証情報を取得できませんでした。");
+
+    if(guardianLaunch.launchToken){
+      await loadGuardianLaunchBundle(guardianLaunch);
+      return;
+    }
+
     setLoading("本人情報を確認しています…");
     const session=await jsonp({action:"growthSession",idToken:idToken});
 
@@ -1225,9 +1234,214 @@ async function init(){
   }catch(error){showError(error)}
 }
 
+function getGuardianLaunchParams(){
+  const params=new URLSearchParams(location.search);
+  return {
+    launchToken:String(params.get("guardianLaunchToken")||"").trim(),
+    appKey:String(params.get("guardianLaunchApp")||"").trim()
+  };
+}
+
+function isOkResponse(result){
+  return !!result&&(
+    result.status==="ok"||
+    result.ok===true||
+    result.success===true
+  );
+}
+
+function getResponseData(result){
+  return result&&typeof result==="object"&&result.data&&typeof result.data==="object"
+    ?result.data
+    :result;
+}
+
+async function postJson(payload){
+  const response=await fetch(GAS_URL,{
+    method:"POST",
+    redirect:"follow",
+    headers:{
+      "Content-Type":"text/plain;charset=utf-8"
+    },
+    body:JSON.stringify(payload)
+  });
+
+  const textBody=await response.text();
+  let result=null;
+
+  try{
+    result=JSON.parse(textBody);
+  }catch(error){
+    throw new Error("Apps Scriptの応答を読み取れませんでした。");
+  }
+
+  if(!response.ok){
+    throw new Error(result&&result.message?result.message:"Apps Scriptとの通信に失敗しました。");
+  }
+
+  if(!isOkResponse(result)){
+    throw new Error(result&&result.message?result.message:"処理に失敗しました。");
+  }
+
+  return result;
+}
+
+function unwrapApiData(value){
+  let current=value;
+
+  for(let i=0;i<5;i++){
+    if(
+      current&&
+      typeof current==="object"&&
+      !Array.isArray(current)&&
+      current.data&&
+      typeof current.data==="object"&&
+      isOkResponse(current)
+    ){
+      current=current.data;
+      continue;
+    }
+
+    break;
+  }
+
+  return current&&typeof current==="object"?current:{};
+}
+
+function normalizeGuardianPlayerViewBundle(result,player){
+  const data=unwrapApiData(result);
+  let card=data.card||data.bundle||data.playerCard||data;
+  card=unwrapApiData(card);
+
+  if(card.card){
+    card=unwrapApiData(card.card);
+  }
+
+  const normalized=Object.assign({},card);
+
+  if(!normalized.shooting){
+    normalized.shooting={monthly:[],monthlyByType:{},monthlyByPosition:{}};
+  }
+
+  if(!normalized.shooting.monthly){
+    normalized.shooting.monthly=[];
+  }
+
+  if(!normalized.shooting.monthlyByType){
+    normalized.shooting.monthlyByType={};
+  }
+
+  if(!normalized.shooting.monthlyByPosition){
+    normalized.shooting.monthlyByPosition={};
+  }
+
+  if(!normalized.body&&normalized.growth){
+    normalized.body=normalized.growth;
+  }
+
+  if(!normalized.body){
+    normalized.body={records:[]};
+  }
+
+  if(!normalized.body.records){
+    normalized.body.records=[];
+  }
+
+  if(!normalized.agility){
+    normalized.agility={records:[]};
+  }
+
+  if(!normalized.agility.records){
+    normalized.agility.records=[];
+  }
+
+  if(!normalized.ranking){
+    normalized.ranking=null;
+  }
+
+  normalized.player=normalized.player||player||data.player||{};
+
+  return normalized;
+}
+
+function currentMonthKey(){
+  const now=new Date();
+  return String(now.getFullYear())+"-"+String(now.getMonth()+1).padStart(2,"0");
+}
+
+async function loadGuardianLaunchBundle(guardianLaunch){
+  if(guardianLaunch.appKey&&guardianLaunch.appKey!=="growth"){
+    throw new Error("起動先アプリが成長記録ではありません。");
+  }
+
+  setLoading("保護者起動情報を確認しています…");
+
+  const verified=await postJson({
+    action:"guardian.externalAppLaunch.verify",
+    launchToken:guardianLaunch.launchToken,
+    appKey:"growth"
+  });
+
+  const verifiedData=getResponseData(verified);
+  const player=verifiedData&&verifiedData.player?verifiedData.player:null;
+
+  if(!player||!player.playerId){
+    throw new Error("選手情報を確認できませんでした。");
+  }
+
+  guardianLaunchContext={
+    playerId:String(player.playerId||"").trim(),
+    player:player
+  };
+
+  applySessionPlayer(player);
+  await loadGuardianPlayerViewBundle();
+}
+
+async function loadGuardianPlayerViewBundle(){
+  if(!guardianLaunchContext||!guardianLaunchContext.playerId){
+    throw new Error("保護者起動情報を確認できませんでした。");
+  }
+
+  setLoading("成長記録を取得しています…");
+  show("loading");hide("app");hide("message");hide("linkLogin");
+
+  const result=await postJson({
+    action:"guardian.playerView",
+    idToken:idToken,
+    playerId:guardianLaunchContext.playerId,
+    month:currentMonthKey(),
+    limit:20
+  });
+
+  bundle=normalizeGuardianPlayerViewBundle(
+    result,
+    guardianLaunchContext.player
+  );
+
+  applySessionPlayer(
+    guardianLaunchContext.player
+  );
+
+  const unlinkButton=document.getElementById("unlinkButton");
+  if(unlinkButton){
+    unlinkButton.classList.add("hidden");
+  }
+
+  renderAll();
+  hide("loading");
+  show("app");
+}
+
 async function loadBundle(){
   try{
     if(!idToken)throw new Error("LINE認証情報がありません。LINEのリッチメニューから開き直してください。");
+
+    if(guardianLaunchContext&&guardianLaunchContext.playerId){
+      await loadGuardianPlayerViewBundle();
+      return;
+    }
+
     show("loading");hide("app");hide("message");hide("linkLogin");setLoading("成長記録を取得しています…");
     const result=await jsonp({action:"growthBundle",idToken:idToken});
     if(!result||result.status!=="ok")throw new Error(result&&result.message?result.message:"成長記録を取得できませんでした。");
