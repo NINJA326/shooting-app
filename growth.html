@@ -1188,6 +1188,7 @@ body{
 <script>
 const LIFF_ID="2010789200-zVWWxqSQ";
 const GAS_URL="https://script.google.com/macros/s/AKfycbx_SBI38cJqdYtnIyeicdnpnTMu4wG67pak-tR3JwqyLHNoyUGxQ_NulmCJsxLF9_Q/exec";
+const GUARDIAN_GAS_URL="https://script.google.com/macros/s/AKfycbxbnca_UIigFLiSfTGOtlU4871H_cm9rHy8iutFT5P9HJR5w3TBvBoA0IZ5fQWkUJRw/exec";
 let idToken="";
 let bundle=null;
 let guardianLaunchContext=null;
@@ -1256,8 +1257,8 @@ function getResponseData(result){
     :result;
 }
 
-async function postJson(payload){
-  const response=await fetch(GAS_URL,{
+async function postJson(payload,url){
+  const response=await fetch(url||GAS_URL,{
     method:"POST",
     redirect:"follow",
     headers:{
@@ -1380,7 +1381,7 @@ async function loadGuardianLaunchBundle(guardianLaunch){
     action:"guardian.externalAppLaunch.verify",
     launchToken:guardianLaunch.launchToken,
     appKey:"growth"
-  });
+  },GUARDIAN_GAS_URL);
 
   const verifiedData=getResponseData(verified);
   const player=verifiedData&&verifiedData.player?verifiedData.player:null;
@@ -1412,7 +1413,7 @@ async function loadGuardianPlayerViewBundle(){
     playerId:guardianLaunchContext.playerId,
     month:currentMonthKey(),
     limit:20
-  });
+  },GUARDIAN_GAS_URL);
 
   bundle=normalizeGuardianPlayerViewBundle(
     result,
