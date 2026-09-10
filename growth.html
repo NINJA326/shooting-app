@@ -1192,6 +1192,7 @@ const GUARDIAN_GAS_URL="https://script.google.com/macros/s/AKfycbxbnca_UIigFLiSf
 let idToken="";
 let bundle=null;
 let guardianLaunchContext=null;
+let currentPlayerContext=null;
 
 window.addEventListener("load",init);
 
@@ -1370,6 +1371,150 @@ function currentMonthKey(){
   return String(now.getFullYear())+"-"+String(now.getMonth()+1).padStart(2,"0");
 }
 
+
+const GROWTH_CACHE_CONFIG=Object.freeze({
+  version:"v1",
+  prefix:"ninjaGrowthBundleCache",
+  maxAgeMs:1000*60*60*24*30
+});
+
+function safeStorageGet(key){
+  try{
+    return window.localStorage?window.localStorage.getItem(key):"";
+  }catch(error){
+    return "";
+  }
+}
+
+function safeStorageSet(key,value){
+  try{
+    if(window.localStorage){
+      window.localStorage.setItem(key,value);
+    }
+  }catch(error){
+    console.warn("[NINJA Growth Cache] save skipped",error);
+  }
+}
+
+function safeStorageRemove(key){
+  try{
+    if(window.localStorage){
+      window.localStorage.removeItem(key);
+    }
+  }catch(error){
+    // localStorageを使えない環境では無視します。
+  }
+}
+
+function normalizeCacheText(value){
+  return String(value||"").trim();
+}
+
+function buildGrowthCacheKey(scope,playerId){
+  const safeScope=normalizeCacheText(scope)||"player";
+  const safePlayerId=normalizeCacheText(playerId);
+  if(!safePlayerId)return "";
+  return [
+    GROWTH_CACHE_CONFIG.prefix,
+    GROWTH_CACHE_CONFIG.version,
+    safeScope,
+    safePlayerId
+  ].join(":");
+}
+
+function saveGrowthBundleCache(scope,playerId,player,data){
+  const key=buildGrowthCacheKey(scope,playerId);
+  if(!key||!data)return;
+
+  const payload={
+    version:GROWTH_CACHE_CONFIG.version,
+    scope:normalizeCacheText(scope)||"player",
+    playerId:normalizeCacheText(playerId),
+    savedAt:new Date().toISOString(),
+    player:player||null,
+    bundle:data
+  };
+
+  safeStorageSet(
+    key,
+    JSON.stringify(payload)
+  );
+}
+
+function readGrowthBundleCache(scope,playerId){
+  const key=buildGrowthCacheKey(scope,playerId);
+  if(!key)return null;
+
+  const raw=safeStorageGet(key);
+  if(!raw)return null;
+
+  try{
+    const payload=JSON.parse(raw);
+    if(!payload||payload.version!==GROWTH_CACHE_CONFIG.version||!payload.bundle){
+      safeStorageRemove(key);
+      return null;
+    }
+
+    const savedAt=Date.parse(String(payload.savedAt||""));
+    if(!Number.isFinite(savedAt)||Date.now()-savedAt>GROWTH_CACHE_CONFIG.maxAgeMs){
+      safeStorageRemove(key);
+      return null;
+    }
+
+    return payload;
+  }catch(error){
+    safeStorageRemove(key);
+    return null;
+  }
+}
+
+function showNotice(message){
+  const box=document.getElementById("message");
+  if(!box)return;
+  box.textContent=message||"";
+  box.className="notice";
+  show("message");
+}
+
+function renderCachedGrowthBundle(scope,playerId,player){
+  const cache=readGrowthBundleCache(scope,playerId);
+  if(!cache||!cache.bundle)return false;
+
+  bundle=cache.bundle;
+
+  const displayPlayer=player||cache.player||(bundle&&bundle.player)||null;
+  applySessionPlayer(displayPlayer);
+
+  hide("loading");
+  hide("linkLogin");
+  show("app");
+
+  renderAll();
+  showNotice("前回保存データを表示しています。最新情報を確認中です。");
+
+  return true;
+}
+
+function updateGrowthBundleFromServer(scope,playerId,player,nextBundle){
+  bundle=nextBundle;
+  applySessionPlayer(player||(bundle&&bundle.player)||null);
+  renderAll();
+  saveGrowthBundleCache(scope,playerId,player,bundle);
+  hide("loading");
+  hide("message");
+  show("app");
+}
+
+function handleGrowthRefreshError(error,cacheRendered){
+  if(cacheRendered){
+    showNotice("前回保存データを表示しています。最新情報の更新に時間がかかっています。");
+    console.warn("[NINJA Growth Cache] refresh failed",error);
+    return;
+  }
+
+  throw error;
+}
+
 async function loadGuardianLaunchBundle(guardianLaunch){
   if(guardianLaunch.appKey&&guardianLaunch.appKey!=="growth"){
     throw new Error("起動先アプリが成長記録ではありません。");
@@ -1404,34 +1549,43 @@ async function loadGuardianPlayerViewBundle(){
     throw new Error("保護者起動情報を確認できませんでした。");
   }
 
-  setLoading("成長記録を取得しています…");
-  show("loading");hide("app");hide("message");hide("linkLogin");
+  const playerId=String(guardianLaunchContext.playerId||"").trim();
+  const player=guardianLaunchContext.player||null;
+  const cacheRendered=renderCachedGrowthBundle("guardian",playerId,player);
 
-  const result=await postJson({
-    action:"guardian.playerView",
-    idToken:idToken,
-    playerId:guardianLaunchContext.playerId,
-    month:currentMonthKey(),
-    limit:20
-  },GUARDIAN_GAS_URL);
-
-  bundle=normalizeGuardianPlayerViewBundle(
-    result,
-    guardianLaunchContext.player
-  );
-
-  applySessionPlayer(
-    guardianLaunchContext.player
-  );
-
-  const unlinkButton=document.getElementById("unlinkButton");
-  if(unlinkButton){
-    unlinkButton.classList.add("hidden");
+  if(!cacheRendered){
+    setLoading("成長記録を取得しています…");
+    show("loading");hide("app");hide("message");hide("linkLogin");
   }
 
-  renderAll();
-  hide("loading");
-  show("app");
+  try{
+    const result=await postJson({
+      action:"guardian.playerView",
+      idToken:idToken,
+      playerId:playerId,
+      month:currentMonthKey(),
+      limit:20
+    },GUARDIAN_GAS_URL);
+
+    const nextBundle=normalizeGuardianPlayerViewBundle(
+      result,
+      player
+    );
+
+    const unlinkButton=document.getElementById("unlinkButton");
+    if(unlinkButton){
+      unlinkButton.classList.add("hidden");
+    }
+
+    updateGrowthBundleFromServer(
+      "guardian",
+      playerId,
+      player,
+      nextBundle
+    );
+  }catch(error){
+    handleGrowthRefreshError(error,cacheRendered);
+  }
 }
 
 async function loadBundle(){
@@ -1443,12 +1597,21 @@ async function loadBundle(){
       return;
     }
 
-    show("loading");hide("app");hide("message");hide("linkLogin");setLoading("成長記録を取得しています…");
-    const result=await jsonp({action:"growthBundle",idToken:idToken});
-    if(!result||result.status!=="ok")throw new Error(result&&result.message?result.message:"成長記録を取得できませんでした。");
-    bundle=result;
-    renderAll();
-    hide("loading");show("app");
+    const player=currentPlayerContext||null;
+    const playerId=String(player&&player.playerId||"").trim();
+    const cacheRendered=renderCachedGrowthBundle("player",playerId,player);
+
+    if(!cacheRendered){
+      show("loading");hide("app");hide("message");hide("linkLogin");setLoading("成長記録を取得しています…");
+    }
+
+    try{
+      const result=await jsonp({action:"growthBundle",idToken:idToken});
+      if(!result||result.status!=="ok")throw new Error(result&&result.message?result.message:"成長記録を取得できませんでした。");
+      updateGrowthBundleFromServer("player",playerId,player,result);
+    }catch(error){
+      handleGrowthRefreshError(error,cacheRendered);
+    }
   }catch(error){showError(error)}
 }
 
@@ -1456,9 +1619,19 @@ async function loadBundle(){
 
 function applySessionPlayer(player){
   if(!player)return;
-  text("playerName",player.name||"");
-  text("playerMeta",(player.category||"")+" / "+(player.playerId||""));
-  text("dashboardPlayerName",player.name||"選手データ");
+
+  currentPlayerContext=Object.assign(
+    {},
+    currentPlayerContext||{},
+    player
+  );
+
+  const playerName=player.name||player.playerName||"";
+  const playerId=player.playerId||"";
+
+  text("playerName",playerName);
+  text("playerMeta",(player.category||"")+" / "+playerId);
+  text("dashboardPlayerName",playerName||"選手データ");
   show("profile");
 }
 
