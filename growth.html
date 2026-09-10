@@ -1311,11 +1311,11 @@ function unwrapApiData(value){
 }
 
 function collectGuardianBundleCandidates(value,list,depth){
-  if(!value||typeof value!=="object"||Array.isArray(value)||depth>6)return;
+  if(!value||typeof value!=="object"||Array.isArray(value)||depth>7)return;
 
   list.push(value);
 
-  ["data","card","bundle","playerCard","playerBundle"].forEach(function(key){
+  ["data","card","bundle","playerCard","playerBundle","result","payload"].forEach(function(key){
     if(value[key]&&typeof value[key]==="object"){
       collectGuardianBundleCandidates(value[key],list,depth+1);
     }
@@ -1334,7 +1334,8 @@ function scoreGuardianBundleCandidate(value){
   if(value.feedback)score+=8;
   if(value.coachAdvice)score+=8;
   if(value.player)score+=5;
-  if(value.monthly||value.records)score+=2;
+  if(value.monthly||value.monthlyByType||value.monthlyByPosition)score+=14;
+  if(value.records||value.recent||value.byType||value.byPosition||value.total)score+=10;
 
   return score;
 }
@@ -1350,6 +1351,341 @@ function findBestGuardianBundleCandidate(result){
   return candidates[0]||{};
 }
 
+function firstArray(){
+  for(let i=0;i<arguments.length;i++){
+    if(Array.isArray(arguments[i]))return arguments[i];
+  }
+
+  return [];
+}
+
+function firstObject(){
+  for(let i=0;i<arguments.length;i++){
+    const value=arguments[i];
+    if(value&&typeof value==="object"&&!Array.isArray(value))return value;
+  }
+
+  return null;
+}
+
+function normalizeShotNumber(value){
+  const number=Number(value);
+  return Number.isFinite(number)?number:0;
+}
+
+function normalizeShotMonth(value){
+  const text=String(value||"").trim();
+  if(!text)return "";
+
+  const monthMatch=text.match(/^(\d{4})[\/-](\d{1,2})/);
+  if(monthMatch){
+    return monthMatch[1]+"-"+String(Number(monthMatch[2])).padStart(2,"0");
+  }
+
+  const jaMatch=text.match(/^(\d{4})年\s*(\d{1,2})月/);
+  if(jaMatch){
+    return jaMatch[1]+"-"+String(Number(jaMatch[2])).padStart(2,"0");
+  }
+
+  return text;
+}
+
+function normalizeShootingRecord(record){
+  const source=record&&typeof record==="object"?record:{};
+  const made=normalizeShotNumber(
+    source.made ??
+    source.success ??
+    source.successes ??
+    source.in ??
+    source.goal ??
+    source.goals ??
+    source["成功数"]
+  );
+  const attempts=normalizeShotNumber(
+    source.attempts ??
+    source.attempt ??
+    source.totalAttempts ??
+    source.total ??
+    source.shots ??
+    source.count ??
+    source["試投数"] ??
+    source["本数"]
+  );
+  const rate=attempts>0
+    ?Math.round((made/attempts)*100)
+    :normalizeShotNumber(
+        source.rate ??
+        source.successRate ??
+        source["成功率"]
+      );
+
+  return Object.assign({},source,{
+    month:normalizeShotMonth(
+      source.month ||
+      source.date ||
+      source.recordDate ||
+      source.createdAt ||
+      source.updatedAt ||
+      source.latestShootingDate ||
+      ""
+    ),
+    date:String(
+      source.date ||
+      source.recordDate ||
+      source.createdAt ||
+      source.updatedAt ||
+      ""
+    ).trim(),
+    type:String(
+      source.type ||
+      source.menu ||
+      source.practice ||
+      source["種別"] ||
+      source["メニュー"] ||
+      ""
+    ).trim(),
+    position:String(
+      source.position ||
+      source.spot ||
+      source.area ||
+      source["位置"] ||
+      source["場所"] ||
+      ""
+    ).trim(),
+    made:made,
+    attempts:attempts,
+    rate:rate
+  });
+}
+
+function rateForShotAggregate(item){
+  return item.attempts>0
+    ?Math.round((item.made/item.attempts)*100)
+    :0;
+}
+
+function buildMonthlyFromShootingRecords(records){
+  const map=new Map();
+
+  records.forEach(function(record){
+    const r=normalizeShootingRecord(record);
+    const month=r.month;
+    if(!month||r.attempts<=0)return;
+
+    const item=map.get(month)||{
+      month:month,
+      made:0,
+      attempts:0,
+      rate:0
+    };
+
+    item.made+=r.made;
+    item.attempts+=r.attempts;
+    item.rate=rateForShotAggregate(item);
+
+    map.set(month,item);
+  });
+
+  return Array.from(map.values()).sort(function(a,b){
+    return String(a.month).localeCompare(String(b.month));
+  });
+}
+
+function buildMonthlyByTypeFromShootingRecords(records){
+  const monthMap=new Map();
+
+  records.forEach(function(record){
+    const r=normalizeShootingRecord(record);
+    if(!r.month||!r.type||r.attempts<=0)return;
+
+    if(!monthMap.has(r.month))monthMap.set(r.month,new Map());
+
+    const typeMap=monthMap.get(r.month);
+    const item=typeMap.get(r.type)||{
+      type:r.type,
+      made:0,
+      attempts:0,
+      rate:0
+    };
+
+    item.made+=r.made;
+    item.attempts+=r.attempts;
+    item.rate=rateForShotAggregate(item);
+
+    typeMap.set(r.type,item);
+  });
+
+  const result={};
+  monthMap.forEach(function(typeMap,month){
+    result[month]=Array.from(typeMap.values()).sort(function(a,b){
+      return b.attempts-a.attempts||String(a.type).localeCompare(String(b.type),"ja");
+    });
+  });
+
+  return result;
+}
+
+function buildMonthlyByPositionFromShootingRecords(records){
+  const monthMap=new Map();
+
+  records.forEach(function(record){
+    const r=normalizeShootingRecord(record);
+    if(!r.month||!r.position||r.attempts<=0)return;
+
+    if(!monthMap.has(r.month))monthMap.set(r.month,new Map());
+
+    const positionMap=monthMap.get(r.month);
+    const key=(r.type||"")+"|"+r.position;
+    const item=positionMap.get(key)||{
+      type:r.type,
+      position:r.position,
+      made:0,
+      attempts:0,
+      rate:0
+    };
+
+    item.made+=r.made;
+    item.attempts+=r.attempts;
+    item.rate=rateForShotAggregate(item);
+
+    positionMap.set(key,item);
+  });
+
+  const result={};
+  monthMap.forEach(function(positionMap,month){
+    result[month]=Array.from(positionMap.values()).sort(function(a,b){
+      return b.attempts-a.attempts||String(a.position).localeCompare(String(b.position),"ja");
+    });
+  });
+
+  return result;
+}
+
+function normalizeMonthlyShootingRow(row){
+  const source=row&&typeof row==="object"?row:{};
+  const made=normalizeShotNumber(source.made ?? source.success ?? source.successes ?? source["成功数"]);
+  const attempts=normalizeShotNumber(source.attempts ?? source.totalAttempts ?? source.total ?? source.shots ?? source.count ?? source["試投数"] ?? source["本数"]);
+
+  return Object.assign({},source,{
+    month:normalizeShotMonth(source.month||source.date||source.createdAt||source.updatedAt||""),
+    made:made,
+    attempts:attempts,
+    rate:attempts>0
+      ?Math.round((made/attempts)*100)
+      :normalizeShotNumber(source.rate ?? source.successRate ?? source["成功率"])
+  });
+}
+
+function normalizeShootingData(raw){
+  const unwrapped=unwrapApiData(raw);
+  const source=firstObject(unwrapped,raw,{});
+
+  const nested=firstObject(
+    source.shooting,
+    source.playerCard&&source.playerCard.shooting,
+    source.card&&source.card.shooting,
+    {}
+  );
+
+  const actual=firstObject(
+    unwrapApiData(nested),
+    unwrapApiData(source),
+    source,
+    {}
+  );
+
+  const records=firstArray(
+    actual.records,
+    actual.recent,
+    actual.items,
+    source.records,
+    source.recent,
+    nested.records,
+    nested.recent
+  ).map(normalizeShootingRecord).filter(function(record){
+    return record.attempts>0;
+  });
+
+  let monthly=firstArray(
+    actual.monthly,
+    source.monthly,
+    nested.monthly
+  ).map(normalizeMonthlyShootingRow).filter(function(row){
+    return row.month&&row.attempts>0;
+  });
+
+  if(!monthly.length&&records.length){
+    monthly=buildMonthlyFromShootingRecords(records);
+  }
+
+  if(!monthly.length&&actual.total&&typeof actual.total==="object"){
+    const totalMade=normalizeShotNumber(actual.total.made);
+    const totalAttempts=normalizeShotNumber(actual.total.attempts);
+    const totalMonth=normalizeShotMonth(
+      actual.latestShootingDate ||
+      (records[0]&&records[0].date) ||
+      currentMonthKey()
+    );
+
+    if(totalMonth&&totalAttempts>0){
+      monthly=[{
+        month:totalMonth,
+        made:totalMade,
+        attempts:totalAttempts,
+        rate:totalAttempts>0?Math.round((totalMade/totalAttempts)*100):0
+      }];
+    }
+  }
+
+  let monthlyByType=firstObject(
+    actual.monthlyByType,
+    source.monthlyByType,
+    nested.monthlyByType
+  );
+
+  if(!monthlyByType){
+    monthlyByType=records.length
+      ?buildMonthlyByTypeFromShootingRecords(records)
+      :{};
+  }
+
+  if(
+    !Object.keys(monthlyByType).length&&
+    Array.isArray(actual.byType)&&
+    monthly.length
+  ){
+    monthlyByType[monthly[monthly.length-1].month]=actual.byType;
+  }
+
+  let monthlyByPosition=firstObject(
+    actual.monthlyByPosition,
+    source.monthlyByPosition,
+    nested.monthlyByPosition
+  );
+
+  if(!monthlyByPosition){
+    monthlyByPosition=records.length
+      ?buildMonthlyByPositionFromShootingRecords(records)
+      :{};
+  }
+
+  if(
+    !Object.keys(monthlyByPosition).length&&
+    Array.isArray(actual.byPosition)&&
+    monthly.length
+  ){
+    monthlyByPosition[monthly[monthly.length-1].month]=actual.byPosition;
+  }
+
+  return Object.assign({},actual,{
+    monthly:monthly,
+    monthlyByType:monthlyByType,
+    monthlyByPosition:monthlyByPosition,
+    records:records,
+    recent:records.length?records:firstArray(actual.recent,actual.records)
+  });
+}
+
 function normalizeGuardianPlayerViewBundle(result,player){
   const data=unwrapApiData(result);
   const best=findBestGuardianBundleCandidate(data);
@@ -1362,21 +1698,14 @@ function normalizeGuardianPlayerViewBundle(result,player){
     }
   }
 
-  if(!normalized.shooting){
-    normalized.shooting={monthly:[],monthlyByType:{},monthlyByPosition:{}};
-  }
-
-  if(!Array.isArray(normalized.shooting.monthly)){
-    normalized.shooting.monthly=[];
-  }
-
-  if(!normalized.shooting.monthlyByType||typeof normalized.shooting.monthlyByType!=="object"){
-    normalized.shooting.monthlyByType={};
-  }
-
-  if(!normalized.shooting.monthlyByPosition||typeof normalized.shooting.monthlyByPosition!=="object"){
-    normalized.shooting.monthlyByPosition={};
-  }
+  normalized.shooting=normalizeShootingData(
+    normalized.shooting ||
+    data.shooting ||
+    (data.card&&data.card.shooting) ||
+    (data.card&&data.card.data&&data.card.data.shooting) ||
+    (data.bundle&&data.bundle.shooting) ||
+    {}
+  );
 
   if(!normalized.body&&normalized.growth){
     normalized.body=normalized.growth;
@@ -1386,6 +1715,8 @@ function normalizeGuardianPlayerViewBundle(result,player){
     normalized.body={records:[]};
   }
 
+  normalized.body=unwrapApiData(normalized.body);
+
   if(!Array.isArray(normalized.body.records)){
     normalized.body.records=[];
   }
@@ -1393,6 +1724,8 @@ function normalizeGuardianPlayerViewBundle(result,player){
   if(!normalized.agility){
     normalized.agility={records:[]};
   }
+
+  normalized.agility=unwrapApiData(normalized.agility);
 
   if(!Array.isArray(normalized.agility.records)){
     normalized.agility.records=[];
@@ -1414,7 +1747,7 @@ function currentMonthKey(){
 
 
 const GROWTH_CACHE_CONFIG=Object.freeze({
-  version:"v2",
+  version:"v3",
   prefix:"ninjaGrowthBundleCache",
   maxAgeMs:1000*60*60*24*30
 });
