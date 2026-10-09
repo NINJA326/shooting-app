@@ -1076,6 +1076,121 @@ canvas{
 }
 </style>
 
+
+<style id="white-colored-icon-overrides">
+.dashboard-shooting{
+  --category:#e53946;
+  --category-bg:#fff1f3;
+  --category-border:#ffd2d8;
+}
+
+.dashboard-body{
+  --category:#16a34a;
+  --category-bg:#edfdf3;
+  --category-border:#c7f0d5;
+}
+
+.dashboard-agility{
+  --category:#247ee8;
+  --category-bg:#eef6ff;
+  --category-border:#cfe2ff;
+}
+
+.dashboard-ranking{
+  --category:#8753d8;
+  --category-bg:#f5f0ff;
+  --category-border:#dfd0ff;
+}
+
+.dashboard-card{
+  border-left:6px solid var(--category,#d7e1ec)!important;
+}
+
+.dashboard-card::before{
+  width:0!important;
+  background:transparent!important;
+}
+
+.dashboard-icon{
+  display:grid!important;
+  place-items:center!important;
+  width:62px!important;
+  height:62px!important;
+  border-radius:18px!important;
+  background:var(--category-bg)!important;
+  border:1px solid var(--category-border)!important;
+  color:var(--category)!important;
+  box-shadow:0 8px 18px rgba(22,32,43,.08)!important;
+  filter:none!important;
+}
+
+.dashboard-icon svg{
+  width:70%!important;
+  height:70%!important;
+  stroke:var(--category)!important;
+  filter:none!important;
+}
+
+.dashboard-title span,
+.dashboard-primary span,
+.dashboard-delta,
+.dashboard-sub{
+  color:var(--category)!important;
+}
+
+.dashboard-title{
+  color:#16202b!important;
+}
+
+.dashboard-card-left::after{
+  content:"";
+  width:42px;
+  height:4px;
+  border-radius:999px;
+  background:var(--category);
+  opacity:.9;
+  margin-top:2px;
+}
+
+.dashboard-card-left{
+  gap:9px!important;
+}
+
+.dashboard-primary strong,
+.dashboard-pair strong{
+  color:#111827!important;
+}
+
+#dashAgilityTypeSelect{
+  border-color:var(--category-border)!important;
+}
+
+.ranking-left .dashboard-icon{
+  flex:0 0 62px!important;
+}
+
+@media(max-width:700px){
+  .dashboard-card{
+    border-left-width:5px!important;
+  }
+
+  .dashboard-icon{
+    width:50px!important;
+    height:50px!important;
+    border-radius:15px!important;
+  }
+
+  .ranking-left .dashboard-icon{
+    flex-basis:50px!important;
+  }
+
+  .dashboard-card-left::after{
+    width:34px;
+    height:3px;
+  }
+}
+</style>
+
 </head>
 <body>
 <div class="wrap">
