@@ -1316,7 +1316,7 @@ canvas{
     </div>
           <div>
             <div class="dashboard-title">アジリティ <span>›</span></div>
-            <div class="dashboard-sub">5種目から選んで詳細確認</div>
+            <div class="dashboard-sub">龍ラン・10kmランを含む種目別詳細</div>
           </div>
           <div class="dashboard-primary">
             <small id="dashAgilityType">最新記録</small>
@@ -1525,7 +1525,10 @@ canvas{
                   <option value="L字コーン">L字コーン</option>
                   <option value="垂直跳び">垂直跳び</option>
                   <option value="120回ハンドリング">120回ハンドリング</option>
-                  <option value="龍ラン">龍ラン</option>
+                  <option value="龍ラン 1周目">龍ラン 1周目</option>
+                  <option value="龍ラン 2周目">龍ラン 2周目</option>
+                  <option value="龍ラン 合計">龍ラン 合計</option>
+                  <option value="10kmラン">10kmラン</option>
                 </select>
               </label>
             </div>
@@ -2692,7 +2695,7 @@ function renderRankingPage(){
     }
   }else{
     const type=document.getElementById("rankingAgilityType").value;
-    const group=(ranking.agility||{})[type]||{rows:[],unit:"",lowerIsBetter:false};
+    const group=getRankingAgilityGroup(ranking,type);
     rows=(group.rows||[]).slice();
     metricKey="value";
     valueLabel=type;
@@ -2705,12 +2708,9 @@ function renderRankingPage(){
           :"個人ベスト";
     };
     note.textContent=(
-      type==="龍ラン"
-        ?"龍ランは2.5km合計タイムの全期間ベストで順位を算出しています。タイムが短い選手が上位です。"
-        :(group.lowerIsBetter
-          ?"全期間の個人ベストで順位を算出しています。秒数が小さい選手が上位です。"
-          :"全期間の個人ベストで順位を算出しています。数値が大きい選手が上位です。"
-        )
+      isTimedRunType(type)||group.lowerIsBetter
+        ?"全期間の個人ベストで順位を算出しています。タイムが短い選手が上位です。"
+        :"全期間の個人ベストで順位を算出しています。数値が大きい選手が上位です。"
     )+" 未測定の選手も「記録なし」で表示します。";
   }
 
@@ -2777,9 +2777,9 @@ function renderRankingPage(){
         :row.value;
       displayValue=(
         rankingMode==="agility" &&
-        document.getElementById("rankingAgilityType").value==="龍ラン"
+        isTimedRunType(document.getElementById("rankingAgilityType").value)
       )
-        ?formatRyuRunTime(value)
+        ?formatRunTime(value)
         :fmt(value)+unit;
       rankText=row.visibleRank+"位";
     }
@@ -2941,15 +2941,15 @@ function renderDashboardAgility(){
     "dashAgilityValue",
     latest
       ? (
-          String(selected).indexOf("龍ラン")>=0
-            ? formatRyuRunTime(latest.value)
+          isTimedRunType(selected)
+            ? formatRunTime(latest.value)
             : fmt(latest.value)+(latest.unit||"")
         )
       : "－"
   );
   text(
     "dashAgilityDelta",
-    String(selected).indexOf("龍ラン")>=0
+    isTimedRunType(selected)
       ? ""
       : (
           latest&&previous
@@ -3428,16 +3428,20 @@ function normalizeAgilityType(type){
   if(value.includes("L字")||value.includes("l字"))return "L字コーン";
   if(value.includes("垂直"))return "垂直跳び";
   if(value.includes("120")&&value.includes("ハンドリング"))return "120回ハンドリング";
+  if(value.includes("10km")||value.includes("10KM")||value.includes("10キロ")||value.includes("１０km")||value.includes("１０KM")||value.includes("１０キロ")){
+    return "10kmラン";
+  }
   if(value.includes("龍ラン")||value.includes("竜ラン")||value.includes("りゅうラン")||value.includes("リュウラン")){
     if(value.includes("1周"))return "龍ラン 1周目";
     if(value.includes("2周"))return "龍ラン 2周目";
+    if(value.includes("合計"))return "龍ラン";
     return "龍ラン";
   }
   return String(type||"未設定");
 }
 
 function agilityTypeOrder(type){
-  const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング","龍ラン","龍ラン 1周目","龍ラン 2周目"];
+  const order=["20mシャトルラン","反復横跳び","L字コーン","垂直跳び","120回ハンドリング","龍ラン","龍ラン 1周目","龍ラン 2周目","10kmラン"];
   const index=order.indexOf(type);
   return index<0?999:index;
 }
@@ -3472,7 +3476,8 @@ function setupAgilitySelector(){
     "L字コーン",
     "垂直跳び",
     "120回ハンドリング",
-    "龍ラン"
+    "龍ラン",
+    "10kmラン"
   ];
 
   const current=select.value;
@@ -3496,6 +3501,11 @@ function renderSelectedAgility(){
 
   if(type==="龍ラン"){
     renderRyuRunAgility(comparison,list,chartTitle);
+    return;
+  }
+
+  if(type==="10kmラン"){
+    renderTimedRunAgility("10kmラン",comparison,list,chartTitle);
     return;
   }
 
@@ -3528,6 +3538,84 @@ function renderSelectedAgility(){
   drawLines("selectedAgilityChart",[
     {label:type+(unit?" "+unit:""),points:points}
   ]);
+}
+
+
+function renderTimedRunAgility(type,comparison,list,chartTitle){
+  const records=getTimedRunRecords(type);
+
+  if(!records.length){
+    comparison.innerHTML='<div class="empty">'+esc(type)+'の記録がありません。</div>';
+    list.innerHTML='<div class="empty">記録がありません。</div>';
+    chartTitle.textContent="";
+    drawLines("selectedAgilityChart",[]);
+    return;
+  }
+
+  comparison.innerHTML=buildTimedRunCard(type,records);
+
+  list.innerHTML=records.slice().reverse().map(function(r){
+    return '<div class="item"><b>'+esc(r.date||r.month||"")+'</b><br>'+
+      '<span class="value">'+esc(formatRunTime(r.value))+'</span></div>';
+  }).join("");
+
+  chartTitle.textContent=type+" の記録推移";
+
+  drawLines("selectedAgilityChart",[
+    {
+      label:type+" タイム",
+      points:records.map(function(r){
+        return {label:r.date||r.month,value:Number(r.value)};
+      })
+    }
+  ]);
+}
+
+function getTimedRunRecords(type){
+  const normalizedType=normalizeAgilityType(type);
+
+  return ((bundle.agility||{}).records||[])
+    .map(function(r){
+      return Object.assign({},r,{type:normalizeAgilityType(r.type)});
+    })
+    .filter(function(r){
+      return r.type===normalizedType&&Number.isFinite(Number(r.value));
+    })
+    .sort(function(a,b){
+      return String(a.date||a.month||"").localeCompare(String(b.date||b.month||""));
+    });
+}
+
+function buildTimedRunCard(type,records){
+  const first=records[0];
+  const latest=records[records.length-1];
+  const previous=records.length>=2?records[records.length-2]:null;
+  const best=records.reduce(function(a,b){
+    return Number(b.value)<Number(a.value)?b:a;
+  });
+
+  return '<div class="item"><b>'+esc(type)+'</b>'+
+    '<div class="grid three" style="margin-top:10px">'+
+      timedRunStatHtml("初回",first)+
+      timedRunStatHtml("前回",previous)+
+      timedRunStatHtml("最新",latest)+
+    '</div>'+
+    '<div class="summary-box" style="margin-top:10px">'+
+      '<div class="kpi-label">ベストタイム</div>'+
+      '<div class="kpi-value">'+esc(formatRunTime(best.value))+'</div>'+
+      '<div class="kpi-note">'+esc(best.date||best.month||"")+'</div>'+
+    '</div>'+
+  '</div>';
+}
+
+function timedRunStatHtml(label,record){
+  return '<div class="stat">'+
+    '<span class="muted">'+esc(label)+'</span>'+
+    '<b style="font-size:20px">'+
+      (record?esc(formatRunTime(record.value)):"－")+
+    '</b>'+
+    '<div class="small">'+esc(record?(record.date||record.month||""):"比較なし")+'</div>'+
+  '</div>';
 }
 
 
@@ -3688,8 +3776,8 @@ function buildRyuRunCard(measurements){
 
   return '<div class="item" style="padding:12px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'+
-      '<b>龍ラン（2.5km）</b>'+
-      '<span class="small">1.25km × 2周</span>'+
+      '<b>龍ラン（1.25km × 2周）</b>'+
+      '<span class="small">1周目・2周目・合計</span>'+
     '</div>'+
 
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
@@ -3786,6 +3874,35 @@ function toFiniteNumberOrNull(value){
 }
 
 
+function isTimedRunType(type){
+  const value=String(type||"").normalize("NFKC");
+  return value.indexOf("龍ラン")>=0 || value.indexOf("10kmラン")>=0 || value.indexOf("10km")>=0;
+}
+
+function formatRunTime(value){
+  return formatRyuRunTime(value);
+}
+
+function getRankingAgilityGroup(ranking,type){
+  const agility=(ranking&&ranking.agility)||{};
+  const key=String(type||"");
+
+  if(agility[key])return agility[key];
+
+  if(key==="龍ラン 合計"){
+    return agility["龍ラン"]||
+      agility["龍ラン 合計"]||
+      {rows:[],unit:"",lowerIsBetter:true};
+  }
+
+  return {
+    rows:[],
+    unit:"",
+    lowerIsBetter:isTimedRunType(key)
+  };
+}
+
+
 function formatRyuRunTime(value){
   const seconds=Math.round(Number(value));
 
@@ -3823,7 +3940,9 @@ function buildAgilityCard(type,records){
     normalizedType.indexOf("L字")>=0 ||
     normalizedType.indexOf("l字")>=0 ||
     normalizedType.indexOf("ハンドリング")>=0 ||
-    normalizedType.indexOf("龍ラン")>=0;
+    normalizedType.indexOf("龍ラン")>=0 ||
+    normalizedType.indexOf("10km")>=0 ||
+    normalizedType.indexOf("１０km")>=0;
   const best=valid.reduce(function(a,b){
     return lower
       ? Number(b.value)<Number(a.value)?b:a
