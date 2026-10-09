@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f7fafc">
 <base target="_top">
 <title>NINJA 成長記録</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -830,6 +831,248 @@ body{
     height:136px!important;
     min-height:136px;
   }
+}
+</style>
+
+
+<style id="white-theme-overrides">
+:root{
+  --bg:#f7fafc;
+  --bg2:#eef4f9;
+  --panel:#ffffff;
+  --panel2:#f8fbff;
+  --line:#d7e1ec;
+  --text:#16202b;
+  --muted:#637487;
+  --blue:#2f80ed;
+  --blue2:#2563eb;
+  --orange:#c97919;
+  --red:#d64f5f;
+  --silver:#718096;
+  --court:#d7a86e;
+
+  --dash-bg:#f7fafc;
+  --dash-panel:#ffffff;
+  --dash-panel2:#f8fbff;
+  --dash-border:#d7e1ec;
+  --shoot:#e53946;
+  --body:#1fa35b;
+  --agility:#247ee8;
+  --rank:#8753d8;
+}
+
+html,
+body{
+  background:linear-gradient(180deg,#f7fafc,#eef4f9)!important;
+  color:var(--text)!important;
+}
+
+.header,
+.card,
+.login-card,
+#loading{
+  background:#ffffff!important;
+  border-color:var(--line)!important;
+  color:var(--text)!important;
+  box-shadow:0 10px 28px rgba(22,32,43,.08)!important;
+}
+
+.header{
+  background:linear-gradient(135deg,#ffffff,#edf5ff)!important;
+}
+
+.brand,
+.dashboard-kicker,
+.name,
+.title,
+.dashboard-head h1,
+.detail-page-title h2,
+.login-card h2,
+.dashboard-title,
+.dashboard-title span,
+.dashboard-primary strong,
+.dashboard-pair strong,
+.mini-chart-title,
+.ranking-player strong,
+.ranking-value{
+  color:var(--text)!important;
+}
+
+.muted,
+.small,
+.section-lead,
+.kpi-label,
+.kpi-note,
+.compare-label,
+.compare-sub,
+.detail-page-title p,
+.dashboard-primary small,
+.dashboard-pair small,
+.empty,
+.ranking-note,
+.ranking-filter-grid label,
+.ranking-player span,
+.ranking-value small{
+  color:var(--muted)!important;
+}
+
+.notice{
+  background:#eef6ff!important;
+  color:#1f4e79!important;
+  border:1px solid #cfe0f3!important;
+}
+
+.notice.error,
+.login-error{
+  background:#fff1f3!important;
+  color:#b73546!important;
+  border-color:#f1c6cd!important;
+}
+
+.tabs{
+  background:linear-gradient(180deg,rgba(247,250,252,.98),rgba(247,250,252,.88))!important;
+}
+
+.tabs button,
+.stat,
+.item,
+.summary-box,
+.month-control,
+.compare-card,
+.agility-select-wrap,
+.body-compact-box,
+.detail-grid div,
+.toggle-list,
+.login-help,
+.ranking-row,
+.ranking-mode-tabs button,
+.ranking-scope-tabs button{
+  background:#f8fbff!important;
+  border-color:var(--line)!important;
+  color:var(--text)!important;
+}
+
+.tabs button.active,
+.ranking-mode-tabs button.active,
+.ranking-scope-tabs button.active{
+  background:var(--blue)!important;
+  border-color:var(--blue)!important;
+  color:#ffffff!important;
+}
+
+.month-control select,
+.agility-select-wrap select,
+.login-field input,
+.ranking-filter-grid select,
+#dashAgilityTypeSelect{
+  background:#ffffff!important;
+  color:var(--text)!important;
+  border-color:var(--line)!important;
+}
+
+.login-field input:focus{
+  border-color:var(--blue)!important;
+  box-shadow:0 0 0 3px rgba(47,128,237,.14)!important;
+}
+
+.login-submit,
+.refresh{
+  background:var(--blue)!important;
+  color:#ffffff!important;
+  border-color:var(--blue)!important;
+}
+
+.account-actions .unlink-button,
+.icon-button,
+.back-button{
+  background:#ffffff!important;
+  color:var(--text)!important;
+  border-color:var(--line)!important;
+  box-shadow:0 4px 12px rgba(22,32,43,.06)!important;
+}
+
+.dashboard-head::before{
+  background:
+    radial-gradient(circle at 25% 75%,rgba(47,128,237,.32),transparent 43%),
+    radial-gradient(circle at 75% 25%,rgba(229,57,70,.30),transparent 44%),
+    #ffffff!important;
+  color:#1f2937!important;
+  border-color:#e53946!important;
+  box-shadow:0 6px 16px rgba(22,32,43,.10)!important;
+}
+
+.dashboard-card{
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.72),rgba(248,251,255,.98))!important;
+  color:var(--text)!important;
+  border-color:var(--line)!important;
+  box-shadow:0 10px 26px rgba(22,32,43,.08)!important;
+}
+
+.dashboard-card::after{
+  background:linear-gradient(110deg,transparent 55%,rgba(47,128,237,.06))!important;
+}
+
+.dashboard-sub,
+.dashboard-primary span,
+.dashboard-delta{
+  color:currentColor!important;
+}
+
+.mini-chart-box canvas,
+canvas{
+  background:#ffffff!important;
+  border-color:var(--line)!important;
+}
+
+.detail-toolbar{
+  background:rgba(247,250,252,.94)!important;
+  border-bottom:1px solid var(--line)!important;
+}
+
+.detail-shell .card,
+.court-detail{
+  background:#ffffff!important;
+  color:var(--text)!important;
+  border-color:var(--line)!important;
+}
+
+.compare-table th,
+.compare-table td,
+.body-table th,
+.body-table td{
+  border-color:var(--line)!important;
+}
+
+.body-table th:first-child,
+.body-table td:first-child{
+  background:#f8fbff!important;
+}
+
+.ranking-current{
+  border-color:#8753d8!important;
+  box-shadow:0 0 0 1px rgba(135,83,216,.25) inset!important;
+}
+
+.ranking-no-record,
+.ranking-ineligible{
+  background:#f4f6f8!important;
+  color:var(--muted)!important;
+}
+
+.value,
+.status-good{
+  color:var(--blue2)!important;
+}
+
+.status-warn,
+.delta.down{
+  color:var(--orange)!important;
+}
+
+.spinner{
+  border-color:#d7e1ec!important;
+  border-top-color:var(--blue)!important;
 }
 </style>
 
@@ -2396,9 +2639,9 @@ function drawBars(canvasId,points,label){
   const topValue=Math.ceil(maxValue/50)*50 || maxValue;
   const gridCount=4;
 
-  ctx.strokeStyle="#22303d";
+  ctx.strokeStyle="#d7e1ec";
   ctx.lineWidth=1;
-  ctx.fillStyle="#8592a0";
+  ctx.fillStyle="#637487";
   ctx.font="10px sans-serif";
   ctx.textAlign="right";
   for(let i=0;i<=gridCount;i++){
@@ -2422,13 +2665,13 @@ function drawBars(canvasId,points,label){
     gradient.addColorStop(1,"#83000c");
     ctx.fillStyle=gradient;
     ctx.fillRect(x,y,barWidth,barHeight);
-    ctx.fillStyle="#d7dee6";
+    ctx.fillStyle="#334155";
     ctx.font="10px sans-serif";
     ctx.textAlign="center";
     ctx.fillText(String(p.label||""),x+barWidth/2,cssHeight-8);
   });
 
-  ctx.fillStyle="#c5ced7";
+  ctx.fillStyle="#16202b";
   ctx.font="10px sans-serif";
   ctx.textAlign="left";
   ctx.fillText(label||"",pad.left,12);
@@ -3393,21 +3636,21 @@ function drawLines(canvasId,series){
   const canvas=document.getElementById(canvasId),ctx=canvas.getContext("2d");ctx.clearRect(0,0,canvas.width,canvas.height);
   const active=series.filter(function(s){return s.points&&s.points.length});
   const all=active.flatMap(function(s){return s.points.map(function(p){return p.value})}).filter(Number.isFinite);
-  if(!all.length){ctx.fillStyle="#a7bad2";ctx.font="20px sans-serif";ctx.textAlign="center";ctx.fillText("記録がありません",canvas.width/2,canvas.height/2);ctx.textAlign="left";return}
+  if(!all.length){ctx.fillStyle="#637487";ctx.font="20px sans-serif";ctx.textAlign="center";ctx.fillText("記録がありません",canvas.width/2,canvas.height/2);ctx.textAlign="left";return}
   const left=55,right=20,top=42,bottom=48,width=canvas.width-left-right,height=canvas.height-top-bottom;
   let min=Math.min.apply(null,all),max=Math.max.apply(null,all);
   if(active.some(function(s){return s.min===0}))min=0;if(active.some(function(s){return s.max===100}))max=100;
   if(min===max){min-=1;max+=1}const pad=(max-min)*.1;if(!active.some(function(s){return s.min===0}))min-=pad;if(!active.some(function(s){return s.max===100}))max+=pad;
-  ctx.strokeStyle="#29496d";ctx.fillStyle="#a7bad2";ctx.font="12px sans-serif";
+  ctx.strokeStyle="#d7e1ec";ctx.fillStyle="#637487";ctx.font="12px sans-serif";
   for(let i=0;i<=4;i++){const y=top+i*height/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(canvas.width-right,y);ctx.stroke();ctx.fillText(fmt(max-(max-min)*i/4),5,y+4)}
   const colors=["#42a5f5","#77c4ff","#ff7373","#ffb35c","#ad7cff","#44d8e8"];
   active.forEach(function(s,si){
     const color=colors[si%colors.length],pts=s.points.map(function(p,i){return{x:left+i*(width/Math.max(1,s.points.length-1)),y:top+(max-p.value)*height/(max-min),label:p.label,value:p.value}});
     ctx.beginPath();pts.forEach(function(p,i){i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});ctx.strokeStyle=color;ctx.lineWidth=4;ctx.stroke();
     pts.forEach(function(p){ctx.beginPath();ctx.arc(p.x,p.y,5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill()});
-    ctx.fillStyle=color;ctx.fillRect(left+(si%3)*190,10,15,5);ctx.fillStyle="#f5f9ff";ctx.fillText(s.label,left+22+(si%3)*190,17);
+    ctx.fillStyle=color;ctx.fillRect(left+(si%3)*190,10,15,5);ctx.fillStyle="#16202b";ctx.fillText(s.label,left+22+(si%3)*190,17);
   });
-  const labels=active[0].points;ctx.fillStyle="#a7bad2";ctx.font="11px sans-serif";ctx.textAlign="center";
+  const labels=active[0].points;ctx.fillStyle="#637487";ctx.font="11px sans-serif";ctx.textAlign="center";
   labels.forEach(function(p,i){if(labels.length>6&&i%Math.ceil(labels.length/6)!==0&&i!==labels.length-1)return;const x=left+i*(width/Math.max(1,labels.length-1));ctx.fillText(String(p.label).replace(/^\d{4}\//,""),x,canvas.height-16)});ctx.textAlign="left";
 }
 
