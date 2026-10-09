@@ -1574,10 +1574,17 @@ async function init(){
       return;
     }
 
-    setLoading("本人情報を確認しています…");
+    const cacheRenderedBeforeSession=
+      renderCachedGrowthBeforeSession();
+
+    if(!cacheRenderedBeforeSession){
+      setLoading("本人情報を確認しています…");
+    }
+
     const session=await jsonp({action:"growthSession",idToken:idToken});
 
     if(session&&session.status==="unlinked"){
+      clearGrowthSessionPlayerCache();
       hide("loading");
       hide("app");
       hide("message");
@@ -1590,6 +1597,7 @@ async function init(){
     }
 
     applySessionPlayer(session.player);
+    saveGrowthSessionPlayerCache(session.player);
     await loadBundle();
   }catch(error){showError(error)}
 }
@@ -2104,6 +2112,104 @@ function currentMonthKey(){
 }
 
 
+const GROWTH_SESSION_CACHE_KEY="ninjaGrowthLastSessionPlayerV1";
+const GROWTH_SESSION_CACHE_MAX_AGE_MS=1000*60*60*24*30;
+
+function getLineAccountFingerprint(){
+  try{
+    if(window.liff&&typeof liff.getDecodedIDToken==="function"){
+      const decoded=liff.getDecodedIDToken();
+      if(decoded&&decoded.sub)return String(decoded.sub);
+    }
+  }catch(_){}
+
+  try{
+    const token=String(idToken||"");
+    const parts=token.split(".");
+    if(parts.length>=2){
+      const payload=JSON.parse(
+        decodeURIComponent(
+          atob(parts[1].replace(/-/g,"+").replace(/_/g,"/"))
+            .split("")
+            .map(function(c){
+              return "%"+("00"+c.charCodeAt(0).toString(16)).slice(-2);
+            })
+            .join("")
+        )
+      );
+
+      if(payload&&payload.sub)return String(payload.sub);
+    }
+  }catch(_){}
+
+  return "";
+}
+
+function saveGrowthSessionPlayerCache(player){
+  if(!player||!player.playerId)return;
+
+  const accountFingerprint=getLineAccountFingerprint();
+  if(!accountFingerprint)return;
+
+  safeStorageSet(
+    GROWTH_SESSION_CACHE_KEY,
+    JSON.stringify({
+      accountFingerprint:accountFingerprint,
+      savedAtMs:Date.now(),
+      player:player
+    })
+  );
+}
+
+function readGrowthSessionPlayerCache(){
+  const accountFingerprint=getLineAccountFingerprint();
+  if(!accountFingerprint)return null;
+
+  const raw=safeStorageGet(GROWTH_SESSION_CACHE_KEY);
+  if(!raw)return null;
+
+  try{
+    const payload=JSON.parse(raw);
+    if(
+      !payload||
+      payload.accountFingerprint!==accountFingerprint||
+      !payload.player||
+      !payload.player.playerId||
+      !payload.savedAtMs||
+      Date.now()-Number(payload.savedAtMs)>GROWTH_SESSION_CACHE_MAX_AGE_MS
+    ){
+      safeStorageRemove(GROWTH_SESSION_CACHE_KEY);
+      return null;
+    }
+
+    return payload.player;
+  }catch(_){
+    safeStorageRemove(GROWTH_SESSION_CACHE_KEY);
+    return null;
+  }
+}
+
+function clearGrowthSessionPlayerCache(){
+  safeStorageRemove(GROWTH_SESSION_CACHE_KEY);
+}
+
+function renderCachedGrowthBeforeSession(){
+  const player=readGrowthSessionPlayerCache();
+  if(!player||!player.playerId)return false;
+
+  applySessionPlayer(player);
+
+  return renderCachedGrowthBundle(
+    "player",
+    String(player.playerId||"").trim(),
+    player,
+    {
+      silent:true
+    }
+  );
+}
+
+
 const GROWTH_CACHE_CONFIG=Object.freeze({
   version:"v3",
   prefix:"ninjaGrowthBundleCache",
@@ -2208,7 +2314,8 @@ function showNotice(message){
   show("message");
 }
 
-function renderCachedGrowthBundle(scope,playerId,player){
+function renderCachedGrowthBundle(scope,playerId,player,options){
+  const settings=options&&typeof options==="object"?options:{};
   const cache=readGrowthBundleCache(scope,playerId);
   if(!cache||!cache.bundle)return false;
 
@@ -2222,7 +2329,10 @@ function renderCachedGrowthBundle(scope,playerId,player){
   show("app");
 
   renderAll();
-  showNotice("前回保存データを表示しています。最新情報を確認中です。");
+
+  if(!settings.silent){
+    showNotice("前回保存データを表示しています。最新情報を確認中です。");
+  }
 
   return true;
 }
@@ -2358,6 +2468,8 @@ function applySessionPlayer(player){
     player
   );
 
+  saveGrowthSessionPlayerCache(currentPlayerContext);
+
   const playerName=player.name||player.playerName||"";
   const playerId=player.playerId||"";
 
@@ -2445,6 +2557,7 @@ async function unlinkGrowthAccount(){
     }
 
     bundle=null;
+    clearGrowthSessionPlayerCache();
     hide("app");
     hide("profile");
     hide("message");
