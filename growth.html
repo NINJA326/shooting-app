@@ -1264,7 +1264,7 @@ canvas{
           <div class="dashboard-kicker">NINJA 成長記録</div>
           <h1 id="dashboardPlayerName">選手データ</h1>
         </div>
-        <button class="icon-button" type="button" onclick="loadBundle()" aria-label="最新情報に更新">↻</button>
+        <button class="icon-button" type="button" onclick="loadBundle({forceRefresh:true})" aria-label="最新情報に更新">↻</button>
       </div>
 
       <button class="dashboard-card dashboard-shooting" type="button" onclick="openDetail('shooting')">
@@ -1347,7 +1347,7 @@ canvas{
         </div>
       </button>
 
-      <button class="refresh dashboard-refresh" onclick="loadBundle()">最新情報に更新</button>
+      <button class="refresh dashboard-refresh" onclick="loadBundle({forceRefresh:true})">最新情報に更新</button>
 
       <div class="account-actions">
         <button
@@ -1364,7 +1364,7 @@ canvas{
     <section id="detailShell" class="detail-shell hidden">
       <div class="detail-toolbar">
         <button class="back-button" type="button" onclick="closeDetail()">‹ 成長記録へ戻る</button>
-        <button class="icon-button" type="button" onclick="loadBundle()" aria-label="最新情報に更新">↻</button>
+        <button class="icon-button" type="button" onclick="loadBundle({forceRefresh:true})" aria-label="最新情報に更新">↻</button>
       </div>
 
       <section id="shootingView" class="detail-view hidden">
@@ -2216,7 +2216,8 @@ function renderCachedGrowthBeforeSession(){
 const GROWTH_CACHE_CONFIG=Object.freeze({
   version:"v3",
   prefix:"ninjaGrowthBundleCache",
-  maxAgeMs:1000*60*60*24*30
+  maxAgeMs:1000*60*60*24*30,
+  autoRefreshIntervalMs:1000*60*60*24
 });
 
 function safeStorageGet(key){
@@ -2309,6 +2310,21 @@ function readGrowthBundleCache(scope,playerId){
   }
 }
 
+function isGrowthBundleCacheFresh(scope,playerId){
+  const cache=readGrowthBundleCache(scope,playerId);
+  if(!cache||!cache.bundle)return false;
+
+  const savedAt=Date.parse(String(cache.savedAt||""));
+  if(!Number.isFinite(savedAt))return false;
+
+  return Date.now()-savedAt<GROWTH_CACHE_CONFIG.autoRefreshIntervalMs;
+}
+
+function shouldUseGrowthCacheOnly(scope,playerId,settings){
+  if(settings&&settings.forceRefresh)return false;
+  return isGrowthBundleCacheFresh(scope,playerId);
+}
+
 function showNotice(message){
   const box=document.getElementById("message");
   if(!box)return;
@@ -2389,14 +2405,22 @@ async function loadGuardianLaunchBundle(guardianLaunch){
   await loadGuardianPlayerViewBundle();
 }
 
-async function loadGuardianPlayerViewBundle(){
+async function loadGuardianPlayerViewBundle(options){
+  const settings=options&&typeof options==="object"?options:{};
+
   if(!guardianLaunchContext||!guardianLaunchContext.playerId){
     throw new Error("保護者起動情報を確認できませんでした。");
   }
 
   const playerId=String(guardianLaunchContext.playerId||"").trim();
   const player=guardianLaunchContext.player||null;
-  const cacheRendered=renderCachedGrowthBundle("guardian",playerId,player);
+  const cacheOnly=shouldUseGrowthCacheOnly("guardian",playerId,settings);
+  const cacheRendered=renderCachedGrowthBundle("guardian",playerId,player,{silent:cacheOnly});
+
+  if(cacheRendered&&cacheOnly){
+    hide("message");
+    return;
+  }
 
   if(!cacheRendered){
     setLoading("成長記録を取得しています…");
@@ -2433,18 +2457,26 @@ async function loadGuardianPlayerViewBundle(){
   }
 }
 
-async function loadBundle(){
+async function loadBundle(options){
+  const settings=options&&typeof options==="object"?options:{};
+
   try{
     if(!idToken)throw new Error("LINE認証情報がありません。LINEのリッチメニューから開き直してください。");
 
     if(guardianLaunchContext&&guardianLaunchContext.playerId){
-      await loadGuardianPlayerViewBundle();
+      await loadGuardianPlayerViewBundle(settings);
       return;
     }
 
     const player=currentPlayerContext||null;
     const playerId=String(player&&player.playerId||"").trim();
-    const cacheRendered=renderCachedGrowthBundle("player",playerId,player);
+    const cacheOnly=shouldUseGrowthCacheOnly("player",playerId,settings);
+    const cacheRendered=renderCachedGrowthBundle("player",playerId,player,{silent:cacheOnly});
+
+    if(cacheRendered&&cacheOnly){
+      hide("message");
+      return;
+    }
 
     if(!cacheRendered){
       show("loading");hide("app");hide("message");hide("linkLogin");setLoading("成長記録を取得しています…");
