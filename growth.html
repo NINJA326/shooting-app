@@ -2988,7 +2988,7 @@ function renderDashboard(){
   );
 
   const bodyRows=((bundle.body||{}).records||[]).slice().sort(function(a,b){
-    return String(a.month||"").localeCompare(String(b.month||""));
+    return getBodyRecordMonthValue(a).localeCompare(getBodyRecordMonthValue(b));
   });
   const heights=bodyRows.filter(function(r){return Number.isFinite(Number(r.height))});
   const weights=bodyRows.filter(function(r){return Number.isFinite(Number(r.weight))});
@@ -3003,8 +3003,8 @@ function renderDashboard(){
   if(latestW&&previousW)bodyParts.push("体重 "+signedDashboardDiff(Number(latestW.weight)-Number(previousW.weight),"kg"));
   text("dashBodyDelta",bodyParts.length?"前回比 "+bodyParts.join(" / "):"比較できる記録がありません");
   drawLines("dashBodyChart",[
-    {label:"身長 cm",points:heights.map(function(r){return{label:r.month,value:Number(r.height)}})},
-    {label:"体重 kg",points:weights.map(function(r){return{label:r.month,value:Number(r.weight)}})}
+    {label:"身長 cm",points:heights.map(function(r){return{label:formatBodyMonth(r),value:Number(r.height)}})},
+    {label:"体重 kg",points:weights.map(function(r){return{label:formatBodyMonth(r),value:Number(r.weight)}})}
   ]);
 
   setupDashboardAgilitySelector();
@@ -3106,19 +3106,19 @@ function drawShooting(){
 
 function drawBody(){
   const rows=((bundle&&bundle.body&&bundle.body.records)||[]).slice().sort(function(a,b){
-    return String(a.month||"").localeCompare(String(b.month||""));
+    return getBodyRecordMonthValue(a).localeCompare(getBodyRecordMonthValue(b));
   });
 
   const heightPoints=rows
     .filter(function(r){return Number.isFinite(Number(r.height))})
     .map(function(r){
-      return {label:r.month,value:Number(r.height)};
+      return {label:formatBodyMonth(r),value:Number(r.height)};
     });
 
   const weightPoints=rows
     .filter(function(r){return Number.isFinite(Number(r.weight))})
     .map(function(r){
-      return {label:r.month,value:Number(r.weight)};
+      return {label:formatBodyMonth(r),value:Number(r.weight)};
     });
 
   drawLines("heightChart",[
@@ -3280,11 +3280,49 @@ function showCourtDetail(row,currentMonth,compareMonth){
     '<div class="detail-grid"><div><small>成功</small><b>'+p.made+'本</b></div><div><small>試投</small><b>'+p.attempts+'本</b></div></div>';
 }
 
+function getBodyRecordMonthValue(record){
+  const source=record&&typeof record==="object"?record:{};
+
+  return String(
+    source.month ||
+    source.date ||
+    source.recordDate ||
+    source.measurementDate ||
+    source.measuredAt ||
+    source.createdAt ||
+    source.updatedAt ||
+    source["月"] ||
+    source["年月"] ||
+    source["日付"] ||
+    source["測定日"] ||
+    ""
+  ).trim();
+}
+
 function formatBodyMonth(value){
-  const text=String(value||"").replace(/-/g,"/");
+  const raw=(
+    value&&typeof value==="object"
+      ?getBodyRecordMonthValue(value)
+      :String(value??"").trim()
+  );
+
+  if(!raw)return "－";
+
+  const text=String(raw)
+    .replace(/[年月]/g,"/")
+    .replace(/日/g,"")
+    .replace(/-/g,"/")
+    .replace(/\./g,"/");
+
   const match=text.match(/^(\d{4})\/(\d{1,2})/);
-  if(!match)return text;
-  return String(match[1]).slice(-2)+"."+Number(match[2]);
+  if(match)return String(match[1]).slice(-2)+"."+Number(match[2]);
+
+  const date=new Date(raw);
+  if(!Number.isNaN(date.getTime())){
+    return String(date.getFullYear()).slice(-2)+"."+(date.getMonth()+1);
+  }
+
+  return raw;
 }
 
 
@@ -3300,7 +3338,7 @@ function formatYearMonthLabel(value){
 
 function renderBody(){
   const rows=((bundle.body||{}).records||[]).slice().sort(function(a,b){
-    return String(a.month||"").localeCompare(String(b.month||""));
+    return getBodyRecordMonthValue(a).localeCompare(getBodyRecordMonthValue(b));
   });
 
   const summary=document.getElementById("bodyCompactSummary");
@@ -3348,7 +3386,7 @@ function renderBody(){
 
   if(table){
     const dates=rows.map(function(r){
-      return '<th>'+esc(formatBodyMonth(r.month))+'</th>';
+      return '<th>'+esc(formatBodyMonth(r))+'</th>';
     }).join("");
 
     const heights=rows.map(function(r){
