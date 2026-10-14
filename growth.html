@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -1553,6 +1553,7 @@ const GUARDIAN_GAS_URL="https://script.google.com/macros/s/AKfycbxbnca_UIigFLiSf
 let idToken="";
 let bundle=null;
 let guardianLaunchContext=null;
+let sharedViewContext=null;
 let currentPlayerContext=null;
 
 window.addEventListener("load",init);
@@ -1560,6 +1561,12 @@ window.addEventListener("load",init);
 async function init(){
   try{
     const guardianLaunch=getGuardianLaunchParams();
+    const shareLaunch=getGrowthShareParams();
+
+    if(shareLaunch.shareToken){
+      await loadSharedGrowthBundle(shareLaunch);
+      return;
+    }
 
     if(!window.liff)throw new Error("LIFF SDKを読み込めませんでした。");
     setLoading("LINE認証を初期化しています…");
@@ -1610,6 +1617,17 @@ function getGuardianLaunchParams(){
   return {
     launchToken:String(params.get("guardianLaunchToken")||"").trim(),
     appKey:String(params.get("guardianLaunchApp")||"").trim()
+  };
+}
+
+function getGrowthShareParams(){
+  const params=new URLSearchParams(location.search);
+  return {
+    shareToken:String(
+      params.get("shareToken")||
+      params.get("growthShareToken")||
+      ""
+    ).trim()
   };
 }
 
@@ -2100,33 +2118,11 @@ function normalizeGuardianPlayerViewBundle(result,player){
     normalized.agility.records=[];
   }
 
-  normalized.ranking=firstObject(
-    normalized.ranking,
-    data.ranking,
-    data.card&&data.card.ranking,
-    data.card&&data.card.data&&data.card.data.ranking,
-    data.playerCard&&data.playerCard.ranking,
-    data.playerCard&&data.playerCard.data&&data.playerCard.data.ranking,
-    data.bundle&&data.bundle.ranking,
-    data.result&&data.result.ranking,
-    data.payload&&data.payload.ranking
-  );
-
   if(!normalized.ranking){
     normalized.ranking=null;
   }
 
   normalized.player=normalized.player||player||data.player||{};
-
-  if(normalized.ranking&&typeof normalized.ranking==="object"){
-    if(!normalized.ranking.currentPlayerId&&normalized.player&&normalized.player.playerId){
-      normalized.ranking.currentPlayerId=String(normalized.player.playerId||"").trim();
-    }
-
-    if(!normalized.ranking.currentCategory&&normalized.player&&normalized.player.category){
-      normalized.ranking.currentCategory=String(normalized.player.category||"").trim();
-    }
-  }
 
   return normalized;
 }
@@ -2236,7 +2232,7 @@ function renderCachedGrowthBeforeSession(){
 
 
 const GROWTH_CACHE_CONFIG=Object.freeze({
-  version:"v4-step7-ranking-front",
+  version:"v3",
   prefix:"ninjaGrowthBundleCache",
   maxAgeMs:1000*60*60*24*30,
   autoRefreshIntervalMs:1000*60*60*24
@@ -2398,6 +2394,79 @@ function handleGrowthRefreshError(error,cacheRendered){
   throw error;
 }
 
+async function loadSharedGrowthBundle(shareLaunch,options){
+  const settings=options&&typeof options==="object"?options:{};
+  const shareToken=String(
+    shareLaunch&&shareLaunch.shareToken?shareLaunch.shareToken:""
+  ).trim();
+
+  if(!shareToken){
+    throw new Error("共有URLを確認できませんでした。");
+  }
+
+  sharedViewContext=Object.assign(
+    {},
+    sharedViewContext||{},
+    {shareToken:shareToken}
+  );
+
+  const cachePlayerId="share:"+shareToken.slice(0,48);
+  const cacheOnly=shouldUseGrowthCacheOnly("share",cachePlayerId,settings);
+  const cacheRendered=renderCachedGrowthBundle("share",cachePlayerId,null,{silent:cacheOnly});
+
+  if(cacheRendered&&cacheOnly){
+    hide("message");
+    return;
+  }
+
+  if(!cacheRendered){
+    setLoading("共有された成長記録を取得しています…");
+    show("loading");hide("app");hide("message");hide("linkLogin");
+  }
+
+  try{
+    const result=await jsonp({
+      action:"growthShareBundle",
+      shareToken:shareToken
+    });
+
+    if(!isOkResponse(result)){
+      throw new Error(result&&result.message?result.message:"共有データを取得できませんでした。");
+    }
+
+    const nextBundle=normalizeGuardianPlayerViewBundle(
+      result,
+      result&&result.player?result.player:null
+    );
+
+    const player=nextBundle.player||(result&&result.player)||null;
+
+    sharedViewContext=Object.assign(
+      {},
+      sharedViewContext||{},
+      {
+        shareToken:shareToken,
+        playerId:String(player&&player.playerId||nextBundle.playerId||"").trim(),
+        player:player
+      }
+    );
+
+    const unlinkButton=document.getElementById("unlinkButton");
+    if(unlinkButton){
+      unlinkButton.classList.add("hidden");
+    }
+
+    updateGrowthBundleFromServer(
+      "share",
+      cachePlayerId,
+      player,
+      nextBundle
+    );
+  }catch(error){
+    handleGrowthRefreshError(error,cacheRendered);
+  }
+}
+
 async function loadGuardianLaunchBundle(guardianLaunch){
   if(guardianLaunch.appKey&&guardianLaunch.appKey!=="growth"){
     throw new Error("起動先アプリが成長記録ではありません。");
@@ -2483,6 +2552,11 @@ async function loadBundle(options){
   const settings=options&&typeof options==="object"?options:{};
 
   try{
+    if(sharedViewContext&&sharedViewContext.shareToken){
+      await loadSharedGrowthBundle(sharedViewContext,settings);
+      return;
+    }
+
     if(!idToken)throw new Error("LINE認証情報がありません。LINEのリッチメニューから開き直してください。");
 
     if(guardianLaunchContext&&guardianLaunchContext.playerId){
