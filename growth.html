@@ -2100,11 +2100,33 @@ function normalizeGuardianPlayerViewBundle(result,player){
     normalized.agility.records=[];
   }
 
+  normalized.ranking=firstObject(
+    normalized.ranking,
+    data.ranking,
+    data.card&&data.card.ranking,
+    data.card&&data.card.data&&data.card.data.ranking,
+    data.playerCard&&data.playerCard.ranking,
+    data.playerCard&&data.playerCard.data&&data.playerCard.data.ranking,
+    data.bundle&&data.bundle.ranking,
+    data.result&&data.result.ranking,
+    data.payload&&data.payload.ranking
+  );
+
   if(!normalized.ranking){
     normalized.ranking=null;
   }
 
   normalized.player=normalized.player||player||data.player||{};
+
+  if(normalized.ranking&&typeof normalized.ranking==="object"){
+    if(!normalized.ranking.currentPlayerId&&normalized.player&&normalized.player.playerId){
+      normalized.ranking.currentPlayerId=String(normalized.player.playerId||"").trim();
+    }
+
+    if(!normalized.ranking.currentCategory&&normalized.player&&normalized.player.category){
+      normalized.ranking.currentCategory=String(normalized.player.category||"").trim();
+    }
+  }
 
   return normalized;
 }
@@ -2214,7 +2236,7 @@ function renderCachedGrowthBeforeSession(){
 
 
 const GROWTH_CACHE_CONFIG=Object.freeze({
-  version:"v3",
+  version:"v4-step7-ranking-front",
   prefix:"ninjaGrowthBundleCache",
   maxAgeMs:1000*60*60*24*30,
   autoRefreshIntervalMs:1000*60*60*24
