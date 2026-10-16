@@ -1562,6 +1562,7 @@ async function init(){
   try{
     const guardianLaunch=getGuardianLaunchParams();
     const shareLaunch=getGrowthShareParams();
+    const playerQrId=getPlayerQrLoginId();
 
     if(shareLaunch.shareToken){
       await loadSharedGrowthBundle(shareLaunch);
@@ -1584,8 +1585,10 @@ async function init(){
       return;
     }
 
-    const cacheRenderedBeforeSession=
-      renderCachedGrowthBeforeSession();
+    // QR経由では別選手の端末キャッシュを先に表示しない。
+    const cacheRenderedBeforeSession=playerQrId
+      ? false
+      : renderCachedGrowthBeforeSession();
 
     if(!cacheRenderedBeforeSession){
       setLoading("本人情報を確認しています…");
@@ -1595,6 +1598,8 @@ async function init(){
 
     if(session&&session.status==="unlinked"){
       clearGrowthSessionPlayerCache();
+      // 選手別QRのIDを、既存のID/パスワード認証画面へ引き継ぐ。
+      setPlayerQrLoginId(playerQrId);
       hide("loading");
       hide("app");
       hide("message");
@@ -1606,10 +1611,55 @@ async function init(){
       throw new Error(session&&session.message?session.message:"本人情報を確認できませんでした。");
     }
 
+    // 別選手へ連携済みのLINEでQRを開いても、別選手の情報を表示しない。
+    if(playerQrId&&String(session.player&&session.player.playerId||"").trim()!==playerQrId){
+      throw new Error(
+        "このLINEアカウントは別の選手に連携されています。"+
+        "通常の成長記録画面から連携解除してから、このQRコードを開き直してください。"
+      );
+    }
+
     applySessionPlayer(session.player);
     saveGrowthSessionPlayerCache(session.player);
     await loadBundle();
   }catch(error){showError(error)}
+}
+
+/**
+ * 選手別QRのURLから選手IDを取得する。
+ * LIFFの通常クエリと、LINEが転送するliff.stateの両方に対応。
+ * IDは認証情報ではなく、画面へ入力する候補にしか使用しない。
+ */
+function getPlayerQrLoginId(){
+  const params=new URLSearchParams(location.search);
+  let id=params.get("playerId")||"";
+
+  if(!id){
+    const state=params.get("liff.state")||"";
+    const query=state.indexOf("?")>=0
+      ? state.slice(state.indexOf("?")+1)
+      : state.replace(/^\/?/,"");
+    id=new URLSearchParams(query).get("playerId")||"";
+  }
+
+  const normalized=String(id).trim();
+  return normalized&&normalized.length<=50&&!/[<>\x00-\x1f]/.test(normalized)
+    ? normalized
+    : "";
+}
+
+function setPlayerQrLoginId(playerId){
+  const input=document.getElementById("linkPlayerId");
+  if(!input)return;
+  const id=String(playerId||"").trim();
+  if(id){
+    input.value=id;
+    input.readOnly=true;
+    input.setAttribute("aria-label","QRコードで指定された選手ID");
+  }else{
+    input.readOnly=false;
+    input.removeAttribute("aria-label");
+  }
 }
 
 function getGuardianLaunchParams(){
@@ -2614,6 +2664,7 @@ async function submitGrowthLink(event){
   event.preventDefault();
 
   const playerId=String(document.getElementById("linkPlayerId").value||"").trim();
+  const playerQrId=getPlayerQrLoginId();
   const password=String(document.getElementById("linkPassword").value||"");
   const button=document.getElementById("linkSubmitButton");
   const errorBox=document.getElementById("linkLoginError");
@@ -2622,6 +2673,12 @@ async function submitGrowthLink(event){
 
   if(!playerId||!password){
     errorBox.textContent="選手IDとパスワードを入力してください。";
+    show("linkLoginError");
+    return;
+  }
+
+  if(playerQrId&&playerId!==playerQrId){
+    errorBox.textContent="QRコードに指定された選手IDと一致しません。";
     show("linkLoginError");
     return;
   }
