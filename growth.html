@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -1585,6 +1585,17 @@ async function init(){
       return;
     }
 
+    // 選手専用QRからのアクセスは、成長記録への選手LINE連携を実行しない。
+    // 保護者のLINE ID Token + 選手パスワードで、独立した保護者連携を行う。
+    if(playerQrId){
+      prepareGuardianQrLogin(playerQrId);
+      hide("loading");
+      hide("app");
+      hide("message");
+      show("linkLogin");
+      return;
+    }
+
     // QR経由では別選手の端末キャッシュを先に表示しない。
     const cacheRenderedBeforeSession=playerQrId
       ? false
@@ -1659,6 +1670,131 @@ function setPlayerQrLoginId(playerId){
   }else{
     input.readOnly=false;
     input.removeAttribute("aria-label");
+  }
+}
+
+/**
+ * 選手専用QRから開いた場合だけ、既存フォームを保護者認証用に切り替える。
+ * 選手IDは入力させない（QRから取得したIDをサーバー検証へ渡す）。
+ * 既存の成長記録ログインと選手LINE紐づけは一切呼ばない。
+ */
+function prepareGuardianQrLogin(playerId){
+  setPlayerQrLoginId(playerId);
+
+  const section=document.getElementById("linkLogin");
+  if(!section)return;
+
+  const title=section.querySelector("h2");
+  if(title)title.textContent="保護者LINE連携";
+
+  const brand=document.querySelector(".legacy-profile-header .brand");
+  if(brand)brand.textContent="NINJA AIRS U15";
+
+  const guide=section.querySelector("p");
+  if(guide)guide.textContent=
+    "お子様のQRコードを確認しました。お子様のパスワードだけを入力してください。"+
+    "保護者ご自身のLINEに閲覧用の連携情報を登録します。";
+
+  const idInput=document.getElementById("linkPlayerId");
+  if(idInput){
+    idInput.readOnly=true;
+    const field=idInput.closest(".login-field");
+    if(field)field.classList.add("hidden");
+  }
+
+  const passwordInput=document.getElementById("linkPassword");
+  if(passwordInput){
+    passwordInput.value="";
+    passwordInput.setAttribute("autocomplete","off");
+    passwordInput.setAttribute("aria-label","お子様のパスワード");
+  }
+
+  const button=document.getElementById("linkSubmitButton");
+  if(button)button.textContent="パスワードで連携する";
+
+  const help=section.querySelector(".login-help");
+  if(help)help.textContent=
+    "選手本人のLINE連携は変更されません。"+
+    "保護者は閲覧のみとなり、記録の入力はできません。";
+
+  hide("linkLoginError");
+}
+
+/**
+ * STEP13: パスワードはURL/JSONPへ入れず、POST本文だけで送信する。
+ * 署名付き証明はブラウザに保存せず、発行直後に保護者GASへ引き渡す。
+ * 実際のメニュー反映は後続STEPで別途行う。
+ */
+async function submitGuardianQrLink(){
+  const playerId=getPlayerQrLoginId();
+  const passwordInput=document.getElementById("linkPassword");
+  const password=passwordInput?passwordInput.value:"";
+  const button=document.getElementById("linkSubmitButton");
+  const errorBox=document.getElementById("linkLoginError");
+
+  hide("linkLoginError");
+  if(!playerId||!password||!idToken){
+    if(errorBox){
+      errorBox.textContent="パスワードまたはLINE認証情報を確認してください。";
+      show("linkLoginError");
+    }
+    return;
+  }
+
+  if(button){
+    button.disabled=true;
+    button.textContent="LINE連携を確認しています…";
+  }
+
+  try{
+    const issued=await postJson({
+      action:"guardian.passwordProof.issue",
+      idToken:idToken,
+      playerId:playerId,
+      password:password
+    },GAS_URL);
+
+    const proofData=unwrapApiData(issued);
+    const proof=proofData&&typeof proofData.proof==="string"
+      ? proofData.proof : "";
+    if(!proof||proof.length>3000){
+      throw new Error("認証情報を取得できませんでした。もう一度お試しください。");
+    }
+
+    if(passwordInput)passwordInput.value="";
+
+    const registered=await postJson({
+      action:"guardian.bridge.link",
+      idToken:idToken,
+      proof:proof
+    },GUARDIAN_GAS_URL);
+    const linkData=unwrapApiData(registered);
+    if(!linkData||linkData.linked!==true){
+      throw new Error("連携結果を確認できませんでした。もう一度お試しください。");
+    }
+
+    hide("linkLogin");
+    hide("loading");
+    hide("app");
+    const message=document.getElementById("message");
+    if(message){
+      message.textContent=
+        "保護者LINEの連携が完了しました。"+
+        "NINJA AIRS公式LINEの6分割メニューへの反映は、次の設定完了後に利用できます。";
+      show("message");
+    }
+  }catch(error){
+    if(errorBox){
+      errorBox.textContent=error&&error.message
+        ? error.message : "連携できませんでした。しばらくしてから再度お試しください。";
+      show("linkLoginError");
+    }
+  }finally{
+    if(passwordInput)passwordInput.value="";
+    if(button){
+      button.disabled=false;
+      button.textContent="パスワードで連携する";
+    }
   }
 }
 
@@ -2662,6 +2798,11 @@ function applySessionPlayer(player){
 
 async function submitGrowthLink(event){
   event.preventDefault();
+
+  // QRからの保護者連携は、既存のgrowthLink(JSONP)を使用しない。
+  if(getPlayerQrLoginId()){
+    return submitGuardianQrLink();
+  }
 
   const playerId=String(document.getElementById("linkPlayerId").value||"").trim();
   const playerQrId=getPlayerQrLoginId();
