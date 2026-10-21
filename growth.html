@@ -1553,6 +1553,9 @@ const GUARDIAN_GAS_URL="https://script.google.com/macros/s/AKfycbxbnca_UIigFLiSf
 let idToken="";
 let bundle=null;
 let guardianLaunchContext=null;
+// STEP17: QRで本人確認済みの保護者用セッション（メモリのみ）。
+// 選手本人のLINE紐付けや端末の成長記録キャッシュへ保存しない。
+let guardianBridgeContext=null;
 let sharedViewContext=null;
 let currentPlayerContext=null;
 
@@ -1773,18 +1776,18 @@ async function submitGuardianQrLink(){
       throw new Error("連携結果を確認できませんでした。もう一度お試しください。");
     }
 
-    hide("linkLogin");
-    hide("loading");
-    hide("app");
-    const message=document.getElementById("message");
-    if(message){
-      message.textContent=
-        "保護者LINEの連携が完了しました。"+
-        "NINJA AIRS公式LINEの6分割メニューへの反映は、次の設定完了後に利用できます。";
-      show("message");
-    }
+    // 連携済みかどうかはAPIが検証済み。端末やURL上のIDを認証には使用しない。
+    guardianBridgeContext={playerId:playerId};
+    await loadGuardianBridgePlayerData();
   }catch(error){
-    if(errorBox){
+    if(guardianBridgeContext){
+      // 連携処理そのものは成功。読み込み失敗をログイン失敗と誤表示しない。
+      hide("linkLogin");
+      hide("loading");
+      hide("app");
+      showNotice("LINE連携は完了しましたが、選手データを取得できませんでした。"+
+        "公開準備が完了するまでは、少し時間を置いてから開き直してください。");
+    }else if(errorBox){
       errorBox.textContent=error&&error.message
         ? error.message : "連携できませんでした。しばらくしてから再度お試しください。";
       show("linkLoginError");
@@ -1796,6 +1799,63 @@ async function submitGuardianQrLink(){
       button.textContent="パスワードで連携する";
     }
   }
+}
+
+/**
+ * STEP17: QRからの連携を確認できた保護者だけが使う閲覧ルート。
+ * 毎回保護者GASの guardian.bridge.playerData でLINE本人認証・選手単位の認可を行う。
+ * 選手用キャッシュ、通常のgrowthBundle、guardian.playerViewにはフォールバックしない。
+ * 成功レスポンスが閲覧専用かつ対象選手のIDと一致するまで描画しない。
+ */
+async function loadGuardianBridgePlayerData(){
+  const playerId=String(
+    guardianBridgeContext&&guardianBridgeContext.playerId||""
+  ).trim();
+  if(!playerId||!idToken){
+    throw new Error("保護者のLINE認証情報を確認できませんでした。");
+  }
+
+  hide("linkLogin");
+  hide("app");
+  hide("message");
+  show("loading");
+  setLoading("閲覧権限と選手データを確認しています…");
+
+  const response=await postJson({
+    action:"guardian.bridge.playerData",
+    idToken:idToken,
+    playerId:playerId,
+    month:currentMonthKey(),
+    limit:20
+  },GUARDIAN_GAS_URL);
+
+  const data=unwrapApiData(response);
+  const player=data&&data.player;
+  if(!response||!response.meta||response.meta.readOnly!==true||
+     !player||String(player.playerId||"").trim()!==playerId){
+    throw new Error("閲覧権限と対象選手を確認できませんでした。");
+  }
+
+  const nextBundle=normalizeGuardianPlayerViewBundle(response,player);
+  if(!nextBundle||!nextBundle.player||
+     String(nextBundle.player.playerId||"").trim()!==playerId){
+    throw new Error("選手データを確認できませんでした。");
+  }
+
+  // セッションと成長記録はメモリ上だけで扱う。
+  // saveGrowthSessionPlayerCache / saveGrowthBundleCache は呼ばない。
+  bundle=nextBundle;
+  text("playerName",player.playerName||player.name||"");
+  text("playerMeta",(player.category||"")+" / "+playerId);
+  text("dashboardPlayerName",player.playerName||player.name||"選手データ");
+  show("profile");
+  const unlinkButton=document.getElementById("unlinkButton");
+  if(unlinkButton)unlinkButton.classList.add("hidden");
+
+  renderAll();
+  hide("loading");
+  hide("message");
+  show("app");
 }
 
 function getGuardianLaunchParams(){
@@ -2747,6 +2807,12 @@ async function loadBundle(options){
 
     if(guardianLaunchContext&&guardianLaunchContext.playerId){
       await loadGuardianPlayerViewBundle(settings);
+      return;
+    }
+
+    // 保護者用の更新ボタンも、認証付き閲覧API以外を呼ばない。
+    if(guardianBridgeContext&&guardianBridgeContext.playerId){
+      await loadGuardianBridgePlayerData();
       return;
     }
 
